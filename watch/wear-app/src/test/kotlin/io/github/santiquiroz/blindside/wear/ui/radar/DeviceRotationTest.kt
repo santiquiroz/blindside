@@ -10,6 +10,7 @@ import io.github.santiquiroz.blindside.wear.settings.WatchPosture
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Test
+import kotlin.math.atan2
 
 class DeviceRotationTest {
     private val widthPx = 480f
@@ -40,6 +41,17 @@ class DeviceRotationTest {
         toDrawModel(scene(blips.toList()), widthPx, heightPx, offset, showContacts = true)
 
     private fun distancePx(rangeM: Double, model: RadarDrawModel): Float = (rangeM / MAX_RANGE_M).toFloat() * model.radiusPx
+
+    private fun bottomPanelAnchor(offset: PointPx) = PointPx(widthPx / 2f + offset.x, heightPx + offset.y)
+
+    // Mirrors the overlay's graphicsLayer: it turns after the burn-in offset, about the shifted screen center.
+    private fun turnedPanelAnchor(posture: WatchPosture, offset: PointPx): PointPx =
+        rotatePoint(bottomPanelAnchor(offset), screenCenter(widthPx, heightPx, offset), posture.rotationDeg)
+
+    private fun clockAngleDeg(from: PointPx, to: PointPx): Float {
+        val degrees = Math.toDegrees(atan2((to.x - from.x).toDouble(), (from.y - to.y).toDouble())).toFloat()
+        return (degrees + 360f) % 360f
+    }
 
     @Test
     fun `a clockwise quarter turn sends a point above the pivot to its right`() {
@@ -110,5 +122,23 @@ class DeviceRotationTest {
         val shifted = logicalModel(offset = shift)
             .rotatedAbout(screenCenter(widthPx, heightPx, shift), WatchPosture.TACTICAL_LEFT.rotationDeg)
         assertPoint(PointPx(still.origin.x + shift.x, still.origin.y + shift.y), shifted.origin)
+    }
+
+    @Test
+    fun `the bottom panel turns with the drawing and stays opposite its front`() {
+        val shift = PointPx(3f, -2f)
+        WatchPosture.entries.forEach { posture ->
+            val rotated = logicalModel(blip(1, 0.0, 3.0), offset = shift)
+                .rotatedAbout(screenCenter(widthPx, heightPx, shift), posture.rotationDeg)
+            val front = clockAngleDeg(rotated.origin, rotated.blips.single().center)
+            val panel = clockAngleDeg(rotated.origin, turnedPanelAnchor(posture, shift))
+            assertEquals((front + 180f) % 360f, panel, 1e-2f, posture.name)
+        }
+    }
+
+    @Test
+    fun `tactical postures move the bottom panel off the flank drawn at six o'clock`() {
+        assertPoint(PointPx(0f, heightPx / 2f), turnedPanelAnchor(WatchPosture.TACTICAL_LEFT, noShift))
+        assertPoint(PointPx(widthPx, heightPx / 2f), turnedPanelAnchor(WatchPosture.TACTICAL_RIGHT, noShift))
     }
 }

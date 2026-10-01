@@ -18,6 +18,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -55,19 +56,30 @@ fun RadarScreen(
     val elapsedMs by rememberElapsedMs()
     val shift = burnInOffset(settings.screenMode, elapsedMs)
     val contacts = showContacts(session.scene, ambient)
+    val rotationDeg = settings.posture.rotationDeg
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         Canvas(Modifier.fillMaxSize()) {
             val logical = toDrawModel(session.scene, size.width, size.height, shift, contacts)
-            drawRadar(logical.rotatedAbout(screenCenter(size.width, size.height, shift), settings.posture.rotationDeg))
+            drawRadar(logical.rotatedAbout(screenCenter(size.width, size.height, shift), rotationDeg))
         }
-        RadarOverlay(session, ambient, shift, onToggleEliminated)
+        RadarOverlay(session, ambient, shift, rotationDeg, onToggleEliminated)
     }
 }
 
 @Composable
-private fun RadarOverlay(session: SessionUiState, ambient: Boolean, shift: PointPx, onToggleEliminated: () -> Unit) {
+private fun RadarOverlay(
+    session: SessionUiState,
+    ambient: Boolean,
+    shift: PointPx,
+    rotationDeg: Float,
+    onToggleEliminated: () -> Unit,
+) {
     val link = radarMessage(session)
-    Box(Modifier.fillMaxSize().offset { IntOffset(shift.x.roundToInt(), shift.y.roundToInt()) }) {
+    val placement = Modifier.fillMaxSize()
+        .offset { IntOffset(shift.x.roundToInt(), shift.y.roundToInt()) }
+        // Turns after the shift, about the shifted center like the drawing, so the panel stays over the rear and off the flanks.
+        .graphicsLayer { rotationZ = rotationDeg }
+    Box(placement) {
         centerLabel(session.scene, ambient, link)?.let { label ->
             CenterLabel(label, isLinkMessage = label == link, Modifier.align(Alignment.Center))
         }
