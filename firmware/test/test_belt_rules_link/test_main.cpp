@@ -31,8 +31,8 @@ BeltInfo example_info() {
     info.mtu = 255;
     info.radars[0] = RadarInfo{0, firmware_named("V2.04.23101915"), 256000};
     info.radars[1] = RadarInfo{1, firmware_named("V2.04.23101915"), 256000};
-    info.imus[0] = ImuInfo{0, 104};
-    info.imus[1] = ImuInfo{1, 112};
+    info.imus[0] = ImuInfo{0, 104, 0};
+    info.imus[1] = ImuInfo{1, 112, 3};
     info.tx_power_dbm = 9;
     info.conn = LinkParams{36, 0, 500};
     info.uptime_s = 42;
@@ -43,10 +43,10 @@ BeltInfo longest_info() {
     BeltInfo info = example_info();
     info.reset_reason = "DEEPSLEEP";
     info.mtu = 517;
-    info.radars[0].baud = 460800;
-    info.radars[1].baud = 460800;
-    info.imus[0].who_am_i = 255;
-    info.imus[1].who_am_i = 255;
+    info.radars[0] = RadarInfo{0, firmware_named("VFF.FF.FFFFFFFF"), 460800};
+    info.radars[1] = RadarInfo{1, firmware_named("VFF.FF.FFFFFFFF"), 460800};
+    info.imus[0] = ImuInfo{0, 255, 4294967295u};
+    info.imus[1] = ImuInfo{1, 255, 4294967295u};
     info.conn = LinkParams{3200, 499, 3200};
     info.uptime_s = 4294967;
     return info;
@@ -119,19 +119,22 @@ void test_info_json_matches_the_contract_example() {
     const char* expected =
         R"({"proto":1,"fw":"0.1.0","boot_id":"9f3a12c4","reset":"POWERON","mtu":255,)"
         R"("radars":[{"id":0,"fw":"V2.04.23101915","baud":256000},{"id":1,"fw":"V2.04.23101915","baud":256000}],)"
-        R"("imus":[{"id":0,"who":104,"gyro_lsb_dps":65.5,"accel_lsb_g":4096},)"
-        R"({"id":1,"who":112,"gyro_lsb_dps":65.5,"accel_lsb_g":4096}],)"
+        R"("imus":[{"id":0,"who":104,"gyro_lsb_dps":65.5,"accel_lsb_g":4096,"repeats":0},)"
+        R"({"id":1,"who":112,"gyro_lsb_dps":65.5,"accel_lsb_g":4096,"repeats":3}],)"
         R"("tx_power_dbm":9,"conn":{"interval_ms":45.0,"latency":0,"timeout_ms":5000},"uptime_s":42})";
     char json[kInfoJsonBufferSize];
     size_t length = format_info_json(example_info(), json, sizeof(json));
     TEST_ASSERT_EQUAL_STRING(expected, json);
-    TEST_ASSERT_EQUAL_UINT(388, length);
+    TEST_ASSERT_EQUAL_UINT(412, length);
 }
 
-void test_info_json_worst_case_still_fits_in_400_bytes() {
+void test_info_json_worst_case_fits_in_the_512_byte_attribute() {
     char json[kInfoJsonBufferSize];
     size_t length = format_info_json(longest_info(), json, sizeof(json));
-    TEST_ASSERT_EQUAL_UINT(400, length);
+    TEST_ASSERT_EQUAL_UINT(444, length);
+    TEST_ASSERT_TRUE(length <= kInfoJsonMaxBytes);
+    TEST_ASSERT_NOT_NULL(strstr(json, R"({"id":1,"fw":"VFF.FF.FFFFFFFF","baud":460800})"));
+    TEST_ASSERT_NOT_NULL(strstr(json, R"("accel_lsb_g":4096,"repeats":4294967295})"));
     TEST_ASSERT_NOT_NULL(strstr(json, R"("conn":{"interval_ms":4000.0,"latency":499,"timeout_ms":32000})"));
 }
 
@@ -166,7 +169,7 @@ int run_all_tests() {
     RUN_TEST(test_advertising_is_fast_for_thirty_seconds);
     RUN_TEST(test_device_name_uses_last_two_mac_bytes);
     RUN_TEST(test_info_json_matches_the_contract_example);
-    RUN_TEST(test_info_json_worst_case_still_fits_in_400_bytes);
+    RUN_TEST(test_info_json_worst_case_fits_in_the_512_byte_attribute);
     RUN_TEST(test_info_json_rounds_the_interval_to_one_decimal);
     RUN_TEST(test_info_json_reports_a_missing_radar);
     RUN_TEST(test_info_json_reports_zero_when_it_does_not_fit);

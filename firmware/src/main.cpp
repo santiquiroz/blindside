@@ -101,6 +101,11 @@ RadarInfo radar_info(uint8_t radar_id) {
     return RadarInfo{radar_id, radar.firmware, radar.baud};
 }
 
+ImuInfo imu_info(uint8_t imu_id) {
+    ImuSnapshot imu = imu_task_snapshot(imu_id);
+    return ImuInfo{imu_id, imu.who_am_i, imu.repeats};
+}
+
 BeltInfo current_info(uint32_t now_ms) {
     LinkSnapshot link = ble_link_snapshot();
     BeltInfo info{};
@@ -112,7 +117,7 @@ BeltInfo current_info(uint32_t now_ms) {
         info.radars[i] = radar_info(i);
     }
     for (uint8_t i = 0; i < kImuCount; ++i) {
-        info.imus[i] = ImuInfo{i, imu_task_snapshot(i).who_am_i};
+        info.imus[i] = imu_info(i);
     }
     info.tx_power_dbm = ble_link_tx_power();
     info.conn = link.params;

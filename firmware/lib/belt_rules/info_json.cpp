@@ -21,8 +21,10 @@ ObjectText radar_object(const RadarInfo& radar) {
 
 ObjectText imu_object(const ImuInfo& imu) {
     ObjectText object{};
-    snprintf(object.text, sizeof(object.text), "{\"id\":%u,\"who\":%u,\"gyro_lsb_dps\":65.5,\"accel_lsb_g\":4096}",
-             static_cast<unsigned>(imu.id), static_cast<unsigned>(imu.who_am_i));
+    snprintf(object.text, sizeof(object.text),
+             "{\"id\":%u,\"who\":%u,\"gyro_lsb_dps\":65.5,\"accel_lsb_g\":4096,\"repeats\":%lu}",
+             static_cast<unsigned>(imu.id), static_cast<unsigned>(imu.who_am_i),
+             static_cast<unsigned long>(imu.repeats));
     return object;
 }
 

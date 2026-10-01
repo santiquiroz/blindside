@@ -6,7 +6,7 @@
 #include "bundler.h"
 #include "ld2450_commands.h"
 
-constexpr size_t kInfoJsonMaxBytes = 400;
+constexpr size_t kInfoJsonMaxBytes = 512;
 constexpr size_t kInfoJsonBufferSize = kInfoJsonMaxBytes + 1;
 
 struct RadarInfo {
@@ -18,6 +18,7 @@ struct RadarInfo {
 struct ImuInfo {
     uint8_t id;
     uint8_t who_am_i;
+    uint32_t repeats;
 };
 
 struct BeltInfo {
