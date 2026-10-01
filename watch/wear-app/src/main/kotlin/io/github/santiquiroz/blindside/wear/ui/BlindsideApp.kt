@@ -1,6 +1,7 @@
 package io.github.santiquiroz.blindside.wear.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
@@ -11,6 +12,7 @@ import androidx.wear.compose.navigation.SwipeDismissableNavHost
 import androidx.wear.compose.navigation.composable
 import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
 import io.github.santiquiroz.blindside.wear.SpikeScreen
+import io.github.santiquiroz.blindside.wear.bridge.publishSharedSettings
 import io.github.santiquiroz.blindside.shared.session.SessionSource
 import io.github.santiquiroz.blindside.shared.session.SessionStore
 import io.github.santiquiroz.blindside.shared.session.toggleEliminated
@@ -36,6 +38,7 @@ fun BlindsideApp(settingsRepository: SettingsRepository) {
     val onToggleEliminated: () -> Unit = { toggleEliminated(scope, settingsRepository) }
     val onPairPhone: () -> Unit = { WearSessionCommands.openPairing(context) }
     LaunchRadarOnOpen(settingsRepository, showRadar)
+    LaunchedEffect(settingsRepository) { publishSharedSettings(context, settingsRepository) }
     MaterialTheme {
         SwipeDismissableNavHost(navController = navController, startDestination = ROUTE_HOME) {
             composable(ROUTE_HOME) { HomeScreen(session, navigate, showRadar, onToggleEliminated) }

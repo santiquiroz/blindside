@@ -32,6 +32,7 @@ abstract class SessionService : Service() {
     private var session: RunningSession? = null
     private var currentSource = SessionSource.BELT
     private var notificationSync: Job? = null
+    private var companions: List<Job> = emptyList()
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -76,12 +77,15 @@ abstract class SessionService : Service() {
         session = created
         scope.launch { created.start() }
         notificationSync = scope.launch { syncNotification(source) }
+        companions = host.launchCompanions(this, scope)
     }
 
     private fun onStop() {
         val current = session ?: return stopSelf()
         session = null
         notificationSync?.cancel()
+        companions.forEach { it.cancel() }
+        companions = emptyList()
         scope.launch {
             current.stop()
             SessionStore.update(::stoppedState)

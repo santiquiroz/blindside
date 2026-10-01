@@ -35,6 +35,7 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     api(platform(libs.compose.bom))
     api(libs.compose.ui)
+    api(libs.play.services.wearable)
 
     testImplementation(platform(libs.junit5.bom))
     testImplementation(libs.junit5.jupiter)
