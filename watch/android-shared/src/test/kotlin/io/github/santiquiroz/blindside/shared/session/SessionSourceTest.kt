@@ -44,4 +44,10 @@ class SessionSourceTest {
         assertEquals("Demo en curso", ongoingStatus(eliminated = false, source = SessionSource.DEMO))
         assertEquals("Partida en curso", ongoingStatus(eliminated = false, source = SessionSource.BELT))
     }
+
+    @Test
+    fun `a diagnostic session says so in its notification`() {
+        assertEquals("Diagnóstico del cinturón", ongoingStatus(eliminated = false, source = SessionSource.BELT, purpose = SessionPurpose.DIAGNOSTIC))
+        assertEquals("Eliminado", ongoingStatus(eliminated = true, source = SessionSource.BELT, purpose = SessionPurpose.GAME))
+    }
 }

@@ -100,6 +100,23 @@ class BsrecTest {
         assertNull(BsrecPayloads.readModeChange(BsrecPayloads.linkChange(true)))
     }
 
+    @Test
+    fun `a corrupt header length is refused before anything is allocated`() {
+        val bytes = BSREC_MAGIC.toByteArray(Charsets.US_ASCII) + byteArrayOf(BSREC_FORMAT_VERSION.toByte(), -1, -1, -1, -1)
+        assertThrows<IllegalArgumentException> { BsrecReader(ByteArrayInputStream(bytes)) }
+    }
+
+    @Test
+    fun `a header longer than the caller allows is refused`() {
+        assertThrows<IllegalArgumentException> { BsrecReader(ByteArrayInputStream(record()), maxHeaderBytes = 3) }
+    }
+
+    @Test
+    fun `a zero-filled tail is skipped without overflowing the stack`() {
+        val reader = BsrecReader(ByteArrayInputStream(record() + ByteArray(1_000_000)))
+        assertEquals(0, reader.records().count())
+    }
+
     private fun record(vararg records: BsrecRecord): ByteArray {
         val out = ByteArrayOutputStream()
         val writer = BsrecWriter(out, """{"proto":1}""")

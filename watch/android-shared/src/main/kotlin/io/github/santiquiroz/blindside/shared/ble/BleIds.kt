@@ -12,8 +12,14 @@ val REQUIRED_CHARACTERISTICS: List<UUID> = listOf(STREAM_UUID, INFO_UUID, CONTRO
 const val REQUESTED_MTU = 517
 const val BLINDSIDE_NAME_PREFIX = "Blindside-"
 
+private const val CMD_RESTART_RADAR: Byte = 0x01
+private const val CMD_IDENTIFY: Byte = 0x03
 private const val CMD_SESSION_ACTIVE: Byte = 0x04
 
 fun sessionActiveCommand(active: Boolean): ByteArray = byteArrayOf(CMD_SESSION_ACTIVE, if (active) 1 else 0)
+
+fun restartRadarCommand(radarId: Int): ByteArray = byteArrayOf(CMD_RESTART_RADAR, radarId.toByte())
+
+fun identifyCommand(): ByteArray = byteArrayOf(CMD_IDENTIFY)
 
 fun isBlindsideName(name: String?): Boolean = name?.startsWith(BLINDSIDE_NAME_PREFIX) == true

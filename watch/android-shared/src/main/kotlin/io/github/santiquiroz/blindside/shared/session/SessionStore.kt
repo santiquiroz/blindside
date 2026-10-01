@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.updateAndGet
 data class SessionUiState(
     val running: Boolean = false,
     val source: SessionSource? = null,
+    val purpose: SessionPurpose? = null,
     val ble: BleStatus = BleStatus.IDLE,
     val scene: RadarScene? = null,
     val watchSteps: Boolean = false,
@@ -46,8 +47,8 @@ object SessionStore {
     }
 }
 
-fun startedState(previous: SessionUiState, source: SessionSource): SessionUiState =
-    SessionUiState(running = true, source = source, lastRecordingName = previous.lastRecordingName)
+fun startedState(previous: SessionUiState, source: SessionSource, purpose: SessionPurpose = SessionPurpose.GAME): SessionUiState =
+    SessionUiState(running = true, source = source, purpose = purpose, lastRecordingName = previous.lastRecordingName)
 
 fun stoppedState(previous: SessionUiState): SessionUiState =
     SessionUiState(lastRecordingName = previous.recordingName ?: previous.lastRecordingName)

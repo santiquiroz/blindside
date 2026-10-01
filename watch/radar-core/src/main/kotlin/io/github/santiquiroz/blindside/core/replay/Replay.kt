@@ -16,7 +16,7 @@ fun replayRecording(records: Sequence<BsrecRecord>, pipeline: RadarPipeline, sta
     return records.flatMap { record -> replayRecord(record, pipeline, startNanos + record.tMsSinceStart * NANOS_PER_MS) }.toList()
 }
 
-private fun replayRecord(record: BsrecRecord, pipeline: RadarPipeline, nanos: Long): List<PipelineEvent> = when (record.type) {
+fun replayRecord(record: BsrecRecord, pipeline: RadarPipeline, nanos: Long): List<PipelineEvent> = when (record.type) {
     RecordType.BLE_PACKET -> pipeline.onBlePacket(record.payload, nanos)
     RecordType.MODE_CHANGE -> replayModeChange(record.payload, pipeline, nanos)
     else -> emptyList<PipelineEvent>().also { replayWatchInput(record, pipeline, nanos) }

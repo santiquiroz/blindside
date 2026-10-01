@@ -16,8 +16,8 @@ private const val TAG = "BeltLink"
 class BeltLink(
     private val context: Context,
     private val listener: BeltListener,
+    private val profile: BeltLinkProfile,
     private val onBeltFound: (String) -> Unit,
-    private val profile: BeltLinkProfile = BeltLinkProfile(),
 ) : BeltGattEvents {
     private val handler = Handler(Looper.getMainLooper())
     private val adapter: BluetoothAdapter? = context.getSystemService(BluetoothManager::class.java)?.adapter
@@ -293,7 +293,7 @@ class BeltLink(
 
     private fun mayReplaceCurrentAttempt(): Boolean = mayReplaceAttempt(attempt, reporter.up, directDeadlineMs != null)
 
-    // Commands ride only on the encrypted, subscribed link; before that the setup queue owns the GATT.
+    // Control writes ride only on the encrypted, subscribed link; before that the setup queue owns the GATT.
     private fun withStreamingGatt(action: (BeltGatt) -> Unit): Boolean {
         val current = gatt?.takeIf { reporter.up } ?: return false
         action(current)

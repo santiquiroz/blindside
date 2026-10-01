@@ -20,3 +20,4 @@ include(":radar-core")
 include(":android-shared")
 // Plan 03 creates wear-app in parallel; including a missing directory breaks the build.
 if (file("wear-app/build.gradle.kts").exists()) include(":wear-app")
+include(":phone-app")

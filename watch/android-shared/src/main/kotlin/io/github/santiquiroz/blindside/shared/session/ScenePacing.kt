@@ -12,3 +12,9 @@ fun scenePeriodMs(radarVisible: Boolean, mode: ScreenMode, ambient: Boolean): Lo
     mode == ScreenMode.VISTA -> VISTA_FRAME_MS
     else -> SIGILO_FRAME_MS
 }
+
+// A host with its own frame rate (the phone) keeps the same rule: no scenes off screen or in ambient.
+fun pacedPeriodMs(framePeriodMs: Long?, radarVisible: Boolean, mode: ScreenMode, ambient: Boolean): Long? {
+    val screenPeriod = scenePeriodMs(radarVisible, mode, ambient) ?: return null
+    return framePeriodMs ?: screenPeriod
+}

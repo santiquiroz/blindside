@@ -61,4 +61,12 @@ class SessionStoreTest {
         assertEquals("a.bsrec", activeRecordingName(SessionUiState(running = true, recordingName = "a.bsrec")))
         assertNull(activeRecordingName(SessionUiState(running = false, recordingName = "a.bsrec")))
     }
+
+    @Test
+    fun `a started session remembers its purpose and stopping forgets it`() {
+        val diagnostic = startedState(SessionUiState(), SessionSource.BELT, SessionPurpose.DIAGNOSTIC)
+        assertEquals(SessionPurpose.DIAGNOSTIC, diagnostic.purpose)
+        assertEquals(SessionPurpose.GAME, startedState(SessionUiState(), SessionSource.BELT).purpose)
+        assertNull(stoppedState(diagnostic).purpose)
+    }
 }

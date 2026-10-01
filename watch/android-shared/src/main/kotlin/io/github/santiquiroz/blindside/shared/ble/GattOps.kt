@@ -28,13 +28,14 @@ const val GATT_OP_TIMEOUT_MS = 5_000L
 val BOND_FAILURE_STATUSES: Set<Int> = setOf(5, 15, 137)
 
 // The role write needs the encrypted link the info read sets up, and goes before the subscription so the belt applies the role's connection parameters before it streams.
-fun setupOpsAfterDiscovery(profile: BeltLinkProfile = BeltLinkProfile()): List<GattOp> =
-    listOf(
-        GattOp.RequestMtu(REQUESTED_MTU),
-        GattOp.ReadInfo,
-        GattOp.WriteCommand(BeltCommand.SetRole(profile.role)),
-        GattOp.EnableStreamNotify,
-    ) + sessionOps(profile.activatesSession)
+// A diagnostic link writes 04 00: the belt keeps a bond's session flag across disconnections, so a stale 1 would block IDENTIFY silently.
+fun setupOpsAfterDiscovery(profile: BeltLinkProfile): List<GattOp> = listOf(
+    GattOp.RequestMtu(REQUESTED_MTU),
+    GattOp.ReadInfo,
+    GattOp.WriteCommand(BeltCommand.SetRole(profile.role)),
+    GattOp.EnableStreamNotify,
+    GattOp.WriteSessionActive(profile.activatesSession),
+)
 
 // Spec §5.2: the info read is the first encrypted operation, so it may sit behind the passkey dialog for the whole window.
 fun timeoutMsFor(op: GattOp): Long = when (op) {
@@ -72,9 +73,6 @@ private fun endsSetupOnFailure(op: GattOp, status: Int): Boolean =
 
 private fun isBondFailureOnInfo(op: GattOp, status: Int): Boolean = op == GattOp.ReadInfo && status in BOND_FAILURE_STATUSES
 
-private fun sessionOps(activatesSession: Boolean): List<GattOp> =
-    if (activatesSession) listOf(GattOp.WriteSessionActive(true)) else emptyList()
-
-// Without a session write nothing else settles the link, so the subscription that brings it up also lowers its priority.
+// Only 04 01 settles the link, so a link that never activates a session settles once the subscription brings it up.
 private fun linkUpEffects(profile: BeltLinkProfile): List<SetupEffect> =
     if (profile.activatesSession) listOf(SetupEffect.REPORT_LINK_UP) else listOf(SetupEffect.REPORT_LINK_UP, SetupEffect.LOWER_PRIORITY)

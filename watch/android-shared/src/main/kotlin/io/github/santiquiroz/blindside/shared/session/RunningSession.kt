@@ -9,6 +9,7 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import io.github.santiquiroz.blindside.core.RadarPipeline
 import io.github.santiquiroz.blindside.core.alerts.ContactAlert
+import io.github.santiquiroz.blindside.core.scene.RadarScene
 import io.github.santiquiroz.blindside.shared.ble.BeltCommand
 import io.github.santiquiroz.blindside.shared.ble.BeltLink
 import io.github.santiquiroz.blindside.shared.demo.DemoSource
@@ -18,6 +19,7 @@ import io.github.santiquiroz.blindside.shared.haptics.dndMaySilenceNow
 import io.github.santiquiroz.blindside.shared.haptics.millisUntil
 import io.github.santiquiroz.blindside.shared.permissions.PERMISSION_ACTIVITY_RECOGNITION
 import io.github.santiquiroz.blindside.shared.recording.InfoHeaderSink
+import io.github.santiquiroz.blindside.shared.recording.NoOpRecordSink
 import io.github.santiquiroz.blindside.shared.recording.RecordSink
 import io.github.santiquiroz.blindside.shared.recording.RecordingMeta
 import io.github.santiquiroz.blindside.shared.recording.SessionClockStamp
@@ -36,6 +38,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -60,6 +63,7 @@ class RunningSession(
     private val scope: CoroutineScope,
     private val useWakeLock: Boolean,
     private val host: SessionHost,
+    private val purpose: SessionPurpose = SessionPurpose.GAME,
 ) {
     private val pipelineDispatcher = Dispatchers.Default.limitedParallelism(1)
     private val inputs = Channel<SessionInput>(Channel.UNLIMITED)
@@ -67,19 +71,26 @@ class RunningSession(
     private val sensors = DeviceSensors(context.getSystemService(SensorManager::class.java), SensorInputs(inputs))
     private val loops = mutableListOf<Job>()
     private var consumer: Job? = null
+    private var startJob: Job? = null
     private var belt: BeltLink? = null
+    private var traits = SessionTraits(host.beltProfile)
 
     @Volatile
     private var screenMode = ScreenMode.SIGILO
 
-    suspend fun start() {
+    fun begin() {
+        startJob = scope.launch { start() }
+    }
+
+    private suspend fun start() {
         settings.update { it.forNewSession() }
         val initial = settings.current()
+        traits = host.traitsFor(context, purpose)
         flagDndRisk(initial)
         consumer = scope.launch(pipelineDispatcher) { consume(createEngine(initial)) }
         holdWakeLock()
         launchLoops()
-        startSensors()
+        if (traits.readsDeviceSensors) startSensors()
         startSource(initial)
     }
 
@@ -93,7 +104,13 @@ class RunningSession(
 
     fun openPairingWindow(): Boolean = belt?.send(BeltCommand.OpenPairingWindow) ?: false
 
+    fun send(command: BeltCommand): Boolean = belt?.send(command) ?: false
+
+    fun refreshInfo(): Boolean = belt?.refreshInfo() ?: false
+
+    // A stop that lands while start() still awaits the settings store cancels it there, before any link or loop exists.
     suspend fun stop() {
+        startJob?.cancelAndJoin()
         belt?.stop()
         sensors.stop()
         loops.forEach { it.cancel() }
@@ -112,17 +129,24 @@ class RunningSession(
 
     private fun createEngine(initial: AppSettings): SessionEngine {
         val startNanos = nowNanos()
-        val haptics = HapticPlayer.create(context, initial.vibrationUsage)
+        val player = HapticPlayer.create(context, initial.vibrationUsage)
+        val pipeline = RadarPipeline(toPipelineConfig(initial))
         return SessionEngine(
-            pipeline = RadarPipelineAdapter(RadarPipeline(toPipelineConfig(initial))),
-            records = openRecorder(initial, startNanos, haptics),
-            haptics = haptics,
-            scenes = SceneSink { scene -> SessionStore.update { it.copy(scene = scene) } },
+            pipeline = RadarPipelineAdapter(pipeline),
+            records = openRecorder(initial, startNanos, player),
+            haptics = hapticsFor(traits, player),
+            scenes = SceneSink { scene -> publish(scene, pipeline) },
             clock = NanoClock(::nowNanos),
             startNanos = startNanos,
             deferred = DeferredPlayback(::playLater),
             onError = { error -> Log.w(TAG, "session input failed", error) },
         )
+    }
+
+    // SceneSink runs on the pipeline thread inside the tick, so reading the counters cannot race a packet.
+    private fun publish(scene: RadarScene, pipeline: RadarPipeline) {
+        SessionStore.update { it.copy(scene = scene) }
+        host.onScene(pipeline.counters())
     }
 
     private fun playLater(alert: ContactAlert, atNanos: Long) {
@@ -133,8 +157,9 @@ class RunningSession(
     }
 
     private fun openRecorder(initial: AppSettings, startNanos: Long, haptics: HapticPlayer): RecordSink {
+        if (!traits.records) return NoOpRecordSink
         val stamp = SessionClockStamp(epochMs = System.currentTimeMillis(), elapsedNanos = startNanos)
-        val name = recordingFileName(stamp.epochMs, ZoneId.systemDefault(), source.name)
+        val name = recordingFileName(stamp.epochMs, ZoneId.systemDefault(), recordingTagFor(traits, source))
         val meta = recordingMeta(
             initial, source.name, stamp, Build.MODEL, host.appVersion,
             haptics.hasAmplitudeControl(), haptics.supportsPrimitives(),
@@ -173,7 +198,7 @@ class RunningSession(
 
     private suspend fun tickScenes() {
         while (currentCoroutineContext().isActive) {
-            val period = scenePeriodMs(SessionStore.radarVisible.value, screenMode, SessionStore.ambient.value)
+            val period = pacedPeriodMs(traits.framePeriodMs, SessionStore.radarVisible.value, screenMode, SessionStore.ambient.value)
             if (period != null) inputs.trySend(SessionInput.Tick(nowNanos()))
             delay(period ?: IDLE_TICK_POLL_MS)
         }
@@ -214,7 +239,8 @@ class RunningSession(
     }
 
     private fun startBelt(savedAddress: String?) {
-        belt = BeltLink(context, BeltInputs(inputs), onBeltFound = ::rememberBelt, profile = host.beltProfile).also { it.start(savedAddress) }
+        val listener = host.beltListener(BeltInputs(inputs))
+        belt = BeltLink(context, listener, traits.link, onBeltFound = ::rememberBelt).also { it.start(savedAddress) }
     }
 
     private fun rememberBelt(address: String) {

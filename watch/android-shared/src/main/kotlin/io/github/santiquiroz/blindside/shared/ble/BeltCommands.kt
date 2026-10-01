@@ -13,14 +13,12 @@ enum class LinkPriority { HIGH, BALANCED }
 
 data class BeltLinkProfile(val role: BeltRole = BeltRole.WATCH, val activatesSession: Boolean = true)
 
-private const val CMD_RESTART_RADAR: Byte = 0x01
-private const val CMD_IDENTIFY: Byte = 0x03
 private const val CMD_SET_ROLE: Byte = 0x06
 private const val CMD_OPEN_PAIRING_WINDOW: Byte = 0x05
 
 fun commandBytes(command: BeltCommand): ByteArray = when (command) {
-    is BeltCommand.RestartRadar -> byteArrayOf(CMD_RESTART_RADAR, command.radarId.toByte())
-    BeltCommand.Identify -> byteArrayOf(CMD_IDENTIFY)
+    is BeltCommand.RestartRadar -> restartRadarCommand(command.radarId)
+    BeltCommand.Identify -> identifyCommand()
     is BeltCommand.SetRole -> byteArrayOf(CMD_SET_ROLE, command.role.code.toByte())
     BeltCommand.OpenPairingWindow -> byteArrayOf(CMD_OPEN_PAIRING_WINDOW)
 }

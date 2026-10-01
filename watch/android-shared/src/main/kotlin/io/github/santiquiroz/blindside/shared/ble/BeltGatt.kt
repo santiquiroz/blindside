@@ -34,7 +34,7 @@ class BeltGatt(
     val device: BluetoothDevice,
     private val handler: Handler,
     private val events: BeltGattEvents,
-    private val profile: BeltLinkProfile = BeltLinkProfile(),
+    private val profile: BeltLinkProfile,
 ) {
     @Volatile private var gatt: BluetoothGatt? = null
     private var queue = OpQueue()
