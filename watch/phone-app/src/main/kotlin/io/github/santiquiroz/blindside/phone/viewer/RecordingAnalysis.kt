@@ -55,8 +55,9 @@ fun analyzeRecording(headerJson: String, records: Sequence<BsrecRecord>, sampleE
 }
 
 // Any failure inside a damaged file is the file's fault: it ends in Failed, never in a crash of the viewer.
-fun analyzeFile(file: File, onProgress: (Float) -> Unit): AnalysisState = try {
-    CountingInputStream(BufferedInputStream(FileInputStream(file))).use { analyzeStream(it, file.length(), onProgress) }
+// checkpoint runs before every record, so a cancelled caller stops a 5 h file there instead of at its end.
+fun analyzeFile(file: File, checkpoint: () -> Unit = {}, onProgress: (Float) -> Unit): AnalysisState = try {
+    CountingInputStream(BufferedInputStream(FileInputStream(file))).use { analyzeStream(it, file.length(), onProgress, checkpoint) }
 } catch (error: CancellationException) {
     throw error
 } catch (error: IOException) {
@@ -76,10 +77,13 @@ fun percentOf(read: Long, total: Long): Int = (read * 100 / total.coerceAtLeast(
 fun nextSampleAfterSkip(nextSampleMs: Long, recordMs: Long): Long = maxOf(nextSampleMs, recordMs - MAX_SAMPLED_GAP_MS)
 
 // A header can never be longer than the file that holds it.
-private fun analyzeStream(counting: CountingInputStream, totalBytes: Long, onProgress: (Float) -> Unit): AnalysisState {
+private fun analyzeStream(counting: CountingInputStream, totalBytes: Long, onProgress: (Float) -> Unit, checkpoint: () -> Unit): AnalysisState {
     val reader = BsrecReader(counting, maxHeaderBytes = minOf(totalBytes, MAX_BSREC_HEADER_BYTES))
     val progress = ProgressReporter(totalBytes, onProgress)
-    val records = reader.records().onEach { progress.report(counting.count) }
+    val records = reader.records().onEach {
+        checkpoint()
+        progress.report(counting.count)
+    }
     return AnalysisState.Done(analyzeRecording(reader.headerJson, records))
 }
 

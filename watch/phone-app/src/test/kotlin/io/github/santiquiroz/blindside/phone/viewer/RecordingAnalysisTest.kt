@@ -7,8 +7,10 @@ import io.github.santiquiroz.blindside.core.replay.RecordType
 import io.github.santiquiroz.blindside.core.scene.MotionState
 import io.github.santiquiroz.blindside.core.scene.RadarScene
 import io.github.santiquiroz.blindside.core.sim.Scenarios
+import kotlinx.coroutines.CancellationException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTimeoutPreemptively
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -81,6 +83,17 @@ class RecordingAnalysisTest {
         analyzeFile(file) { seen += it }
         assertEquals(1f, seen.last())
         assertEquals(seen.sorted(), seen)
+    }
+
+    @Test
+    fun `a refused checkpoint stops the analysis at that record instead of reading to the end`(@TempDir dir: File) {
+        val file = File(dir, "ok.bsrec").apply { writeBytes(recordingBytes(headerFor(scenario), records)) }
+        var checks = 0
+        assertThrows(CancellationException::class.java) {
+            analyzeFile(file, checkpoint = { if (++checks > 10) throw CancellationException("left the Visor") }) {}
+        }
+        assertEquals(11, checks)
+        assertTrue(records.size > checks)
     }
 
     @Test

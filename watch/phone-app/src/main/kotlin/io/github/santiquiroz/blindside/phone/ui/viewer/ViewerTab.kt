@@ -17,11 +17,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.santiquiroz.blindside.phone.recordings.RecordingsRepository
 import io.github.santiquiroz.blindside.phone.recordings.recordingTitle
 import io.github.santiquiroz.blindside.phone.ui.common.EmptyState
@@ -29,27 +30,31 @@ import io.github.santiquiroz.blindside.phone.ui.common.NumberText
 import io.github.santiquiroz.blindside.phone.ui.common.SectionCard
 import io.github.santiquiroz.blindside.phone.ui.common.formatPercent
 import io.github.santiquiroz.blindside.phone.ui.theme.Text2Color
+import io.github.santiquiroz.blindside.phone.viewer.AnalysisCache
 import io.github.santiquiroz.blindside.phone.viewer.AnalysisState
 import io.github.santiquiroz.blindside.phone.viewer.RecordingAnalysis
 import io.github.santiquiroz.blindside.phone.viewer.SummaryRow
-import io.github.santiquiroz.blindside.phone.viewer.analyzeFile
 import io.github.santiquiroz.blindside.phone.viewer.summaryRows
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.plus
 import java.io.File
 
 private const val VIEWER_EMPTY_TEXT = "Elige una grabación para verla aquí: reproducción, mapa de calor y resumen."
 
+// Lives above the tab switcher, so an analysis keeps running and stays cached while another tab is shown.
 @Composable
-fun ViewerTab(name: String?, repository: RecordingsRepository, onPickRecording: () -> Unit) {
+fun rememberAnalysisCache(): AnalysisCache {
+    val scope = rememberCoroutineScope()
+    return remember(scope) { AnalysisCache(scope + viewerDispatcher) }
+}
+
+@Composable
+fun ViewerTab(name: String?, repository: RecordingsRepository, analyses: AnalysisCache, onPickRecording: () -> Unit) {
     val file = remember(name) { name?.let(repository::file) }
     if (file == null) {
         EmptyState(VIEWER_EMPTY_TEXT, "Ver grabaciones", Icons.Filled.Insights, onPickRecording)
         return
     }
-    val analysis by produceState<AnalysisState>(AnalysisState.Running(0f), file) {
-        value = withContext(Dispatchers.Default) { analyzeFile(file) { progress -> value = AnalysisState.Running(progress) } }
-    }
+    val analysis by remember(file) { analyses.analysisOf(file) }.collectAsStateWithLifecycle()
     when (val current = analysis) {
         is AnalysisState.Running -> AnalysisProgress(current.progress)
         is AnalysisState.Failed -> EmptyState("No se pudo abrir: ${current.reason}.", "Volver a grabaciones", Icons.Filled.ErrorOutline, onPickRecording)

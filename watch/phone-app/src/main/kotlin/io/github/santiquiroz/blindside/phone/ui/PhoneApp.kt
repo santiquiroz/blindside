@@ -40,6 +40,8 @@ import io.github.santiquiroz.blindside.phone.ui.radar.RadarTab
 import io.github.santiquiroz.blindside.phone.ui.recordings.RecordingsTab
 import io.github.santiquiroz.blindside.phone.ui.theme.rememberMotionDurationMs
 import io.github.santiquiroz.blindside.phone.ui.viewer.ViewerTab
+import io.github.santiquiroz.blindside.phone.ui.viewer.rememberAnalysisCache
+import io.github.santiquiroz.blindside.phone.viewer.AnalysisCache
 import io.github.santiquiroz.blindside.shared.permissions.bluetoothGranted
 import io.github.santiquiroz.blindside.shared.session.SessionStore
 import io.github.santiquiroz.blindside.shared.session.activeRecordingName
@@ -55,6 +57,7 @@ fun PhoneApp(deps: PhoneDeps) {
     val state = collectPhoneUiState(deps, bluetoothBlocked)
     val actions = rememberPhoneActions(deps, onBluetoothBlocked = { bluetoothBlocked = it })
     var nav by rememberSaveable(stateSaver = PHONE_NAV_SAVER) { mutableStateOf(PhoneNav()) }
+    val analyses = rememberAnalysisCache()
     ReportSceneVisibility(sceneWanted(nav.tab))
     RememberLinkSupport(deps, state.phone.infoJson)
     BridgeWhileOpen(deps)
@@ -62,7 +65,7 @@ fun PhoneApp(deps: PhoneDeps) {
     BackHandler(enabled = backFrom(nav) != null) { backFrom(nav)?.let { nav = it } }
     Scaffold(bottomBar = { PhoneNavigationBar(nav.tab) { nav = selectTab(nav, it) } }) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
-            TabContent(nav, state, actions, deps) { nav = it }
+            TabContent(nav, state, actions, deps, analyses) { nav = it }
         }
     }
 }
@@ -78,7 +81,7 @@ private fun collectPhoneUiState(deps: PhoneDeps, bluetoothBlocked: Boolean): Pho
 }
 
 @Composable
-private fun TabContent(nav: PhoneNav, state: PhoneUiState, actions: PhoneActions, deps: PhoneDeps, onNav: (PhoneNav) -> Unit) {
+private fun TabContent(nav: PhoneNav, state: PhoneUiState, actions: PhoneActions, deps: PhoneDeps, analyses: AnalysisCache, onNav: (PhoneNav) -> Unit) {
     val fadeMs = rememberMotionDurationMs(TAB_FADE_MS)
     Crossfade(targetState = nav.tab, animationSpec = tween(fadeMs), label = "tab") { tab ->
         when (tab) {
@@ -90,7 +93,7 @@ private fun TabContent(nav: PhoneNav, state: PhoneUiState, actions: PhoneActions
                 onOpen = { onNav(openRecording(nav, it)) },
                 onDeleted = { onNav(afterDelete(nav, it)) },
             )
-            PhoneTab.VIEWER -> ViewerTab(nav.viewing, deps.recordings, onPickRecording = { onNav(selectTab(nav, PhoneTab.RECORDINGS)) })
+            PhoneTab.VIEWER -> ViewerTab(nav.viewing, deps.recordings, analyses, onPickRecording = { onNav(selectTab(nav, PhoneTab.RECORDINGS)) })
             PhoneTab.BELT -> BeltTab(state, actions, deps.bridge)
         }
     }

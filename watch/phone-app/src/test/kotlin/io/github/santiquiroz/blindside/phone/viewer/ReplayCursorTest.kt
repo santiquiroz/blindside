@@ -1,8 +1,10 @@
 package io.github.santiquiroz.blindside.phone.viewer
 
 import io.github.santiquiroz.blindside.core.sim.Scenarios
+import kotlinx.coroutines.CancellationException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.io.ByteArrayInputStream
@@ -12,6 +14,27 @@ class ReplayCursorTest {
     private val bytes = recordingBytes(headerFor(scenario), simulatedRecords(scenario))
 
     private fun cursor() = ReplayCursor { ByteArrayInputStream(bytes) }
+
+    private fun cancelledAfter(records: Int): () -> Unit {
+        var left = records
+        return { if (left-- == 0) throw CancellationException("left the Visor") }
+    }
+
+    @Test
+    fun `a seek cancelled midway loses no record and the next seek resumes from there`() {
+        val interrupted = cursor()
+        assertThrows(CancellationException::class.java) { interrupted.seekTo(6_000, cancelledAfter(40)) }
+        assertTrue(interrupted.positionMs < 6_000)
+        assertEquals(cursor().seekTo(6_000), interrupted.seekTo(6_000))
+    }
+
+    @Test
+    fun `a backward seek cancelled midway still lands on the right scene afterwards`() {
+        val interrupted = cursor()
+        interrupted.seekTo(7_000)
+        assertThrows(CancellationException::class.java) { interrupted.seekTo(4_000, cancelledAfter(10)) }
+        assertEquals(cursor().seekTo(4_000), interrupted.seekTo(4_000))
+    }
 
     @Test
     fun `seeking back shows exactly what a fresh replay shows at that time`() {

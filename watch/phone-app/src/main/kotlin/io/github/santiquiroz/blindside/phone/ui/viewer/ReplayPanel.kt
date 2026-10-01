@@ -21,7 +21,6 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,8 +46,10 @@ import io.github.santiquiroz.blindside.phone.viewer.advanced
 import io.github.santiquiroz.blindside.phone.viewer.seekedTo
 import io.github.santiquiroz.blindside.phone.viewer.toggledPlay
 import io.github.santiquiroz.blindside.phone.viewer.withSpeed
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.withContext
 import java.io.BufferedInputStream
@@ -59,31 +60,29 @@ private val PLAY_BUTTON_SIZE = 64.dp
 private val PLAY_ICON_SIZE = 32.dp
 private const val MIN_SLIDER_RANGE = 1f
 
-@OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 fun ReplayPanel(file: File, durationMs: Long) {
-    val cursor = remember(file) { runCatching { ReplayCursor { BufferedInputStream(FileInputStream(file)) } }.getOrNull() }
-    if (cursor == null) {
-        Text("No se pudo abrir la reproducción de esta grabación.", color = AlertRedColor)
-        return
-    }
-    DisposableEffect(cursor) { onDispose { cursor.close() } }
     var playback by remember(file) { mutableStateOf(Playback(durationMs = durationMs)) }
     var scene by remember(file) { mutableStateOf<RadarScene?>(null) }
     var seeking by remember(file) { mutableStateOf(false) }
-    val replayThread = remember { Dispatchers.Default.limitedParallelism(1) }
-    LaunchedEffect(cursor) {
-        var shownMs = 0L
-        // Conflating keeps only the newest position, so a long scrub never queues a pile of slow backward seeks.
-        snapshotFlow { playback.positionMs }.conflate().collect { target ->
-            seeking = target < shownMs
-            scene = withContext(replayThread) { runCatching { cursor.seekTo(target) }.getOrNull() } ?: scene
-            shownMs = target
-            seeking = false
+    var unavailable by remember(file) { mutableStateOf(false) }
+    // Opening, every seek and closing share the viewer thread, so closing can never pull the file from under a read.
+    LaunchedEffect(file) {
+        withContext(viewerDispatcher) {
+            val cursor = openCursorOrNull(file)
+            if (cursor == null) {
+                unavailable = true
+            } else {
+                cursor.use { followPositions(it, snapshotFlow { playback.positionMs }, onSeeking = { seeking = it }, onScene = { scene = it }) }
+            }
         }
     }
     LaunchedEffect(playback.playing) {
         if (playback.playing) runPlaybackClock(current = { playback }, update = { playback = it })
+    }
+    if (unavailable) {
+        Text("No se pudo abrir la reproducción de esta grabación.", color = AlertRedColor)
+        return
     }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Box(Modifier.fillMaxWidth().aspectRatio(1f)) {
@@ -93,6 +92,27 @@ fun ReplayPanel(file: File, durationMs: Long) {
         Transport(playback, onChange = { playback = it })
     }
 }
+
+private fun openCursorOrNull(file: File): ReplayCursor? =
+    runCatching { ReplayCursor { BufferedInputStream(FileInputStream(file)) } }.getOrNull()
+
+// Conflating keeps only the newest position, so a long scrub never queues a pile of slow backward seeks.
+private suspend fun followPositions(cursor: ReplayCursor, positions: Flow<Long>, onSeeking: (Boolean) -> Unit, onScene: (RadarScene) -> Unit) {
+    val context = currentCoroutineContext()
+    var shownMs = 0L
+    positions.conflate().collect { target ->
+        onSeeking(target < shownMs)
+        seekOrNull(cursor, target) { context.ensureActive() }?.let(onScene)
+        shownMs = target
+        onSeeking(false)
+    }
+}
+
+// A damaged stretch keeps the last good scene; cancellation still escapes at the next record.
+private fun seekOrNull(cursor: ReplayCursor, targetMs: Long, checkpoint: () -> Unit): RadarScene? =
+    runCatching { cursor.seekTo(targetMs, checkpoint) }
+        .onFailure { if (it is CancellationException) throw it }
+        .getOrNull()
 
 private suspend fun runPlaybackClock(current: () -> Playback, update: (Playback) -> Unit) {
     var lastFrameMs = withFrameMillis { it }
