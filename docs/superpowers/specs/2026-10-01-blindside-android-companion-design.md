@@ -160,11 +160,44 @@ Que el reloj y el celular (Galaxy S25 Ultra) **funcionen a la vez o cada uno por
 
 Si algún paso no se puede automatizar, se documenta en la lista de verificación para Santiago y no bloquea las fusiones que ya pasaron las pruebas y la regresión del reloj.
 
-## 8. Fuera de alcance
+## 8. Pasada de fluidez, postura automática y HUD táctico (post-fase-2, decidido el 1-oct)
+
+Se implementa **después** de fusionar la fase 2, en un solo plan de "pasada del reloj", porque toca `wear-app` y `android-shared`, que la fase 2 aún está escribiendo. Toda la lógica pura (suavizados, zonas de pantalla, formato) vive en `android-shared` con pruebas JVM; `wear-app` solo dibuja y lee sensores.
+
+### 8.1 Fluidez
+
+- **Brújula:** el sensor sube de `SENSOR_DELAY_UI` a `SENSOR_DELAY_GAME` (~50 Hz). El anillo se anima por cuadro (60 fps) acercándose al rumbo objetivo con el pasabajos circular que ya existe, en vez de saltar por muestra. El anillo se dibuja una vez y se rota con `graphicsLayer`, sin recomponer.
+- **Contactos:** se interpolan entre los cuadros de 10 Hz del cinturón (posición previa → nueva), y al girar el cuerpo el giroscopio del reloj rota la escena de inmediato sin esperar al cinturón.
+- **Medición:** `adb shell dumpsys gfxinfo` en modo demo antes y después; se registran los cuadros perdidos.
+
+### 8.2 Postura automática
+
+- Ajustes → "Calibrar postura táctica": 3 s sosteniendo la réplica guardan una plantilla del vector de gravedad del reloj (sirve para cualquier agarre y cualquier jugador).
+- Detección con histéresis: entra a táctica si el ángulo contra la plantilla es < 25° por 0,4 s; vuelve a normal si supera 35°.
+- Ajustes → Postura: "Automática" (por defecto), "Normal", "Táctica izquierda", "Táctica derecha".
+- Gira **solo el radar** (anillo, ventanita, contactos), nunca la pantalla del sistema.
+
+### 8.3 HUD táctico
+
+Nada de esto tapa la zona de contactos; todo va en el bisel o en la mitad trasera del abanico.
+
+- **Ventanita del bisel** (donde va el rumbo): rota su contenido cada pocos segundos entre rumbo, hora y tiempo de partida. Un toque corto fija lo que se ve.
+- **Reloj de partida:** arranca con "Iniciar radar"; duración configurable (1 h, 5 h…). Cuenta regresiva en los últimos minutos; pulso de vibración a los 5 min restantes y al terminar.
+- **Puntos tácticos:** toque largo sobre el radar marca base / reaparición / objetivo con el GPS (del reloj; si no hay, del celular por el puente). Cada punto es una cuña de color en el anillo de la brújula que apunta a su dirección real, con la distancia en metros. Como el anillo gira con el norte, la cuña siempre apunta bien.
+- **Avisos contextuales:** una línea breve en la mitad trasera, 4 s, de a uno, solo cuando aplican: batería baja (reloj / celular / cinturón), hidratación cada 45 min, atardecer próximo, enlace del cinturón caído. En Sigilo solo vibran los críticos.
+- **Vistazo con un toque:** tocar el centro muestra 3 s un panel de tarjetas (hora y tiempo de partida, pulso, pasos y distancia, las tres baterías) y se oculta solo.
+
+Reglas transversales: números en JetBrains Mono, disciplina de luz (nada de fondos blancos), en Sigilo la pantalla sigue apagada por defecto.
+
+### 8.4 Quitar el modo "eliminado"
+
+Se retira el chip "ME DIERON" / "REAPARECÍ" del radar, su ajuste persistido y el toggle de sesión (causaba ruido visual y poco uso). `SessionMode.ELIMINATED` se conserva solo para leer grabaciones `.bsrec` anteriores; no se emiten nuevas.
+
+## 9. Fuera de alcance
 
 - GPS del celular en las grabaciones.
 - IMU del torso desde el celular.
-- Postura automática.
-- Equipo e IFF.
+- Equipo e IFF (balizas de equipo, amigo-enemigo con UWB/RTT): fase siguiente, con consentimiento de todos los jugadores inscritos.
+- Detección de rivales por RF pasiva (sniffing de dispositivos ajenos): descartado por privacidad.
 
 Todo eso pasa a la fase siguiente del roadmap.
