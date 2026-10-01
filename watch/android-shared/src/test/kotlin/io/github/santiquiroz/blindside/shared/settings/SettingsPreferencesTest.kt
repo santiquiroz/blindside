@@ -33,6 +33,7 @@ class SettingsPreferencesTest {
             posture = WatchPosture.TACTICAL_RIGHT,
             autoStartRadar = false,
             sharedUpdatedMs = 1_727_790_153_123L,
+            contactColor = ContactColor.RED,
         )
         val prefs = mutablePreferencesOf()
         writeSettings(prefs, original)

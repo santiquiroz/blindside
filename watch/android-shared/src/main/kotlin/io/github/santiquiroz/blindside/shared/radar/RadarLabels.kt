@@ -57,3 +57,14 @@ fun statusItems(scene: RadarScene?, watchSteps: Boolean): List<StatusItem> = lis
 fun eliminatedActionLabel(eliminated: Boolean): String = if (eliminated) "REAPARECÍ" else "ME DIERON"
 
 private fun isAlive(sensors: List<SensorStatus>?, id: Int): Boolean = sensors?.firstOrNull { it.id == id }?.alive == true
+
+enum class StatusMark { FILLED, HOLLOW }
+
+private const val SHORT_STATUS_LABEL = 3
+
+// Colour is never the only signal (spec §6), so each chip also carries a filled or hollow dot.
+fun statusMark(item: StatusItem): StatusMark = if (item.ok) StatusMark.FILLED else StatusMark.HOLLOW
+
+// The round screen narrows at the bottom: long labels such as "SIN PASOS" go on their own row.
+fun statusRows(items: List<StatusItem>): List<List<StatusItem>> =
+    items.partition { it.label.length <= SHORT_STATUS_LABEL }.toList().filter { it.isNotEmpty() }

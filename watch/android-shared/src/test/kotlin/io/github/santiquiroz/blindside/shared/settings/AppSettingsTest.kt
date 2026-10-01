@@ -56,4 +56,11 @@ class AppSettingsTest {
         assertEquals(VibrationUsage.NOTIFICATION, toggledUsage(VibrationUsage.ALARM))
         assertEquals(VibrationUsage.ALARM, toggledUsage(VibrationUsage.NOTIFICATION))
     }
+
+    @Test
+    fun `contacts are green by default and the colour toggles with red`() {
+        assertEquals(ContactColor.GREEN, AppSettings().contactColor)
+        assertEquals(ContactColor.RED, toggledContactColor(ContactColor.GREEN))
+        assertEquals(ContactColor.GREEN, toggledContactColor(ContactColor.RED))
+    }
 }

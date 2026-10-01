@@ -22,6 +22,7 @@ import io.github.santiquiroz.blindside.shared.settings.effectiveYawDeg
 import io.github.santiquiroz.blindside.shared.settings.nextHandedness
 import io.github.santiquiroz.blindside.shared.settings.nextPosture
 import io.github.santiquiroz.blindside.shared.settings.radar
+import io.github.santiquiroz.blindside.shared.settings.toggledContactColor
 import io.github.santiquiroz.blindside.shared.settings.toggledScreenMode
 import io.github.santiquiroz.blindside.shared.settings.toggledUsage
 import io.github.santiquiroz.blindside.shared.settings.withFlipXToggled
@@ -44,6 +45,7 @@ fun SettingsScreen(
         item { SettingChip("Mano", handednessLabel(settings.handedness)) { onUpdate { it.withHandedness(nextHandedness(it.handedness)) } } }
         item { SettingChip("Postura del reloj", postureLabel(settings.posture)) { onUpdate { it.copy(posture = nextPosture(it.posture)) } } }
         item { SettingChip("Pantalla", screenModeLabel(settings.screenMode)) { onUpdate { it.copy(screenMode = toggledScreenMode(it.screenMode)) } } }
+        item { SettingChip("Color de contactos", contactColorLabel(settings.contactColor)) { onUpdate { it.copy(contactColor = toggledContactColor(it.contactColor)) } } }
         item { SettingChip("Vibración", usageLabel(settings.vibrationUsage)) { onUpdate { it.copy(vibrationUsage = toggledUsage(it.vibrationUsage)) } } }
         item { NavChip(VIBRATION_TEST_LABEL) { onNavigate(ROUTE_PRACTICE) } }
         DEFAULT_RADARS.forEach { radarItems(settings, it.radarId, onUpdate) }

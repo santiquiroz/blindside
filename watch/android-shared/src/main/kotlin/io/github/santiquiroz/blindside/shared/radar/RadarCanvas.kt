@@ -45,13 +45,18 @@ private fun DrawScope.drawSectorArc(origin: PointPx, radius: Float, sector: Sect
 }
 
 private fun DrawScope.drawBlip(blip: BlipDraw, radius: Float, colors: RadarColors) {
-    val color = colors.contact.copy(alpha = blip.alpha)
+    val color = toneColor(contactTone(blip.style), colors).copy(alpha = blip.alpha)
     val center = Offset(blip.center.x, blip.center.y)
     when (blip.style) {
         BlipStyle.FILLED -> drawCircle(color, radius, center)
         BlipStyle.OUTLINE -> drawCircle(color, radius, center, style = Stroke(width = BLIP_STROKE_PX))
         BlipStyle.DASHED -> drawCircle(color, radius, center, style = Stroke(width = BLIP_STROKE_PX, pathEffect = DASHED))
     }
+}
+
+private fun toneColor(tone: ContactTone, colors: RadarColors): Color = when (tone) {
+    ContactTone.FULL -> colors.contact
+    ContactTone.DIM -> colors.contactDim
 }
 
 private fun DrawScope.drawEdgeMarker(marker: EdgeMarkerDraw, colors: RadarColors) {

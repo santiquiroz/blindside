@@ -3,6 +3,7 @@ package io.github.santiquiroz.blindside.wear.ui
 import io.github.santiquiroz.blindside.core.scene.Side
 import io.github.santiquiroz.blindside.wear.practice.QuizAnswer
 import io.github.santiquiroz.blindside.wear.practice.QuizState
+import io.github.santiquiroz.blindside.shared.settings.ContactColor
 import io.github.santiquiroz.blindside.shared.settings.WatchPosture
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -48,5 +49,11 @@ class LabelsTest {
         assertEquals("Normal", postureLabel(WatchPosture.NORMAL))
         assertEquals("Táctica izquierda (+90°)", postureLabel(WatchPosture.TACTICAL_LEFT))
         assertEquals("Táctica derecha (-90°)", postureLabel(WatchPosture.TACTICAL_RIGHT))
+    }
+
+    @Test
+    fun `contact colour labels name the colour`() {
+        assertEquals("Verde", contactColorLabel(ContactColor.GREEN))
+        assertEquals("Rojo", contactColorLabel(ContactColor.RED))
     }
 }

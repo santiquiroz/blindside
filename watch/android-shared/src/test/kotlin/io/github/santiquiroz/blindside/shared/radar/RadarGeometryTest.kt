@@ -115,4 +115,11 @@ class RadarGeometryTest {
         assertFalse(showContacts(scene(emptyList(), eliminated = true), ambient = false))
         assertFalse(showContacts(scene(emptyList()), ambient = true))
     }
+
+    @Test
+    fun `coasting contacts use the dim tone`() {
+        assertEquals(ContactTone.FULL, contactTone(BlipStyle.FILLED))
+        assertEquals(ContactTone.FULL, contactTone(BlipStyle.OUTLINE))
+        assertEquals(ContactTone.DIM, contactTone(BlipStyle.DASHED))
+    }
 }

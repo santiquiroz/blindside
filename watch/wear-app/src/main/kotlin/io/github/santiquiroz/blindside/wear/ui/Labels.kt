@@ -17,6 +17,7 @@ import io.github.santiquiroz.blindside.shared.session.SessionSource
 import io.github.santiquiroz.blindside.shared.session.SessionUiState
 import io.github.santiquiroz.blindside.shared.session.StartError
 import io.github.santiquiroz.blindside.core.config.RADAR_A
+import io.github.santiquiroz.blindside.shared.settings.ContactColor
 import io.github.santiquiroz.blindside.shared.settings.ScreenMode
 import io.github.santiquiroz.blindside.shared.settings.VibrationUsage
 import io.github.santiquiroz.blindside.shared.settings.WatchPosture
@@ -119,6 +120,11 @@ fun postureLabel(posture: WatchPosture): String = when (posture) {
 fun usageLabel(usage: VibrationUsage): String = when (usage) {
     VibrationUsage.ALARM -> "Alarma"
     VibrationUsage.NOTIFICATION -> "Notificación"
+}
+
+fun contactColorLabel(color: ContactColor): String = when (color) {
+    ContactColor.GREEN -> "Verde"
+    ContactColor.RED -> "Rojo"
 }
 
 fun radarName(radarId: Int): String = if (radarId == RADAR_A) "Radar A (izq.)" else "Radar B (der.)"

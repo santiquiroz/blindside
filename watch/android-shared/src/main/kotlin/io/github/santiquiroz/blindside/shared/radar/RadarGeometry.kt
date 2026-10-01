@@ -75,6 +75,11 @@ fun blipStyle(confidence: Confidence): BlipStyle = when (confidence) {
     Confidence.COASTING -> BlipStyle.DASHED
 }
 
+enum class ContactTone { FULL, DIM }
+
+// Spec §6: accent-dim marks contacts kept alive without a fresh measurement.
+fun contactTone(style: BlipStyle): ContactTone = if (style == BlipStyle.DASHED) ContactTone.DIM else ContactTone.FULL
+
 fun blipAlpha(ageMs: Long): Float = (1.0 - ageMs / FULL_FADE_MS).toFloat().coerceIn(MIN_BLIP_ALPHA, 1f)
 
 private fun sweepDeg(sector: CoverageSector): Double {

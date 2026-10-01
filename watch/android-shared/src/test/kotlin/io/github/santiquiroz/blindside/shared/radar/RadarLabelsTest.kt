@@ -94,4 +94,17 @@ class RadarLabelsTest {
         assertEquals("ME DIERON", eliminatedActionLabel(eliminated = false))
         assertEquals("REAPARECÍ", eliminatedActionLabel(eliminated = true))
     }
+
+    @Test
+    fun `status chips mark ok with a filled dot and faults with a hollow one`() {
+        assertEquals(StatusMark.FILLED, statusMark(StatusItem("BLE", ok = true)))
+        assertEquals(StatusMark.HOLLOW, statusMark(StatusItem("BLE", ok = false)))
+    }
+
+    @Test
+    fun `long status labels move to their own row`() {
+        val rows = statusRows(statusItems(scene(), watchSteps = false))
+        assertEquals(listOf(listOf("BLE", "R-A", "R-B", "I-A", "I-B"), listOf(NO_WATCH_STEPS_LABEL)), rows.map { row -> row.map { it.label } })
+        assertEquals(1, statusRows(statusItems(scene(), watchSteps = true)).size)
+    }
 }

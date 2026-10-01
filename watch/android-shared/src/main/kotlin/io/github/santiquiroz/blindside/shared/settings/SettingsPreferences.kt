@@ -17,6 +17,7 @@ internal object Keys {
     val POSTURE = stringPreferencesKey("watch_posture")
     val AUTO_START_RADAR = booleanPreferencesKey("auto_start_radar")
     val SHARED_UPDATED_MS = longPreferencesKey("shared_updated_ms")
+    val CONTACT_COLOR = stringPreferencesKey("contact_color")
 
     fun yaw(radarId: Int) = doublePreferencesKey("radar${radarId}_yaw_deg")
     fun flipX(radarId: Int) = booleanPreferencesKey("radar${radarId}_flip_x")
@@ -35,6 +36,7 @@ fun settingsFrom(prefs: Preferences): AppSettings {
         posture = enumOrDefault(prefs[Keys.POSTURE], defaults.posture),
         autoStartRadar = prefs[Keys.AUTO_START_RADAR] ?: defaults.autoStartRadar,
         sharedUpdatedMs = prefs[Keys.SHARED_UPDATED_MS] ?: defaults.sharedUpdatedMs,
+        contactColor = enumOrDefault(prefs[Keys.CONTACT_COLOR], defaults.contactColor),
     )
 }
 
@@ -46,6 +48,7 @@ fun writeSettings(prefs: MutablePreferences, settings: AppSettings) {
     prefs[Keys.POSTURE] = settings.posture.name
     prefs[Keys.AUTO_START_RADAR] = settings.autoStartRadar
     prefs[Keys.SHARED_UPDATED_MS] = settings.sharedUpdatedMs
+    prefs[Keys.CONTACT_COLOR] = settings.contactColor.name
     writeOptional(prefs, Keys.BELT_ADDRESS, settings.beltAddress)
     settings.radars.forEach { writeRadar(prefs, it) }
 }

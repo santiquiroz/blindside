@@ -8,6 +8,8 @@ enum class ScreenMode { SIGILO, VISTA }
 
 enum class VibrationUsage { ALARM, NOTIFICATION }
 
+enum class ContactColor { GREEN, RED }
+
 // Positive turns the drawing clockwise: +90° puts "arriba" at 3 o'clock, the fingers with the watch on the inside of the left wrist.
 enum class WatchPosture(val rotationDeg: Float) {
     NORMAL(0f),
@@ -32,6 +34,7 @@ data class AppSettings(
     val posture: WatchPosture = WatchPosture.NORMAL,
     val autoStartRadar: Boolean = true,
     val sharedUpdatedMs: Long = 0L,
+    val contactColor: ContactColor = ContactColor.GREEN,
 )
 
 typealias SettingsTransform = (AppSettings) -> AppSettings
@@ -72,3 +75,6 @@ fun toggledScreenMode(mode: ScreenMode): ScreenMode =
 
 fun toggledUsage(usage: VibrationUsage): VibrationUsage =
     if (usage == VibrationUsage.ALARM) VibrationUsage.NOTIFICATION else VibrationUsage.ALARM
+
+fun toggledContactColor(color: ContactColor): ContactColor =
+    if (color == ContactColor.GREEN) ContactColor.RED else ContactColor.GREEN
