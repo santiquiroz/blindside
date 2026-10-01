@@ -40,9 +40,8 @@ void print_link() {
 
 void print_sender() {
     SenderStats stats = stream_sender_stats();
-    Serial.printf(" tx[sent=%lu fail=%lu dropped=%lu skipped=%lu]\n", static_cast<unsigned long>(stats.packets_sent),
-                  static_cast<unsigned long>(stats.notify_failures), static_cast<unsigned long>(stats.dropped_total),
-                  static_cast<unsigned long>(stats.skipped_cuts));
+    Serial.printf(" tx[fail=%lu dropped=%lu skipped=%lu]\n", static_cast<unsigned long>(stats.notify_failures),
+                  static_cast<unsigned long>(stats.dropped_total), static_cast<unsigned long>(stats.skipped_cuts));
 }
 
 void report_imu_change(uint8_t imu_id, const ImuSnapshot& imu, uint32_t now_ms) {

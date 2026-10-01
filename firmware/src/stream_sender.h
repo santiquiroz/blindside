@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include "bundler.h"
+#include "link_fanout.h"
 
 struct SenderSources {
     QueueHandle_t radar_frames;
@@ -12,10 +13,10 @@ struct SenderSources {
 };
 
 struct SenderStats {
-    uint32_t packets_sent;
     uint32_t notify_failures;
     uint32_t dropped_total;
     uint32_t skipped_cuts;
+    LinkDelivery links[kMaxLinks];
 };
 
 void stream_sender_start(const SenderSources& sources);
