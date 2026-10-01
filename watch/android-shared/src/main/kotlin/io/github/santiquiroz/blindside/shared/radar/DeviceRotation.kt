@@ -1,4 +1,4 @@
-package io.github.santiquiroz.blindside.wear.ui.radar
+package io.github.santiquiroz.blindside.shared.radar
 
 import kotlin.math.cos
 import kotlin.math.sin

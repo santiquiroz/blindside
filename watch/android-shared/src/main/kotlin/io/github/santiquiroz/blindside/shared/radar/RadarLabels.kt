@@ -1,15 +1,10 @@
-package io.github.santiquiroz.blindside.wear.ui.radar
+package io.github.santiquiroz.blindside.shared.radar
 
+import io.github.santiquiroz.blindside.core.config.RADAR_A
+import io.github.santiquiroz.blindside.core.config.RADAR_B
 import io.github.santiquiroz.blindside.core.scene.RadarScene
 import io.github.santiquiroz.blindside.core.scene.SensorStatus
 import io.github.santiquiroz.blindside.core.scene.Warning
-import io.github.santiquiroz.blindside.core.config.RADAR_A
-import io.github.santiquiroz.blindside.core.config.RADAR_B
-import io.github.santiquiroz.blindside.shared.ble.BleStatus
-import io.github.santiquiroz.blindside.shared.session.SessionSource
-import io.github.santiquiroz.blindside.shared.session.SessionUiState
-import io.github.santiquiroz.blindside.wear.ui.bleStatusLabel
-import io.github.santiquiroz.blindside.wear.ui.startErrorMessage
 
 data class StatusItem(val label: String, val ok: Boolean)
 
@@ -18,8 +13,6 @@ const val ELIMINATED_LABEL = "ELIMINADO"
 const val NO_WATCH_STEPS_LABEL = "SIN PASOS"
 const val CONNECTING_TO_BELT_LABEL = "Conectando con el cinturón…"
 const val DND_RADAR_WARNING = "NO MOLESTAR: PUEDE NO VIBRAR"
-
-private val CONNECTING_STATUSES = setOf(BleStatus.IDLE, BleStatus.CONNECTING, BleStatus.STREAMING)
 
 private val WARNING_PRIORITY = listOf(
     Warning.RADAR_DOWN,
@@ -37,17 +30,6 @@ fun centerLabel(scene: RadarScene?, ambient: Boolean, linkMessage: String? = nul
     linkMessage != null -> linkMessage
     scene == null || !scene.linkUp -> NO_DATA_LABEL
     else -> null
-}
-
-// The radar opens before the service answers, so a refused start must be explained here and not only on the home.
-fun radarMessage(session: SessionUiState): String? =
-    session.startError?.let(::startErrorMessage) ?: linkMessage(session.source, session.ble, session.scene?.linkUp == true)
-
-// Searching and pairing keep their own instructions: the first pairing needs the BOOT hint and the passkey prompt.
-fun linkMessage(source: SessionSource?, ble: BleStatus, linkUp: Boolean): String? = when {
-    source != SessionSource.BELT || linkUp -> null
-    ble in CONNECTING_STATUSES -> CONNECTING_TO_BELT_LABEL
-    else -> bleStatusLabel(ble)
 }
 
 fun warningLabel(warnings: Set<Warning>): String? = WARNING_PRIORITY.firstOrNull { it in warnings }?.let(::labelFor)

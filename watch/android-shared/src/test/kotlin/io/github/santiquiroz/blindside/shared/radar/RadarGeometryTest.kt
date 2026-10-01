@@ -1,4 +1,4 @@
-package io.github.santiquiroz.blindside.wear.ui.radar
+package io.github.santiquiroz.blindside.shared.radar
 
 import io.github.santiquiroz.blindside.core.scene.Blip
 import io.github.santiquiroz.blindside.core.scene.Confidence

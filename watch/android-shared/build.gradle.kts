@@ -33,6 +33,8 @@ dependencies {
     api(libs.coroutines.android)
     api(libs.datastore.preferences)
     implementation(libs.androidx.core.ktx)
+    api(platform(libs.compose.bom))
+    api(libs.compose.ui)
 
     testImplementation(platform(libs.junit5.bom))
     testImplementation(libs.junit5.jupiter)

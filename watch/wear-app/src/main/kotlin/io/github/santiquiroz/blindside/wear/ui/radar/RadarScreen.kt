@@ -26,6 +26,19 @@ import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material.Chip
 import androidx.wear.compose.material.ChipDefaults
 import androidx.wear.compose.material.Text
+import io.github.santiquiroz.blindside.shared.radar.CLASSIC_RADAR_COLORS
+import io.github.santiquiroz.blindside.shared.radar.DND_RADAR_WARNING
+import io.github.santiquiroz.blindside.shared.radar.PointPx
+import io.github.santiquiroz.blindside.shared.radar.StatusItem
+import io.github.santiquiroz.blindside.shared.radar.centerLabel
+import io.github.santiquiroz.blindside.shared.radar.drawRadar
+import io.github.santiquiroz.blindside.shared.radar.eliminatedActionLabel
+import io.github.santiquiroz.blindside.shared.radar.rotatedAbout
+import io.github.santiquiroz.blindside.shared.radar.screenCenter
+import io.github.santiquiroz.blindside.shared.radar.showContacts
+import io.github.santiquiroz.blindside.shared.radar.statusItems
+import io.github.santiquiroz.blindside.shared.radar.toDrawModel
+import io.github.santiquiroz.blindside.shared.radar.warningLabel
 import io.github.santiquiroz.blindside.shared.session.SessionUiState
 import io.github.santiquiroz.blindside.shared.settings.AppSettings
 import io.github.santiquiroz.blindside.wear.ui.KeepScreenOn
@@ -60,7 +73,7 @@ fun RadarScreen(
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         Canvas(Modifier.fillMaxSize()) {
             val logical = toDrawModel(session.scene, size.width, size.height, shift, contacts)
-            drawRadar(logical.rotatedAbout(screenCenter(size.width, size.height, shift), rotationDeg))
+            drawRadar(logical.rotatedAbout(screenCenter(size.width, size.height, shift), rotationDeg), CLASSIC_RADAR_COLORS)
         }
         RadarOverlay(session, ambient, shift, rotationDeg, onToggleEliminated)
     }

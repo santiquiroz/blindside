@@ -38,7 +38,7 @@ import io.github.santiquiroz.blindside.shared.permissions.startDecision
 import io.github.santiquiroz.blindside.wear.session.WearSessionCommands
 import io.github.santiquiroz.blindside.shared.session.SessionSource
 import io.github.santiquiroz.blindside.shared.session.SessionUiState
-import io.github.santiquiroz.blindside.wear.ui.radar.eliminatedActionLabel
+import io.github.santiquiroz.blindside.shared.radar.eliminatedActionLabel
 
 private val START_CHIP_HEIGHT = 72.dp
 private val START_ICON_SIZE = 28.dp
