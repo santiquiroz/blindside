@@ -11,14 +11,16 @@ class GattOpsTest {
     private val nothing = emptyList<SetupEffect>()
 
     @Test
-    fun `setup requests the mtu before enabling notifications and activates the session last`() {
+    fun `the watch announces its role after the info read and activates the session last`() {
         val expected = listOf(
             GattOp.RequestMtu(REQUESTED_MTU),
             GattOp.ReadInfo,
+            GattOp.WriteCommand(BeltCommand.SetRole(BeltRole.WATCH)),
             GattOp.EnableStreamNotify,
             GattOp.WriteSessionActive(true),
         )
-        assertEquals(expected, setupOpsAfterDiscovery())
+        assertEquals(BeltLinkProfile(BeltRole.WATCH, activatesSession = true), BeltLinkProfile())
+        assertEquals(expected, setupOpsAfterDiscovery(BeltLinkProfile()))
     }
 
     @Test
@@ -26,6 +28,7 @@ class GattOpsTest {
         assertEquals(2_000L, timeoutMsFor(GattOp.RequestMtu(REQUESTED_MTU)))
         assertEquals(5_000L, timeoutMsFor(GattOp.EnableStreamNotify))
         assertEquals(5_000L, timeoutMsFor(GattOp.WriteSessionActive(true)))
+        assertEquals(5_000L, timeoutMsFor(GattOp.WriteCommand(BeltCommand.SetRole(BeltRole.WATCH))))
     }
 
     @Test
@@ -70,6 +73,48 @@ class GattOpsTest {
     fun `activating the session lowers the connection priority`() {
         assertEquals(listOf(SetupEffect.LOWER_PRIORITY), effectsAfter(GattOp.WriteSessionActive(true), GATT_SUCCESS_STATUS))
         assertEquals(nothing, effectsAfter(GattOp.WriteSessionActive(false), GATT_SUCCESS_STATUS))
+    }
+
+    @Test
+    fun `the phone announces its own role`() {
+        val ops = setupOpsAfterDiscovery(BeltLinkProfile(BeltRole.PHONE))
+        assertTrue(GattOp.WriteCommand(BeltCommand.SetRole(BeltRole.PHONE)) in ops)
+        assertFalse(GattOp.WriteCommand(BeltCommand.SetRole(BeltRole.WATCH)) in ops)
+    }
+
+    @Test
+    fun `a diagnostic link never marks the session active and settles once subscribed`() {
+        val diagnostic = BeltLinkProfile(BeltRole.PHONE, activatesSession = false)
+        assertFalse(setupOpsAfterDiscovery(diagnostic).any { it is GattOp.WriteSessionActive })
+        assertEquals(
+            listOf(SetupEffect.REPORT_LINK_UP, SetupEffect.LOWER_PRIORITY),
+            effectsAfter(GattOp.EnableStreamNotify, GATT_SUCCESS_STATUS, diagnostic),
+        )
+    }
+
+    @Test
+    fun `a failed role write keeps the setup going`() {
+        val setRole = GattOp.WriteCommand(BeltCommand.SetRole(BeltRole.WATCH))
+        assertEquals(nothing, effectsAfter(setRole, 133))
+        assertEquals(nothing, effectsAfter(setRole, LOCAL_FAILURE_STATUS))
+        assertEquals(nothing, effectsAfter(setRole, GATT_SUCCESS_STATUS))
+    }
+
+    @Test
+    fun `control writes are the session write and every command`() {
+        assertTrue(isControlWrite(GattOp.WriteSessionActive(false)))
+        assertTrue(isControlWrite(GattOp.WriteCommand(BeltCommand.Identify)))
+        assertFalse(isControlWrite(GattOp.ReadInfo))
+        assertFalse(isControlWrite(GattOp.EnableStreamNotify))
+    }
+
+    @Test
+    fun `a command write reports whether the belt took it`() {
+        val identify = GattOp.WriteCommand(BeltCommand.Identify)
+        assertEquals(CommandResult(BeltCommand.Identify, delivered = true), commandResultOf(identify, GATT_SUCCESS_STATUS))
+        assertEquals(CommandResult(BeltCommand.Identify, delivered = false), commandResultOf(identify, 3))
+        assertEquals(CommandResult(BeltCommand.Identify, delivered = false), commandResultOf(identify, LOCAL_FAILURE_STATUS))
+        assertNull(commandResultOf(GattOp.ReadInfo, GATT_SUCCESS_STATUS))
     }
 
     @Test

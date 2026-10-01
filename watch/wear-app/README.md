@@ -93,3 +93,6 @@ Marca cada punto en el reloj real. Si un punto falla, anota qué viste y la hora
 
 **Día de juego (10/11-oct)**
 19. [ ] Quiz de vibración aprobado el mismo día, No molestar apagado, reloj cargado, cargador del reloj en el power bank y modo Sigilo.
+
+**Fase 2: reloj y celular**
+20. [ ] **Rol del enlace:** al conectar, `adb logcat -s BeltGatt` muestra `WriteCommand(command=SetRole(role=WATCH)) -> status 0` después de `ReadInfo` y antes de `EnableStreamNotify`. Con el firmware del MVP, que ignora `06`, el radar recibe datos igual que antes.

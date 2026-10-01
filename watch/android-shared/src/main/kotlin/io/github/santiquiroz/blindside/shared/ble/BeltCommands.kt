@@ -1,0 +1,30 @@
+package io.github.santiquiroz.blindside.shared.ble
+
+enum class BeltRole(val code: Int) { WATCH(0), PHONE(1) }
+
+sealed interface BeltCommand {
+    data class RestartRadar(val radarId: Int) : BeltCommand
+    data object Identify : BeltCommand
+    data class SetRole(val role: BeltRole) : BeltCommand
+}
+
+enum class LinkPriority { HIGH, BALANCED, LOW_POWER }
+
+data class BeltLinkProfile(val role: BeltRole = BeltRole.WATCH, val activatesSession: Boolean = true)
+
+private const val CMD_RESTART_RADAR: Byte = 0x01
+private const val CMD_IDENTIFY: Byte = 0x03
+private const val CMD_SET_ROLE: Byte = 0x06
+
+fun commandBytes(command: BeltCommand): ByteArray = when (command) {
+    is BeltCommand.RestartRadar -> byteArrayOf(CMD_RESTART_RADAR, command.radarId.toByte())
+    BeltCommand.Identify -> byteArrayOf(CMD_IDENTIFY)
+    is BeltCommand.SetRole -> byteArrayOf(CMD_SET_ROLE, command.role.code.toByte())
+}
+
+fun connectPriorityFor(role: BeltRole): LinkPriority =
+    if (role == BeltRole.WATCH) LinkPriority.HIGH else LinkPriority.BALANCED
+
+// Spec §2: the belt gives the phone 60-100 ms; LOW_POWER lets the belt's request win instead of competing with the watch.
+fun settledPriorityFor(role: BeltRole): LinkPriority =
+    if (role == BeltRole.WATCH) LinkPriority.BALANCED else LinkPriority.LOW_POWER

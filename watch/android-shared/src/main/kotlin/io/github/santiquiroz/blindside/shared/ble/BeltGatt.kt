@@ -25,6 +25,7 @@ interface BeltGattEvents {
     fun onPacket(bytes: ByteArray, arrivalNanos: Long)
     fun onInfo(source: BeltGatt, json: String, nowNanos: Long)
     fun onRssi(source: BeltGatt, dbm: Int, nowNanos: Long)
+    fun onCommandWritten(source: BeltGatt, result: CommandResult, nowNanos: Long)
 }
 
 @SuppressLint("MissingPermission")
@@ -33,6 +34,7 @@ class BeltGatt(
     val device: BluetoothDevice,
     private val handler: Handler,
     private val events: BeltGattEvents,
+    private val profile: BeltLinkProfile = BeltLinkProfile(),
 ) {
     @Volatile private var gatt: BluetoothGatt? = null
     private var queue = OpQueue()
@@ -60,6 +62,10 @@ class BeltGatt(
 
     fun deactivateSession() = enqueueOp(GattOp.WriteSessionActive(false))
 
+    fun send(command: BeltCommand) = enqueueOp(GattOp.WriteCommand(command))
+
+    fun readInfo() = enqueueOp(GattOp.ReadInfo)
+
     private fun enqueueOp(op: GattOp) {
         val step = enqueue(queue, op)
         queue = step.queue
@@ -84,6 +90,7 @@ class BeltGatt(
             GattOp.ReadInfo -> characteristic(current, INFO_UUID)?.let { current.readCharacteristic(it) } ?: false
             GattOp.EnableStreamNotify -> enableStreamNotify(current)
             is GattOp.WriteSessionActive -> writeControl(current, sessionActiveCommand(op.active))
+            is GattOp.WriteCommand -> writeControl(current, commandBytes(op.command))
             GattOp.ReadRssi -> current.readRemoteRssi()
         }
     }
@@ -92,10 +99,15 @@ class BeltGatt(
         if (queue.inFlight != op) return
         handler.removeCallbacksAndMessages(timeoutToken)
         logResult(op, status)
-        val effects = effectsAfter(op, status)
+        val effects = effectsAfter(op, status, profile)
         if (SetupEffect.DISCONNECT in effects) return events.onSetupFailed(this, op, status)
         applyEffects(effects)
+        reportCommandResult(op, status)
         advanceQueue()
+    }
+
+    private fun reportCommandResult(op: GattOp, status: Int) {
+        commandResultOf(op, status)?.let { events.onCommandWritten(this, it, SystemClock.elapsedRealtimeNanos()) }
     }
 
     private fun advanceQueue() {
@@ -115,7 +127,7 @@ class BeltGatt(
 
     private fun applyEffects(effects: List<SetupEffect>) {
         if (SetupEffect.REPORT_LINK_UP in effects) events.onStreamReady(this)
-        if (SetupEffect.LOWER_PRIORITY in effects) gatt?.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_BALANCED)
+        if (SetupEffect.LOWER_PRIORITY in effects) gatt?.requestConnectionPriority(androidPriority(settledPriorityFor(profile.role)))
     }
 
     private fun handleConnectionState(status: Int, newState: Int) {
@@ -125,7 +137,7 @@ class BeltGatt(
     }
 
     private fun handleConnected() {
-        gatt?.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
+        gatt?.requestConnectionPriority(androidPriority(connectPriorityFor(profile.role)))
         events.onConnected(this)
         enqueueOp(GattOp.DiscoverServices)
     }
@@ -140,7 +152,7 @@ class BeltGatt(
         if (queue.inFlight != GattOp.DiscoverServices) return
         val result = if (hasBlindsideService()) status else LOCAL_FAILURE_STATUS
         finish(GattOp.DiscoverServices, result)
-        if (result == GATT_SUCCESS_STATUS) setupOpsAfterDiscovery().forEach(::enqueueOp)
+        if (result == GATT_SUCCESS_STATUS) setupOpsAfterDiscovery(profile).forEach(::enqueueOp)
     }
 
     private fun handleMtu(mtu: Int, status: Int) {
@@ -160,7 +172,7 @@ class BeltGatt(
     }
 
     private fun handleControlWrite(status: Int) {
-        val op = queue.inFlight as? GattOp.WriteSessionActive ?: return
+        val op = queue.inFlight?.takeIf(::isControlWrite) ?: return
         finish(op, status)
     }
 
@@ -189,6 +201,12 @@ class BeltGatt(
     private fun hasBlindsideService(): Boolean {
         val current = gatt ?: return false
         return REQUIRED_CHARACTERISTICS.all { characteristic(current, it) != null }
+    }
+
+    private fun androidPriority(priority: LinkPriority): Int = when (priority) {
+        LinkPriority.HIGH -> BluetoothGatt.CONNECTION_PRIORITY_HIGH
+        LinkPriority.BALANCED -> BluetoothGatt.CONNECTION_PRIORITY_BALANCED
+        LinkPriority.LOW_POWER -> BluetoothGatt.CONNECTION_PRIORITY_LOW_POWER
     }
 
     private val callback = object : BluetoothGattCallback() {

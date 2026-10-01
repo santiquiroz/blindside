@@ -6,4 +6,7 @@ interface BeltListener {
     fun onRssi(dbm: Int, nowNanos: Long)
     fun onLinkChanged(connected: Boolean, nowNanos: Long)
     fun onStatus(status: BleStatus)
+
+    // Only the apps that act on a command result override this; the default keeps every other listener unchanged.
+    fun onCommandWritten(result: CommandResult, nowNanos: Long) {}
 }

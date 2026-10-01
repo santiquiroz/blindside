@@ -1,0 +1,36 @@
+package io.github.santiquiroz.blindside.shared.ble
+
+import org.junit.jupiter.api.Assertions.assertArrayEquals
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
+
+class BeltCommandsTest {
+    @Test
+    fun `restart radar carries the radar id`() {
+        assertArrayEquals(byteArrayOf(0x01, 0x00), commandBytes(BeltCommand.RestartRadar(0)))
+        assertArrayEquals(byteArrayOf(0x01, 0x01), commandBytes(BeltCommand.RestartRadar(1)))
+    }
+
+    @Test
+    fun `identify is a single byte`() {
+        assertArrayEquals(byteArrayOf(0x03), commandBytes(BeltCommand.Identify))
+    }
+
+    @Test
+    fun `set role sends 06 with the firmware role code`() {
+        assertArrayEquals(byteArrayOf(0x06, 0x00), commandBytes(BeltCommand.SetRole(BeltRole.WATCH)))
+        assertArrayEquals(byteArrayOf(0x06, 0x01), commandBytes(BeltCommand.SetRole(BeltRole.PHONE)))
+    }
+
+    @Test
+    fun `the watch connects fast and settles balanced`() {
+        assertEquals(LinkPriority.HIGH, connectPriorityFor(BeltRole.WATCH))
+        assertEquals(LinkPriority.BALANCED, settledPriorityFor(BeltRole.WATCH))
+    }
+
+    @Test
+    fun `the phone never asks for the fast interval the watch needs`() {
+        assertEquals(LinkPriority.BALANCED, connectPriorityFor(BeltRole.PHONE))
+        assertEquals(LinkPriority.LOW_POWER, settledPriorityFor(BeltRole.PHONE))
+    }
+}

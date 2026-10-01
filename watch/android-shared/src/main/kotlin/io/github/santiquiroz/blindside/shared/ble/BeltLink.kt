@@ -17,6 +17,7 @@ class BeltLink(
     private val context: Context,
     private val listener: BeltListener,
     private val onBeltFound: (String) -> Unit,
+    private val profile: BeltLinkProfile = BeltLinkProfile(),
 ) : BeltGattEvents {
     private val handler = Handler(Looper.getMainLooper())
     private val adapter: BluetoothAdapter? = context.getSystemService(BluetoothManager::class.java)?.adapter
@@ -68,6 +69,10 @@ class BeltLink(
         gatt = null
         listener.onStatus(BleStatus.IDLE)
     }
+
+    fun send(command: BeltCommand): Boolean = withStreamingGatt { it.send(command) }
+
+    fun refreshInfo(): Boolean = withStreamingGatt { it.readInfo() }
 
     override fun onConnected(source: BeltGatt) {
         if (source !== gatt) return
@@ -121,6 +126,10 @@ class BeltLink(
 
     override fun onRssi(source: BeltGatt, dbm: Int, nowNanos: Long) {
         if (source === gatt) listener.onRssi(dbm, nowNanos)
+    }
+
+    override fun onCommandWritten(source: BeltGatt, result: CommandResult, nowNanos: Long) {
+        if (source === gatt) listener.onCommandWritten(result, nowNanos)
     }
 
     private fun supervise(nowMs: Long) {
@@ -207,7 +216,7 @@ class BeltLink(
     private fun openGatt(target: BluetoothDevice, autoConnect: Boolean) {
         gatt?.close()
         attempt = ConnectionAttempt(pairing = target.bondState != BluetoothDevice.BOND_BONDED)
-        gatt = BeltGatt(context, target, handler, this).also { it.connect(autoConnect) }
+        gatt = BeltGatt(context, target, handler, this, profile).also { it.connect(autoConnect) }
     }
 
     private fun resumePending() {
@@ -283,6 +292,13 @@ class BeltLink(
     }
 
     private fun mayReplaceCurrentAttempt(): Boolean = mayReplaceAttempt(attempt, reporter.up, directDeadlineMs != null)
+
+    // Commands ride only on the encrypted, subscribed link; before that the setup queue owns the GATT.
+    private fun withStreamingGatt(action: (BeltGatt) -> Unit): Boolean {
+        val current = gatt?.takeIf { reporter.up } ?: return false
+        action(current)
+        return true
+    }
 
     private fun connectingStatus(): BleStatus = if (everStreamed) BleStatus.RECONNECTING else BleStatus.CONNECTING
 
