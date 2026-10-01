@@ -16,6 +16,7 @@
 #include "imu_task.h"
 #include "info_json.h"
 #include "led_pattern.h"
+#include "nimble_internals.h"
 #include "pairing.h"
 #include "radar_port.h"
 #include "status_led.h"
@@ -33,6 +34,11 @@ uint32_t g_identify_started_ms = 0;
 void print_banner() {
     Serial.printf("blindside fw %s boot_id=%08lx reset=%s\n", config::kFirmwareVersion,
                   static_cast<unsigned long>(g_boot_id.load()), reset_reason_name(esp_reset_reason()));
+}
+
+// Before any link exists every controller buffer is free, so this is the controller's total (the cap's headroom).
+void print_ble_buffers() {
+    Serial.printf("ble: controller acl buffers=%u\n", static_cast<unsigned>(nimble_free_acl_buffers()));
 }
 
 RadarInfo radar_info(uint8_t radar_id) {
@@ -193,7 +199,7 @@ void print_diagnostics_if_due(uint32_t now_ms) {
     if (!deadline_reached(now_ms, g_next_diagnostics_ms)) {
         return;
     }
-    g_diagnostics = diagnostics_print(g_diagnostics, now_ms);
+    g_diagnostics = diagnostics_print(g_diagnostics, now_ms, g_pairing.window);
     g_next_diagnostics_ms = now_ms + config::kDiagnosticsPeriodMs;
 }
 
@@ -209,6 +215,7 @@ void setup() {
     // esp_random() is only truly random once the radio is on, which start_ble() just did.
     g_boot_id = esp_random();
     print_banner();
+    print_ble_buffers();
     g_pairing = pairing_begin(millis());
     ble_advertising_start(pairing_whitelist_only(g_pairing), millis());
     start_tasks();
