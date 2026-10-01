@@ -13,6 +13,7 @@ CMD_TAIL = bytes([0x04, 0x03, 0x02, 0x01])
 TLV_RADAR = 0x01
 TLV_IMU = 0x02
 TLV_STATUS = 0x03
+TLV_LINK = 0x04
 
 
 # The LD2450 uses sign-magnitude, not two's complement: bit 15 set means positive.
@@ -75,6 +76,10 @@ def status_section(entries) -> bytes:
     return tlv(TLV_STATUS, body)
 
 
+def link_section(interval_units: int, latency: int, supervision_units: int) -> bytes:
+    return tlv(TLV_LINK, struct.pack("<HHH", interval_units, latency, supervision_units))
+
+
 OFFICIAL_TARGET = (-782, 1713, -16, 320)
 RIGHT_TARGET = (500, 3000, 25, 360)
 IMU_SAMPLES_A = [(0, 0, 4096, 10, -5, 3), (1, -1, 4095, 11, -5, 3), (2, -2, 4094, 12, -4, 2),
@@ -126,13 +131,14 @@ def build_vectors():
 
     sums_a = (100, -6, 7)
     sums_b = (-20000, 3, 3_000_000_000)
+    # Fill order (spec §4.2): IMU, STATUS and LINK first, then RADAR sorted by t_ms.
     typical = (
         header(0x0F, 65535, 123456)
-        + radar_section(0, 123400, [OFFICIAL_TARGET])
-        + radar_section(1, 123410, [RIGHT_TARGET])
         + imu_section(0, 123380, IMU_SAMPLES_A, sums_a)
         + imu_section(1, 123380, IMU_SAMPLES_B, sums_b)
         + status_section([(0, 2, 0, 7), (1, 0, 1, 7)])
+        + radar_section(0, 123400, [OFFICIAL_TARGET])
+        + radar_section(1, 123410, [RIGHT_TARGET])
     )
     assert len(typical) == 242, len(typical)
     vectors["bundle_typical"] = {
@@ -156,6 +162,19 @@ def build_vectors():
                 {"radar_id": 0, "bad_frames": 2, "restarts": 0, "baud_index": 7},
                 {"radar_id": 1, "bad_frames": 0, "restarts": 1, "baud_index": 7},
             ],
+        },
+    }
+
+    with_link = header(0x0F, 9, 7000) + link_section(36, 0, 500) + radar_section(0, 6990, [OFFICIAL_TARGET])
+    vectors["bundle_with_link"] = {
+        "hex": with_link.hex(),
+        "size": len(with_link),
+        "expected": {
+            "version": 1, "flags": 0x0F, "seq": 9, "t_ms": 7000, "truncated": False,
+            "link": {"interval_units": 36, "latency": 0, "supervision_units": 500},
+            "radar_frames": [{"radar_id": 0, "t_ms": 6990, "targets": [
+                {"x_mm": -782, "y_mm": 1713, "speed_cms": -16, "resolution_mm": 320}]}],
+            "imu_batches": [], "statuses": [],
         },
     }
 
@@ -191,7 +210,7 @@ def write_c_header(vectors) -> str:
     ]
     for key, hex_value in vectors["ld2450_commands"].items():
         lines.append(c_array(f"VEC_CMD_{key.upper()}", bytes.fromhex(hex_value)))
-    for key in ["bundle_one_radar", "bundle_typical", "bundle_unknown_tlv", "bundle_truncated"]:
+    for key in ["bundle_one_radar", "bundle_typical", "bundle_with_link", "bundle_unknown_tlv", "bundle_truncated"]:
         lines.append(c_array(f"VEC_{key.upper()}", bytes.fromhex(vectors[key]["hex"])))
     return "\n".join(lines)
 

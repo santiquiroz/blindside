@@ -80,7 +80,7 @@
     }
   },
   "bundle_typical": {
-    "hex": "010fffff40e20100011d0008e201000e03b1861000400100000000000000000000000000000000011d0112e20100f481b88b1980680100000000000000000000000000000000024e00f4e10100050000000000100a00fbff03000100ffffff0f0b00fbff03000200fefffe0f0c00fcff0200ffff010001100900faff04000000000000100a00fbff030064000000faffffff07000000024e01f4e10100050a001400fa0ffdff00008f020b001500fb0ffdff010090020c001600fc0ffeff010091020d001700fd0ffeff000092020e001800fe0fffff00009302e0b1ffff03000000005ed0b2030a00020000070100000107",
+    "hex": "010fffff40e20100024e00f4e10100050000000000100a00fbff03000100ffffff0f0b00fbff03000200fefffe0f0c00fcff0200ffff010001100900faff04000000000000100a00fbff030064000000faffffff07000000024e01f4e10100050a001400fa0ffdff00008f020b001500fb0ffdff010090020c001600fc0ffeff010091020d001700fd0ffeff000092020e001800fe0fffff00009302e0b1ffff03000000005ed0b2030a00020000070100000107011d0008e201000e03b1861000400100000000000000000000000000000000011d0112e20100f481b88b1980680100000000000000000000000000000000",
     "size": 242,
     "expected": {
       "version": 1,
@@ -232,6 +232,38 @@
           "baud_index": 7
         }
       ]
+    }
+  },
+  "bundle_with_link": {
+    "hex": "010f0900581b0000040624000000f401011d004e1b00000e03b1861000400100000000000000000000000000000000",
+    "size": 47,
+    "expected": {
+      "version": 1,
+      "flags": 15,
+      "seq": 9,
+      "t_ms": 7000,
+      "truncated": false,
+      "link": {
+        "interval_units": 36,
+        "latency": 0,
+        "supervision_units": 500
+      },
+      "radar_frames": [
+        {
+          "radar_id": 0,
+          "t_ms": 6990,
+          "targets": [
+            {
+              "x_mm": -782,
+              "y_mm": 1713,
+              "speed_cms": -16,
+              "resolution_mm": 320
+            }
+          ]
+        }
+      ],
+      "imu_batches": [],
+      "statuses": []
     }
   },
   "bundle_unknown_tlv": {
