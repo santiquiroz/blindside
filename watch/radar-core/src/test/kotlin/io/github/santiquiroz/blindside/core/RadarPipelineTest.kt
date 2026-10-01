@@ -98,6 +98,16 @@ class RadarPipelineTest {
     }
 
     @Test
+    fun `with both box imus down a watch step heard 1_5 s late still marks the player as walking`() {
+        val run = runScenario(Scenarios.crossing()) { it.copy(flags = it.flags and 0x03) }
+
+        run.pipeline.onWatchStep(simArrivalNanos(7_000, 0))
+
+        assertEquals(MotionState.WALKING, run.pipeline.scene(simArrivalNanos(8_500)).motion)
+        assertEquals(MotionState.STILL, run.pipeline.scene(simArrivalNanos(9_800)).motion)
+    }
+
+    @Test
     fun `no packets for more than 1 s means the link is not up`() {
         val run = runScenario(Scenarios.crossing())
 

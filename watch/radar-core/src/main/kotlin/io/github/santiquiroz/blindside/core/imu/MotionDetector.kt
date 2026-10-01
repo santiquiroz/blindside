@@ -11,6 +11,7 @@ data class MotionDetector(
     val turnFromWatch: Boolean = false,
     val beltAccel: Map<Int, BeltAccel> = emptyMap(),
     val lastStepMs: Long? = null,
+    val walkingHoldFromMs: Long? = null,
     val prone: Boolean = false,
 ) {
     fun withYawIncrement(increment: YawIncrement, params: MotionParams): MotionDetector =
@@ -27,10 +28,11 @@ data class MotionDetector(
     fun withAccelNorm(imuId: Int, tMs: Long, normG: Double, params: MotionParams): MotionDetector {
         val updated = (beltAccel[imuId] ?: BeltAccel()).withNorm(tMs, normG, params)
         val stored = copy(beltAccel = beltAccel + (imuId to updated))
-        return updated.lastStepMs?.let { stored.withStep(it) } ?: stored
+        return updated.lastStepMs?.let { stored.withStepEvent(it).withHoldFrom(it) } ?: stored
     }
 
-    fun withStep(tMs: Long): MotionDetector = copy(lastStepMs = maxOf(tMs, lastStepMs ?: tMs))
+    // Spec §6.6: watch steps arrive up to 2 s late, so their 1.2 s walking hold runs from when the step was heard.
+    fun withWatchStep(eventMs: Long, heardMs: Long): MotionDetector = withStepEvent(eventMs).withHoldFrom(heardMs)
 
     fun withProne(isProne: Boolean): MotionDetector = copy(prone = isProne)
 
@@ -49,9 +51,13 @@ data class MotionDetector(
         else -> MotionState.STILL
     }
 
+    private fun withStepEvent(stepMs: Long): MotionDetector = copy(lastStepMs = maxOf(stepMs, lastStepMs ?: stepMs))
+
+    private fun withHoldFrom(fromMs: Long): MotionDetector = copy(walkingHoldFromMs = maxOf(fromMs, walkingHoldFromMs ?: fromMs))
+
     private fun steppedRecently(tMs: Long, params: MotionParams): Boolean {
-        val last = lastStepMs ?: return false
-        return tMs - last <= params.stepHoldMs
+        val from = walkingHoldFromMs ?: return false
+        return tMs - from <= params.stepHoldMs
     }
 }
 

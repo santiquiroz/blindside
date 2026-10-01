@@ -76,7 +76,7 @@ class MotionDetectorTest {
 
     @Test
     fun `a watch step alone keeps walking for 1_2 s`() {
-        val stepped = MotionDetector().withStep(5_000)
+        val stepped = MotionDetector().withWatchStep(eventMs = 5_000, heardMs = 5_000)
 
         assertTrue(stepped.isWalking(6_000, params))
         assertFalse(stepped.isWalking(6_300, params))
@@ -99,8 +99,17 @@ class MotionDetectorTest {
     }
 
     @Test
+    fun `a late watch step holds walking from when it was heard and keeps its event time for the bias`() {
+        val late = MotionDetector().withWatchStep(eventMs = 5_000, heardMs = 6_500)
+
+        assertTrue(late.isWalking(7_600, params))
+        assertFalse(late.isWalking(7_800, params))
+        assertEquals(5_000L, late.lastStepMs)
+    }
+
+    @Test
     fun `moving means walking or turning`() {
-        val stepped = MotionDetector().withStep(5_000)
+        val stepped = MotionDetector().withWatchStep(eventMs = 5_000, heardMs = 5_000)
 
         assertTrue(stepped.isMoving(5_500, params))
         assertFalse(stepped.isMoving(7_000, params))

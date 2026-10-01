@@ -7,9 +7,11 @@ import io.github.santiquiroz.blindside.core.protocol.ImuScale
 import io.github.santiquiroz.blindside.core.protocol.parseBeltInfo
 import kotlin.math.sqrt
 
+// The newest packet's t_ms is the best ESP32 "now" at hand for when the step was heard.
 internal fun withWatchStep(state: PipelineState, eventNanos: Long): PipelineState {
     val espMs = state.clock.toEspMs(eventNanos) ?: return state
-    return state.copy(motion = state.motion.withStep(espMs))
+    val heardMs = maxOf(espMs, state.lastHeaderMs ?: espMs)
+    return state.copy(motion = state.motion.withWatchStep(espMs, heardMs))
 }
 
 // Android delivers TYPE_GYROSCOPE in rad/s; the core works in °/s on the ESP32 clock.
