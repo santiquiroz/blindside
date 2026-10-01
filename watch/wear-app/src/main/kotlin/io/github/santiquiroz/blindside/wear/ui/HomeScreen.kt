@@ -32,9 +32,9 @@ import androidx.wear.compose.material.ListHeader
 import androidx.wear.compose.material.Text
 import io.github.santiquiroz.blindside.wear.R
 import io.github.santiquiroz.blindside.wear.ble.needsRetry
-import io.github.santiquiroz.blindside.wear.permissions.SESSION_PERMISSIONS
-import io.github.santiquiroz.blindside.wear.permissions.StartDecision
-import io.github.santiquiroz.blindside.wear.permissions.startDecision
+import io.github.santiquiroz.blindside.shared.permissions.SESSION_PERMISSIONS
+import io.github.santiquiroz.blindside.shared.permissions.StartDecision
+import io.github.santiquiroz.blindside.shared.permissions.startDecision
 import io.github.santiquiroz.blindside.wear.session.SessionCommands
 import io.github.santiquiroz.blindside.wear.session.SessionSource
 import io.github.santiquiroz.blindside.wear.session.SessionUiState

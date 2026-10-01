@@ -64,7 +64,7 @@ jobs:
         run: chmod +x gradlew && ./gradlew :radar-core:test --no-daemon
 
   wear-app:
-    name: wear-app assembleDebug
+    name: watch apps unit tests and assembleDebug
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -93,4 +93,4 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
       - if: steps.scaffold.outputs.present == 'true'
         working-directory: watch
-        run: chmod +x gradlew && ./gradlew :wear-app:assembleDebug --no-daemon
+        run: chmod +x gradlew && ./gradlew :android-shared:testDebugUnitTest :wear-app:testDebugUnitTest :wear-app:assembleDebug --no-daemon

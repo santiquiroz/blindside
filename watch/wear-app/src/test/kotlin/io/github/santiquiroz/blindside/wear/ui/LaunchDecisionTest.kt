@@ -1,8 +1,8 @@
 package io.github.santiquiroz.blindside.wear.ui
 
-import io.github.santiquiroz.blindside.wear.permissions.PERMISSION_ACTIVITY_RECOGNITION
-import io.github.santiquiroz.blindside.wear.permissions.PERMISSION_BLUETOOTH_CONNECT
-import io.github.santiquiroz.blindside.wear.permissions.PERMISSION_BLUETOOTH_SCAN
+import io.github.santiquiroz.blindside.shared.permissions.PERMISSION_ACTIVITY_RECOGNITION
+import io.github.santiquiroz.blindside.shared.permissions.PERMISSION_BLUETOOTH_CONNECT
+import io.github.santiquiroz.blindside.shared.permissions.PERMISSION_BLUETOOTH_SCAN
 import io.github.santiquiroz.blindside.wear.settings.AppSettings
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse

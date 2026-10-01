@@ -1,4 +1,4 @@
-package io.github.santiquiroz.blindside.wear.permissions
+package io.github.santiquiroz.blindside.shared.permissions
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse

@@ -10,8 +10,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
-import io.github.santiquiroz.blindside.wear.permissions.SESSION_PERMISSIONS
-import io.github.santiquiroz.blindside.wear.permissions.bluetoothGranted
+import io.github.santiquiroz.blindside.shared.permissions.SESSION_PERMISSIONS
+import io.github.santiquiroz.blindside.shared.permissions.bluetoothGranted
 import io.github.santiquiroz.blindside.wear.session.SessionCommands
 import io.github.santiquiroz.blindside.wear.session.SessionSource
 import io.github.santiquiroz.blindside.wear.session.SessionStore

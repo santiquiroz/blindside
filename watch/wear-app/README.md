@@ -7,9 +7,11 @@ App de Wear OS para el Galaxy Watch 7. Recibe por BLE los paquetes del cinturón
 Desde `watch/`:
 
 ```bash
-./gradlew :wear-app:testDebugUnitTest   # pruebas JVM
+./gradlew :android-shared:testDebugUnitTest :wear-app:testDebugUnitTest   # pruebas JVM (código compartido y del reloj)
 ./gradlew :wear-app:assembleDebug       # APK en wear-app/build/outputs/apk/debug/wear-app-debug.apk
 ```
+
+El código que no depende de Wear OS (BLE, grabación, ajustes, vibración, sesión y dibujo del radar) vive en `watch/android-shared` y lo comparte la app del celular.
 
 ## Instalar en el reloj (depuración por Wi-Fi)
 

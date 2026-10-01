@@ -1,4 +1,4 @@
-package io.github.santiquiroz.blindside.wear.permissions
+package io.github.santiquiroz.blindside.shared.permissions
 
 const val PERMISSION_BLUETOOTH_SCAN = "android.permission.BLUETOOTH_SCAN"
 const val PERMISSION_BLUETOOTH_CONNECT = "android.permission.BLUETOOTH_CONNECT"
