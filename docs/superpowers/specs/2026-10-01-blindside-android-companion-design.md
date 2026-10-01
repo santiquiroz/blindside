@@ -130,6 +130,20 @@ Que el reloj y el celular (Galaxy S25 Ultra) **funcionen a la vez o cada uno por
 - Fondo negro en todo.
 - Ajustes nuevo: **"Emparejar celular"** (§5).
 
+**Radar a pantalla completa con brújula** (pedido de Santiago, 1-oct; verificado en su reloj: magnetómetro AK09918C y `TYPE_ROTATION_VECTOR` disponibles para apps):
+- **Toda la pantalla.** El origen del abanico baja al borde inferior del círculo, así que el abanico de cobertura ocupa todo el alto de la pantalla redonda con la escala fija de 6 m. El estado pasa a chips pequeños en las esquinas del abanico y nunca tapa la zona de contactos.
+- **Anillo de brújula en el borde,** al estilo del bisel:
+  - marcas cada 15°, letras N/E/S/O, y la N resaltada en `accent`;
+  - **el anillo gira** según el rumbo, mientras **el radar sigue "frente arriba"** (D6: los contactos no se mueven por la brújula);
+  - arriba al centro, el **rumbo numérico** en JetBrains Mono (por ejemplo `318° NO`).
+- **Fuente del rumbo:** `TYPE_ROTATION_VECTOR`, que da el azimut de las 12 en punto del reloj (≈ el frente del cuerpo en la postura de lectura normal).
+  - En postura táctica se suma la rotación de la postura (±90°), para que el rumbo corresponda a "arriba" en la pantalla.
+  - Suavizado con un pasabajos circular (τ ≈ 150 ms) y animación del anillo de ≤ 150 ms.
+- **Confianza:** si la precisión del sensor es `UNRELIABLE` o `LOW`, el anillo se atenúa y aparece "Brújula: calibra (mueve en 8)". Cerca del motor de la réplica, el magnetismo la desvía; es esperable y se avisa, sin bloquear nada.
+- **Ajustes:** "Brújula" activada o desactivada (activada por defecto). Con disciplina de luz, el anillo usa `ring`/`accent-dim` y respeta Sigilo.
+- **Grabación:** nuevo registro `.bsrec` de tipo **11 "rumbo del reloj"** (f32 azimut en grados + u8 precisión + i64 nanos del evento), registrado a ≤ 5 Hz para los mapas de partida futuros. La lógica pura (pasabajos circular, giro del anillo, combinación con la postura y texto cardinal) va en `android-shared` con pruebas JVM.
+- **Fuera de alcance por ahora:** el modo "norte arriba", con el radar girando según el norte.
+
 ## 7. E2E autónomo (ADB + serie, sin Santiago)
 
 1. Cargar el firmware en COM6 y leer `diag`.
