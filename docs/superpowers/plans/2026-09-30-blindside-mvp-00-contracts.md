@@ -30,10 +30,11 @@
 - **Firmware toolchain:**
   - PlatformIO, `platform = espressif32`, `framework = arduino`, `board = esp32dev`.
   - `lib_deps = h2zero/NimBLE-Arduino@^2`.
-  - Unit tests run in the `native` env with Unity, **in CI only**: there is no local C/C++ compiler.
+  - Unit tests run in the `native` env with Unity. **CI is authoritative** (`pio test -e native`). There is no installed C/C++ compiler, so locally the same suites run with `python tools/run_native_tests.py [suite …]` from `firmware/` (plan 02 Task 1), which builds them with the Zig toolchain from PyPI (`python -m pip install --user ziglang`, once). A local pass does not replace a green CI run.
 - **Shared test vectors:**
   - `python protocol/tools/make_vectors.py` regenerates `protocol/vectors/vectors.json` (Kotlin) and `firmware/test/vectors.h` (C++).
   - **Never edit those two outputs by hand.**
+  - Plan 02 Task 1 owns the generator change that writes `bundle_typical` in the fill order of §"BLE packet" (IMU 0, IMU 1, STATUS, then RADAR by `t_ms`; still 242 B) and adds `bundle_with_link` (header, LINK 36/0/500, one RADAR; 47 B). Both encoders (plan 01 `BundleEncoder`, plan 02 bundler) must reproduce those bytes.
 - **MVP scope** is exactly spec §12 "Entra". Items listed under "Queda para la v1 completa" must **not** be implemented now.
 
 ## Repository layout
@@ -57,6 +58,7 @@ firmware/
   src/status_led.{h,cpp}
   test/vectors.h               generated
   test/test_ld2450_frame/ · test/test_ld2450_commands/ · test/test_bundler/ · test/test_imu_math/
+  tools/run_native_tests.py    local runner for the native suites (Zig from PyPI); CI stays authoritative
 watch/
   settings.gradle.kts · build.gradle.kts · gradle.properties · gradle/libs.versions.toml · gradlew(.bat) + gradle/wrapper/
   radar-core/                  Kotlin/JVM library (no Android)
@@ -73,7 +75,7 @@ watch/
 | applicationId | `io.github.santiquiroz.blindside` |
 | GATT service UUID | `569f3867-024f-4498-a979-90a762ad3593` |
 | `stream` characteristic | `37869398-ecc2-4915-90a1-13d39d708ad5` (notify; CCCD write requires encryption) |
-| `info` characteristic | `278b9369-d8ac-4eda-868b-7bfd0dea5dc6` (READ_ENC; UTF-8 JSON, ≤ 400 B) |
+| `info` characteristic | `278b9369-d8ac-4eda-868b-7bfd0dea5dc6` (READ_ENC; UTF-8 JSON, ≤ 512 B, read long) |
 | `control` characteristic | `725c9a6e-0c7b-45d2-bef6-48c03be7c092` (WRITE_AUTHEN) |
 | BLE device name | `Blindside-XXXX` (last 2 bytes of the MAC in hex) |
 | Radar / IMU ids | `0` = A (left box), `1` = B (right box) |
@@ -99,7 +101,7 @@ TLV sections: u8 type | u8 len | payload[len]
 - `sum_g*` are running sums of the **raw 200 Hz** gyro readings since boot. They wrap as u32; the watch takes the difference and reads it as int32.
 - IMU timing: each 50 Hz sample is the average of one block of exactly 4 raw readings on a fixed 20 ms grid. The sample's `t` is the centre of its block, and `t_last = t_first_ms + (n−1)·20`. A failed or skipped raw read repeats the previous reading, so the sums advance exactly 4 readings per block. The sums cover up to the end of the section's last block.
 - `max_payload = min(getPeerMTU() − 3, 244)`. The ESP32 does not notify until the CCCD is active and `getPeerMTU() ≥ 247`.
-- **Fill order** when a cut is split: IMU, STATUS and LINK sections go first, then the RADAR frames of both radars sorted by `t_ms`. Every RADAR frame in packet k has `t_ms` ≤ those in packet k+1. A section is never split.
+- **Fill order** in every packet, also when a cut is split: IMU sections first (IMU 0, then IMU 1), then STATUS, then LINK, then the RADAR frames of both radars sorted by `t_ms`. Every RADAR frame in packet k has `t_ms` ≤ those in packet k+1. A section is never split. The shared vectors `bundle_typical` and `bundle_with_link` are written in this order.
 
 ### `control` writes
 
@@ -114,9 +116,13 @@ TLV sections: u8 type | u8 len | payload[len]
 ```json
 {"proto":1,"fw":"0.1.0","boot_id":"9f3a12c4","reset":"POWERON","mtu":255,
  "radars":[{"id":0,"fw":"V2.04.23101915","baud":256000},{"id":1,"fw":"V2.04.23101915","baud":256000}],
- "imus":[{"id":0,"who":104,"gyro_lsb_dps":65.5,"accel_lsb_g":4096},{"id":1,"who":112,"gyro_lsb_dps":65.5,"accel_lsb_g":4096}],
+ "imus":[{"id":0,"who":104,"gyro_lsb_dps":65.5,"accel_lsb_g":4096,"repeats":0},{"id":1,"who":112,"gyro_lsb_dps":65.5,"accel_lsb_g":4096,"repeats":3}],
  "tx_power_dbm":9,"conn":{"interval_ms":45.0,"latency":0,"timeout_ms":5000},"uptime_s":42}
 ```
+
+- **Size limit: ≤ 512 B** (the ATT maximum attribute length). The value is longer than one ATT read at MTU 247, so the watch reads it long (ATT Read Blob; Android's `readCharacteristic` does it on its own, and NimBLE serves it). Readers must accept it in one piece of up to 512 B.
+- `imus[i].repeats` (u32): raw 200 Hz readings repeated since boot because a read failed or its slot was skipped (spec §4.2, "Las repeticiones se cuentan por IMU en `info`"). With every field at its longest the document is 442 B (plan 02's 400 B worst case of the other fields plus `,"repeats":4294967295` twice, 21 B each), under the limit.
+- Readers ignore fields they do not know.
 
 ## `radar-core` public API (consumed by `wear-app`)
 
@@ -131,6 +137,8 @@ data class RadarMount(val radarId: Int, val xM: Double, val yM: Double, val yawD
 fun defaultMounts(handedness: Handedness): List<RadarMount>   // ±0.15 m; yaw −40/+20 (RIGHT), −20/+40 (LEFT), −30/+30 (SWITCHER)
 data class PipelineConfig(val tuning: TuningParams = TuningParams(),
                           val mounts: List<RadarMount> = defaultMounts(Handedness.RIGHT))
+fun PipelineConfig.toJson(): String                       // the `.bsrec` header's "config" (plan 01 Task 4d)
+fun pipelineConfigFromJson(json: String): PipelineConfig  // missing keys keep their defaults
 
 // .scene
 enum class Confidence { BOTH, SINGLE, COASTING }
@@ -185,12 +193,17 @@ fun simulate(scenario: Scenario): List<SimPacket>   // Scenario is defined by pl
 records: u8 type | u32 t_ms_since_start | u16 payload_len | payload
 ```
 
+- Header JSON (spec §6.10):
+  - `"info"`: the belt's first `info` read, embedded verbatim, or `null` (demo, or no `info` within 10 s).
+  - `"config"`: `PipelineConfig.toJson()` (plan 01 Task 4d), i.e. `TuningParams` and the mounts, the MVP's whole calibration. `pipelineConfigFromHeader` (plan 01 Task 17) reads it back, so replays and τ sweeps use the session's exact config. No reflection-based dump.
+  - Any other key (clocks, device, app version, settings) is free metadata.
+
 - Gravity payload: 3 × f32 + i64 event nanos.
 - Step payload: i64 event nanos.
 - Marker: empty.
 - Track confirmed: i32 displayId.
 - Vibration started: i32 displayId + u8 side.
-- Mode change: UTF-8 mode name.
+- Mode change: UTF-8 mode name. `ELIMINATED`, `STEALTH` or `VIEW` for the screen/eliminated mode, and `LINK_UP` or `LINK_DOWN` on every link transition the app reports. `replayRecording` feeds the last two to `onLinkState(true/false)`, as the app does live (plan 01: payload helpers `BsrecPayloads.linkChange`/`readLinkChange` in Task 4b, `onLinkState` in Task 16a, the replay in Task 17).
 - Info re-read: UTF-8 JSON.
 - Watch gyro: 3 × f32 (rad/s) + i64 event nanos.
 - RSSI: i16 dBm, read with `readRemoteRssi()` at 1 Hz.
@@ -202,7 +215,7 @@ records: u8 type | u32 t_ms_since_start | u16 payload_len | payload
   - The first alert fires immediately.
   - After that, confirmed contacts become *pending*. When ≥ 1 s has passed since the last vibration, one vibration fires for the highest-priority pending contact that is still confirmed. Priority is centre > sides, then nearest. Its side is recomputed at fire time.
   - A pending contact that is no longer confirmed when its turn comes is shown on screen only.
-  - Per-sector pause of 5 s, except when the contact count in that sector increases.
+  - Per-sector pause of 5 s (spec §5.5): a new track born < 1.5 m from a contact of the same sector that already alerted and was lost < 5 s ago is that contact reacquired. It inherits "already alerted" and does not vibrate. Any other new track vibrates, subject to the 1 s gap and the cap below. (This replaces an earlier count-based wording; spec §9: "Y nace a la izquierda a más de 1,5 m de X antes de 5 s: Y vibra".)
   - Cap: **10 contact alerts in any rolling 60 s window**. System alerts never count and are never silenced.
   - One alert per display ID.
   - Eliminated mode emits no contact alerts.
@@ -213,13 +226,13 @@ records: u8 type | u32 t_ms_since_start | u16 payload_len | payload
 
 | Plan | Directory owned | Can start | Depends on |
 |---|---|---|---|
-| 01 radar-core | `watch/radar-core/` + watch Gradle root files | immediately | vectors (exist) |
-| 02 firmware | `firmware/` + `protocol/PROTOCOL.md` | immediately | vectors (exist) |
+| 01 radar-core | `watch/radar-core/` + watch Gradle root files | immediately | vectors: Tasks 1-3 use the existing file; Task 4 (byte-exact encoder tests, `bundle_with_link`) waits for plan 02 Task 1 |
+| 02 firmware | `firmware/` + `protocol/PROTOCOL.md` + the vector generator change | immediately | vectors (Task 1 regenerates them in fill order) |
 | 03 wear-app | `watch/wear-app/` | after plan 01 Task 1 (Gradle root) | the radar-core API above. Use the real implementation once available; until then code against the signatures |
 | CI | `.github/workflows/ci.yml` | owned by plan 02, Task 1 | — |
 
 **Done for the MVP** means all of the following:
 - `./gradlew :radar-core:test` passes.
 - `./gradlew :wear-app:assembleDebug` builds.
-- CI is green: firmware native tests pass and the `esp32dev` build succeeds.
+- CI is green: firmware native tests pass and the `esp32dev` build succeeds (a local `run_native_tests.py` pass is a quicker check, not a substitute).
 - The hardware steps of spec §12 (spikes, bench and field tests) are left for Santiago, with a checklist.
