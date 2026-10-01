@@ -45,9 +45,16 @@ void test_gestures_only_count_in_the_first_minute() {
 
 void test_window_lasts_sixty_seconds() {
     PairingWindow window = window_opened(1000);
-    TEST_ASSERT_TRUE(window_after_tick(window, 60999).open);
-    TEST_ASSERT_FALSE(window_after_tick(window, 61000).open);
-    TEST_ASSERT_FALSE(window_after_tick(window_closed(), 5).open);
+    TEST_ASSERT_TRUE(window_after_tick(window, 60999, true).open);
+    TEST_ASSERT_FALSE(window_after_tick(window, 61000, true).open);
+    TEST_ASSERT_FALSE(window_after_tick(window_closed(), 5, true).open);
+}
+
+void test_window_stays_open_while_no_watch_is_bonded() {
+    PairingWindow window = window_opened(1000);
+    TEST_ASSERT_TRUE(window_after_tick(window, 61000, false).open);
+    TEST_ASSERT_TRUE(window_after_tick(window, 3600000, false).open);
+    TEST_ASSERT_TRUE(window_after_tick(window_closed(), 5, false).open);
 }
 
 void test_window_opens_at_boot_only_without_a_bond() {
@@ -147,6 +154,7 @@ int run_all_tests() {
     RUN_TEST(test_releasing_boot_after_ten_seconds_resets_pairing);
     RUN_TEST(test_gestures_only_count_in_the_first_minute);
     RUN_TEST(test_window_lasts_sixty_seconds);
+    RUN_TEST(test_window_stays_open_while_no_watch_is_bonded);
     RUN_TEST(test_window_opens_at_boot_only_without_a_bond);
     RUN_TEST(test_authentication_decisions);
     RUN_TEST(test_secure_link_needs_mitm_only_when_required);

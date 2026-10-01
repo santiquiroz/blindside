@@ -35,7 +35,11 @@ PairingWindow initial_window(bool has_trusted_bond, uint32_t now_ms) {
     return has_trusted_bond ? window_closed() : window_opened(now_ms);
 }
 
-PairingWindow window_after_tick(const PairingWindow& window, uint32_t now_ms) {
+PairingWindow window_after_tick(const PairingWindow& window, uint32_t now_ms, bool has_trusted_bond) {
+    // Without a bonded watch there is nothing to protect yet, so first-time pairing never times out.
+    if (!has_trusted_bond) {
+        return window.open ? window : window_opened(now_ms);
+    }
     bool expired = window.open && now_ms - window.opened_ms >= kPairingWindowMs;
     return expired ? window_closed() : window;
 }

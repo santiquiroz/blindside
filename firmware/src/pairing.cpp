@@ -230,7 +230,7 @@ PairingState pairing_begin(uint32_t now_ms) {
 void pairing_poll(PairingState& state, uint32_t now_ms) {
     handle_button(state, now_ms);
     handle_serial(state);
-    state.window = window_after_tick(state.window, now_ms);
+    state.window = window_after_tick(state.window, now_ms, !state.trusted.isNull());
     track_connection(state);
     handle_auth_event(state);
     drop_unwanted_peer(state, now_ms);

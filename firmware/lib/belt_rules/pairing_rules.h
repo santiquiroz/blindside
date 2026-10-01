@@ -22,7 +22,7 @@ ButtonGesture gesture_on_release(uint32_t hold_ms, uint32_t released_at_ms);
 PairingWindow window_opened(uint32_t now_ms);
 PairingWindow window_closed();
 PairingWindow initial_window(bool has_trusted_bond, uint32_t now_ms);
-PairingWindow window_after_tick(const PairingWindow& window, uint32_t now_ms);
+PairingWindow window_after_tick(const PairingWindow& window, uint32_t now_ms, bool has_trusted_bond);
 bool link_is_secure(bool encrypted, bool bonded, bool authenticated, bool require_mitm);
 AuthDecision decide_authentication(bool link_secure, bool peer_is_trusted, bool pairing_allowed);
 bool should_drop_at_connect(bool pairing_allowed, bool peer_is_trusted_identity);
