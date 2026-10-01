@@ -6,6 +6,7 @@
 
 #include <atomic>
 
+#include "ble_advertising.h"
 #include "ble_link.h"
 #include "ble_rules.h"
 #include "blindside_config.h"
@@ -45,8 +46,8 @@ ImuInfo imu_info(uint8_t imu_id) {
     return ImuInfo{imu_id, imu.who_am_i, imu.repeats};
 }
 
-BeltInfo current_info(uint32_t now_ms) {
-    LinkSnapshot link = ble_link_snapshot();
+BeltInfo current_info(uint32_t now_ms, uint8_t reader_slot) {
+    LinkSnapshot link = ble_link_snapshot(reader_slot);
     BeltInfo info{};
     info.firmware_version = config::kFirmwareVersion;
     info.boot_id = g_boot_id.load();
@@ -65,8 +66,8 @@ BeltInfo current_info(uint32_t now_ms) {
 }
 
 // Runs on the NimBLE host task at each read of `info`; current_info only reads atomics and locked snapshots.
-size_t write_info_json(char* out, size_t out_size) {
-    return format_info_json(current_info(millis()), out, out_size);
+size_t write_info_json(uint8_t reader_slot, char* out, size_t out_size) {
+    return format_info_json(current_info(millis(), reader_slot), out, out_size);
 }
 
 void start_ble() {
@@ -138,6 +139,12 @@ void show_led(uint32_t now_ms) {
     status_led_show(LedInputs{now_ms, g_pairing.window.open, g_identify_active, g_identify_started_ms});
 }
 
+// The MVP pairing keeps a single bond; Task 4 counts both.
+AdvertisingPlan advertising_plan() {
+    size_t bonds = g_pairing.trusted.isNull() ? 0 : 1;
+    return AdvertisingPlan{pairing_whitelist_only(g_pairing), g_pairing.window.open, bonds};
+}
+
 void print_diagnostics_if_due(uint32_t now_ms) {
     g_diagnostics = diagnostics_report_imu_changes(g_diagnostics, now_ms);
     if (!deadline_reached(now_ms, g_next_diagnostics_ms)) {
@@ -160,7 +167,7 @@ void setup() {
     g_boot_id = esp_random();
     print_banner();
     g_pairing = pairing_begin(millis());
-    ble_link_start_advertising(pairing_whitelist_only(g_pairing), millis());
+    ble_advertising_start(pairing_whitelist_only(g_pairing), millis());
     start_tasks();
     g_next_diagnostics_ms = millis() + config::kDiagnosticsPeriodMs;
 }
@@ -168,7 +175,7 @@ void setup() {
 void loop() {
     uint32_t now_ms = millis();
     pairing_poll(g_pairing, now_ms);
-    ble_link_poll_advertising(pairing_whitelist_only(g_pairing), now_ms);
+    ble_advertising_poll(advertising_plan(), now_ms);
     handle_control(now_ms);
     show_led(now_ms);
     print_diagnostics_if_due(now_ms);

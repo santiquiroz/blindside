@@ -35,7 +35,7 @@ void print_link() {
     Serial.printf(" link[conn=%d sub=%d trusted=%d mtu=%u itvl=%u lat=%u sup=%u disc=%d]", link.connected ? 1 : 0,
                   link.subscribed ? 1 : 0, link.trusted ? 1 : 0, static_cast<unsigned>(link.mtu),
                   static_cast<unsigned>(link.params.interval_units), static_cast<unsigned>(link.params.latency),
-                  static_cast<unsigned>(link.params.supervision_units), link.last_disconnect_reason);
+                  static_cast<unsigned>(link.params.supervision_units), ble_link_last_disconnect_reason());
 }
 
 void print_sender() {
