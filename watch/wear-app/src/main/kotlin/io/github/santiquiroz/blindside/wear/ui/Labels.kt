@@ -12,9 +12,9 @@ import io.github.santiquiroz.blindside.wear.practice.passed
 import io.github.santiquiroz.blindside.core.config.Handedness
 import io.github.santiquiroz.blindside.shared.ble.BleStatus
 import io.github.santiquiroz.blindside.shared.ble.needsRetry
-import io.github.santiquiroz.blindside.wear.session.SessionSource
-import io.github.santiquiroz.blindside.wear.session.SessionUiState
-import io.github.santiquiroz.blindside.wear.session.StartError
+import io.github.santiquiroz.blindside.shared.session.SessionSource
+import io.github.santiquiroz.blindside.shared.session.SessionUiState
+import io.github.santiquiroz.blindside.shared.session.StartError
 import io.github.santiquiroz.blindside.core.config.RADAR_A
 import io.github.santiquiroz.blindside.shared.settings.ScreenMode
 import io.github.santiquiroz.blindside.shared.settings.VibrationUsage

@@ -2,6 +2,8 @@ package io.github.santiquiroz.blindside.wear.session
 
 import android.app.Notification
 import android.content.Context
+import io.github.santiquiroz.blindside.shared.session.SessionCommands
+import io.github.santiquiroz.blindside.shared.session.SessionHost
 import io.github.santiquiroz.blindside.wear.BuildConfig
 
 val WearSessionCommands = SessionCommands(BlindsideSessionService::class.java)

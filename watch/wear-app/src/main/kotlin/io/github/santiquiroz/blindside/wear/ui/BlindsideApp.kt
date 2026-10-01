@@ -11,9 +11,9 @@ import androidx.wear.compose.navigation.SwipeDismissableNavHost
 import androidx.wear.compose.navigation.composable
 import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
 import io.github.santiquiroz.blindside.wear.SpikeScreen
-import io.github.santiquiroz.blindside.wear.session.SessionSource
-import io.github.santiquiroz.blindside.wear.session.SessionStore
-import io.github.santiquiroz.blindside.wear.session.toggleEliminated
+import io.github.santiquiroz.blindside.shared.session.SessionSource
+import io.github.santiquiroz.blindside.shared.session.SessionStore
+import io.github.santiquiroz.blindside.shared.session.toggleEliminated
 import io.github.santiquiroz.blindside.shared.settings.AppSettings
 import io.github.santiquiroz.blindside.shared.settings.SettingsRepository
 import io.github.santiquiroz.blindside.shared.settings.SettingsTransform

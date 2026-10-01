@@ -5,9 +5,9 @@ import io.github.santiquiroz.blindside.core.scene.RadarScene
 import io.github.santiquiroz.blindside.core.scene.SensorStatus
 import io.github.santiquiroz.blindside.core.scene.Warning
 import io.github.santiquiroz.blindside.shared.ble.BleStatus
-import io.github.santiquiroz.blindside.wear.session.SessionSource
-import io.github.santiquiroz.blindside.wear.session.SessionUiState
-import io.github.santiquiroz.blindside.wear.session.StartError
+import io.github.santiquiroz.blindside.shared.session.SessionSource
+import io.github.santiquiroz.blindside.shared.session.SessionUiState
+import io.github.santiquiroz.blindside.shared.session.StartError
 import io.github.santiquiroz.blindside.wear.ui.bleStatusLabel
 import io.github.santiquiroz.blindside.wear.ui.startErrorMessage
 import org.junit.jupiter.api.Assertions.assertEquals

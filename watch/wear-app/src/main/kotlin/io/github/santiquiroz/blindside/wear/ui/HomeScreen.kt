@@ -36,8 +36,8 @@ import io.github.santiquiroz.blindside.shared.permissions.SESSION_PERMISSIONS
 import io.github.santiquiroz.blindside.shared.permissions.StartDecision
 import io.github.santiquiroz.blindside.shared.permissions.startDecision
 import io.github.santiquiroz.blindside.wear.session.WearSessionCommands
-import io.github.santiquiroz.blindside.wear.session.SessionSource
-import io.github.santiquiroz.blindside.wear.session.SessionUiState
+import io.github.santiquiroz.blindside.shared.session.SessionSource
+import io.github.santiquiroz.blindside.shared.session.SessionUiState
 import io.github.santiquiroz.blindside.wear.ui.radar.eliminatedActionLabel
 
 private val START_CHIP_HEIGHT = 72.dp

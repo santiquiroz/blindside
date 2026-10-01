@@ -32,6 +32,7 @@ dependencies {
     api(project(":radar-core"))
     api(libs.coroutines.android)
     api(libs.datastore.preferences)
+    implementation(libs.androidx.core.ktx)
 
     testImplementation(platform(libs.junit5.bom))
     testImplementation(libs.junit5.jupiter)

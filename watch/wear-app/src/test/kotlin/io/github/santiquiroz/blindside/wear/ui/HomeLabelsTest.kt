@@ -2,9 +2,9 @@ package io.github.santiquiroz.blindside.wear.ui
 
 import io.github.santiquiroz.blindside.core.config.Handedness
 import io.github.santiquiroz.blindside.shared.ble.BleStatus
-import io.github.santiquiroz.blindside.wear.session.SessionSource
-import io.github.santiquiroz.blindside.wear.session.SessionUiState
-import io.github.santiquiroz.blindside.wear.session.StartError
+import io.github.santiquiroz.blindside.shared.session.SessionSource
+import io.github.santiquiroz.blindside.shared.session.SessionUiState
+import io.github.santiquiroz.blindside.shared.session.StartError
 import io.github.santiquiroz.blindside.core.config.RADAR_A
 import io.github.santiquiroz.blindside.core.config.RADAR_B
 import org.junit.jupiter.api.Assertions.assertEquals

@@ -3,7 +3,7 @@ package io.github.santiquiroz.blindside.wear
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import io.github.santiquiroz.blindside.wear.session.SessionStore
+import io.github.santiquiroz.blindside.shared.session.SessionStore
 import io.github.santiquiroz.blindside.shared.settings.settingsRepository
 import io.github.santiquiroz.blindside.wear.ui.BlindsideApp
 import io.github.santiquiroz.blindside.wear.ui.createAmbientObserver

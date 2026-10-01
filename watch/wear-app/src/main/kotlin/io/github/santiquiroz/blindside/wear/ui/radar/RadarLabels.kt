@@ -6,8 +6,8 @@ import io.github.santiquiroz.blindside.core.scene.Warning
 import io.github.santiquiroz.blindside.core.config.RADAR_A
 import io.github.santiquiroz.blindside.core.config.RADAR_B
 import io.github.santiquiroz.blindside.shared.ble.BleStatus
-import io.github.santiquiroz.blindside.wear.session.SessionSource
-import io.github.santiquiroz.blindside.wear.session.SessionUiState
+import io.github.santiquiroz.blindside.shared.session.SessionSource
+import io.github.santiquiroz.blindside.shared.session.SessionUiState
 import io.github.santiquiroz.blindside.wear.ui.bleStatusLabel
 import io.github.santiquiroz.blindside.wear.ui.startErrorMessage
 

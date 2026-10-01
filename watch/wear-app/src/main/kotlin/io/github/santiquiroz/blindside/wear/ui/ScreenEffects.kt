@@ -4,7 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.platform.LocalView
 import androidx.lifecycle.compose.LifecycleStartEffect
-import io.github.santiquiroz.blindside.wear.session.SessionStore
+import io.github.santiquiroz.blindside.shared.session.SessionStore
 
 @Composable
 fun KeepScreenOn(enabled: Boolean) {
