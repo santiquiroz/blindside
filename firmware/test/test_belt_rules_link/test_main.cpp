@@ -24,9 +24,21 @@ FirmwareText firmware_named(const char* text) {
     return firmware;
 }
 
+ConnInfo conn(LinkRole role, uint16_t interval_units, uint32_t sent, uint32_t dropped) {
+    return ConnInfo{role, LinkParams{interval_units, 0, 400}, sent, dropped};
+}
+
+size_t occurrences(const char* text, const char* needle) {
+    size_t count = 0;
+    for (const char* at = strstr(text, needle); at != nullptr; at = strstr(at + 1, needle)) {
+        count++;
+    }
+    return count;
+}
+
 BeltInfo example_info() {
     BeltInfo info{};
-    info.firmware_version = "0.1.0";
+    info.firmware_version = "0.2.0";
     info.boot_id = 0x9f3a12c4u;
     info.reset_reason = "POWERON";
     info.mtu = 255;
@@ -35,7 +47,10 @@ BeltInfo example_info() {
     info.imus[0] = ImuInfo{0, 104, 0};
     info.imus[1] = ImuInfo{1, 112, 3};
     info.tx_power_dbm = 9;
-    info.conn = LinkParams{36, 0, 500};
+    info.conns[0] = conn(LinkRole::Watch, 36, 1234, 0);
+    info.conns[1] = conn(LinkRole::Phone, 60, 1200, 3);
+    info.conn_count = 2;
+    info.bonds = 2;
     info.uptime_s = 42;
     return info;
 }
@@ -48,7 +63,8 @@ BeltInfo longest_info() {
     info.radars[1] = RadarInfo{1, firmware_named("VFF.FF.FFFFFFFF"), 460800};
     info.imus[0] = ImuInfo{0, 255, 4294967295u};
     info.imus[1] = ImuInfo{1, 255, 4294967295u};
-    info.conn = LinkParams{3200, 499, 3200};
+    info.conns[0] = ConnInfo{LinkRole::Watch, LinkParams{3200, 499, 3200}, 999999, 999999};
+    info.conns[1] = ConnInfo{LinkRole::Phone, LinkParams{3200, 499, 3200}, 999999, 999999};
     info.uptime_s = 4294967;
     return info;
 }
@@ -166,34 +182,65 @@ void test_device_name_uses_last_two_mac_bytes() {
 
 void test_info_json_matches_the_contract_example() {
     const char* expected =
-        R"({"proto":1,"fw":"0.1.0","boot_id":"9f3a12c4","reset":"POWERON","mtu":255,)"
+        R"({"proto":1,"fw":"0.2.0","boot_id":"9f3a12c4","reset":"POWERON","mtu":255,)"
         R"("radars":[{"id":0,"fw":"V2.04.23101915","baud":256000},{"id":1,"fw":"V2.04.23101915","baud":256000}],)"
-        R"("imus":[{"id":0,"who":104,"gyro_lsb_dps":65.5,"accel_lsb_g":4096,"repeats":0},)"
-        R"({"id":1,"who":112,"gyro_lsb_dps":65.5,"accel_lsb_g":4096,"repeats":3}],)"
-        R"("tx_power_dbm":9,"conn":{"interval_ms":45.0,"latency":0,"timeout_ms":5000},"uptime_s":42})";
+        R"("imus":[{"id":0,"who":104,"repeats":0},{"id":1,"who":112,"repeats":3}],"tx_power_dbm":9,)"
+        R"("conns":[{"role":"watch","itvl_ms":45.0,"lat":0,"timeout_ms":4000,"sent":1234,"dropped":0},)"
+        R"({"role":"phone","itvl_ms":75.0,"lat":0,"timeout_ms":4000,"sent":1200,"dropped":3}],)"
+        R"("bonds":2,"uptime_s":42})";
     char json[kInfoJsonBufferSize];
     size_t length = format_info_json(example_info(), json, sizeof(json));
     TEST_ASSERT_EQUAL_STRING(expected, json);
-    TEST_ASSERT_EQUAL_UINT(412, length);
+    TEST_ASSERT_EQUAL_UINT(460, length);
 }
 
-void test_info_json_worst_case_fits_in_the_512_byte_attribute() {
+void test_info_json_worst_case_with_two_links_fits_in_the_512_byte_attribute() {
     char json[kInfoJsonBufferSize];
     size_t length = format_info_json(longest_info(), json, sizeof(json));
-    TEST_ASSERT_EQUAL_UINT(444, length);
+    TEST_ASSERT_EQUAL_UINT(511, length);
     TEST_ASSERT_TRUE(length <= kInfoJsonMaxBytes);
     TEST_ASSERT_NOT_NULL(strstr(json, R"({"id":1,"fw":"VFF.FF.FFFFFFFF","baud":460800})"));
-    TEST_ASSERT_NOT_NULL(strstr(json, R"("accel_lsb_g":4096,"repeats":4294967295})"));
-    TEST_ASSERT_NOT_NULL(strstr(json, R"("conn":{"interval_ms":4000.0,"latency":499,"timeout_ms":32000})"));
+    TEST_ASSERT_NOT_NULL(strstr(json, R"({"id":1,"who":255,"repeats":4294967295})"));
+    TEST_ASSERT_NOT_NULL(strstr(
+        json, R"({"role":"phone","itvl_ms":4000.0,"lat":499,"timeout_ms":32000,"sent":999999,"dropped":999999})"));
 }
 
 void test_info_json_rounds_the_interval_to_one_decimal() {
     BeltInfo info = example_info();
-    info.conn = LinkParams{39, 0, 400};
+    info.conns[0].params = LinkParams{39, 0, 400};
     char json[kInfoJsonBufferSize];
     format_info_json(info, json, sizeof(json));
-    TEST_ASSERT_NOT_NULL(strstr(json, R"("interval_ms":48.8,)"));
-    TEST_ASSERT_NOT_NULL(strstr(json, R"("timeout_ms":4000})"));
+    TEST_ASSERT_NOT_NULL(strstr(json, R"("itvl_ms":48.8,)"));
+    TEST_ASSERT_NOT_NULL(strstr(json, R"("timeout_ms":4000,)"));
+}
+
+void test_info_json_lists_one_link_or_none() {
+    BeltInfo info = example_info();
+    info.conn_count = 1;
+    info.bonds = 1;
+    char json[kInfoJsonBufferSize];
+    format_info_json(info, json, sizeof(json));
+    TEST_ASSERT_NOT_NULL(strstr(
+        json, R"("conns":[{"role":"watch","itvl_ms":45.0,"lat":0,"timeout_ms":4000,"sent":1234,"dropped":0}],"bonds":1,)"));
+    info.conn_count = 0;
+    info.bonds = 0;
+    format_info_json(info, json, sizeof(json));
+    TEST_ASSERT_NOT_NULL(strstr(json, R"("conns":[],"bonds":0,)"));
+}
+
+void test_info_counters_wrap_at_one_million() {
+    BeltInfo info = example_info();
+    info.conns[0].sent = 1000001;
+    info.conns[0].dropped = 4294967295u;
+    char json[kInfoJsonBufferSize];
+    format_info_json(info, json, sizeof(json));
+    TEST_ASSERT_NOT_NULL(strstr(json, R"("sent":1,"dropped":967295})"));
+}
+
+void test_info_json_has_a_single_mtu_key_for_the_watch_reader() {
+    char json[kInfoJsonBufferSize];
+    format_info_json(longest_info(), json, sizeof(json));
+    TEST_ASSERT_EQUAL_UINT(1, occurrences(json, R"("mtu")"));
 }
 
 void test_info_json_reports_a_missing_radar() {
@@ -223,8 +270,11 @@ int run_all_tests() {
     RUN_TEST(test_advertising_is_fast_for_thirty_seconds);
     RUN_TEST(test_device_name_uses_last_two_mac_bytes);
     RUN_TEST(test_info_json_matches_the_contract_example);
-    RUN_TEST(test_info_json_worst_case_fits_in_the_512_byte_attribute);
+    RUN_TEST(test_info_json_worst_case_with_two_links_fits_in_the_512_byte_attribute);
     RUN_TEST(test_info_json_rounds_the_interval_to_one_decimal);
+    RUN_TEST(test_info_json_lists_one_link_or_none);
+    RUN_TEST(test_info_counters_wrap_at_one_million);
+    RUN_TEST(test_info_json_has_a_single_mtu_key_for_the_watch_reader);
     RUN_TEST(test_info_json_reports_a_missing_radar);
     RUN_TEST(test_info_json_reports_zero_when_it_does_not_fit);
     return UNITY_END();

@@ -45,13 +45,30 @@ ImuInfo imu_info(uint8_t imu_id) {
     return ImuInfo{imu_id, imu.who_am_i, imu.repeats};
 }
 
+ConnInfo conn_info(const LinkSnapshot& link, const LinkDelivery& delivery) {
+    LinkTally tally = tally_for_link(delivery, link.link_id);
+    return ConnInfo{link.role, link.params, tally.sent, tally.dropped};
+}
+
+BeltInfo with_links(const BeltInfo& info) {
+    BeltInfo next = info;
+    SenderStats stats = stream_sender_stats();
+    for (uint8_t slot = 0; slot < kMaxLinks; ++slot) {
+        LinkSnapshot link = ble_link_snapshot(slot);
+        if (link.connected) {
+            next.conns[next.conn_count++] = conn_info(link, stats.links[slot]);
+        }
+    }
+    next.bonds = pairing_bond_count();
+    return next;
+}
+
 BeltInfo current_info(uint32_t now_ms, uint8_t reader_slot) {
-    LinkSnapshot link = ble_link_snapshot(reader_slot);
     BeltInfo info{};
     info.firmware_version = config::kFirmwareVersion;
     info.boot_id = g_boot_id.load();
     info.reset_reason = reset_reason_name(esp_reset_reason());
-    info.mtu = link.mtu;
+    info.mtu = ble_link_snapshot(reader_slot).mtu;
     for (uint8_t i = 0; i < kRadarCount; ++i) {
         info.radars[i] = radar_info(i);
     }
@@ -59,9 +76,8 @@ BeltInfo current_info(uint32_t now_ms, uint8_t reader_slot) {
         info.imus[i] = imu_info(i);
     }
     info.tx_power_dbm = ble_link_tx_power();
-    info.conn = link.params;
     info.uptime_s = now_ms / 1000;
-    return info;
+    return with_links(info);
 }
 
 // Runs on the NimBLE host task at each read of `info`; current_info only reads atomics and locked snapshots.
