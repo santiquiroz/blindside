@@ -25,7 +25,7 @@ Una vibración distintiva en tu muñeca cuando alguien nuevo entra en tu campo d
   - sigue a cada contacto a lo largo del tiempo;
   - compensa tus propios giros y pasos;
   - dibuja los contactos en una pantalla de radar circular.
-- **Los contactos recién confirmados hacen vibrar tu muñeca** con un ritmo diferente para izquierda, centro o derecha. No tienes que mirar. Las alertas tienen límite de frecuencia: las que llegan juntas se agrupan, y hay una pausa por sector y un tope por minuto, para que un grupo de gente no se convierta en una sola vibración larga.
+- **Los contactos recién confirmados hacen vibrar tu muñeca** con un ritmo diferente para izquierda, centro o derecha. No tienes que mirar. Las alertas van espaciadas: como mucho una vibración por segundo, así que los contactos que llegan juntos hacen fila y vibran uno tras otro (primero el del centro). Además hay una pausa por sector y un tope de 10 por minuto, para que un grupo de gente no se convierta en una sola vibración larga.
 - Sin teléfono, sin Wi-Fi y sin nube: el cinturón solo se comunica con el reloj con el que lo emparejaste.
 
 ```
@@ -37,19 +37,19 @@ Una vibración distintiva en tu muñeca cuando alguien nuevo entra en tu campo d
 
 ## En qué se diferencia
 
-Ya existen "sensores de latidos" caseros construidos con el mismo radar; consulta [Antecedentes y créditos](#antecedentes-y-créditos). Montan un radar y una pantalla pequeña en el rifle. Blindside adopta un enfoque diferente:
+Ya existen "sensores de latidos" caseros construidos con el mismo radar; consulta [Antecedentes y créditos](#antecedentes-y-créditos). El más documentado monta un radar y una pantalla pequeña en el rifle, y otro es una pantalla fija con Raspberry Pi. Blindside adopta un enfoque diferente:
 
 - **Sensores en el cinturón, pantalla en la muñeca.** Los radares siguen tus caderas, la parte más estable de tu cuerpo al moverte. La pantalla está donde ya acostumbras mirar.
 - **Dos radares fusionados.** Mayor cobertura y una zona central donde un contacto detectado por ambos radares obtiene mayor confianza.
 - **Compensación de movimiento.** Un radar que llevas puesto ve "fantasmas" cada vez que te mueves. Los IMU de las cajas de radar rastrean tus giros y el conteo de pasos estima tu velocidad al caminar, lo que permite distinguir paredes y árboles de personas.
 - **Diseñado según cómo sostienes un M4:**
-  - Los ángulos del radar están orientados hacia tu lado de apoyo, hacia donde suele apuntar el cañón.
+  - La apertura de los radares se carga hacia tu lado de apoyo, hacia donde suele apuntar el cañón.
   - La aplicación detecta cuándo consultas el reloj en la cara interna de la muñeca de apoyo (porte "táctico", agarre con la palma arriba) y gira la pantalla para que "arriba" sea hacia donde apuntas. Se calibra en 10 segundos apuntando a un compañero (un "cero", como con la mira).
   - Con empuñadura vertical el reloj no se puede leer mientras apuntas, así que la vibración es la que habla.
 - **El sigilo es prioridad.**
   - La pantalla permanece apagada por defecto y la vibración es el canal principal.
   - El cinturón no emite luz durante el juego: el LED de estado queda apagado, y los LED de encendido que siempre están prendidos se retiran o se tapan durante el armado.
-  - El Bluetooth propio del módulo de radar se desactiva, y solo tu reloj emparejado puede conectarse al cinturón.
+  - El Bluetooth propio del módulo de radar se desactiva y, fuera de una breve ventana de emparejamiento que abres tú, solo tu reloj emparejado puede conectarse al cinturón.
 - **Grabar y reproducir.** Se puede registrar una partida en crudo y reproducirla en una PC para ajustar los filtros con datos reales.
 
 ## Límites honestos
@@ -70,14 +70,14 @@ Ya existen "sensores de latidos" caseros construidos con el mismo radar; consult
 | 2× MPU6050 (GY-521) | ~US$1–3 cada uno | Uno dentro de cada caja de radar, rígido con su radar; no se necesita magnetómetro |
 | Cables JST ZH 1.5 mm de 4 pines | ~US$5–10 por kit | El conector del LD2450 no es de 2.54 mm |
 | Placa con terminales de tornillo para ESP32 | ~US$5–10 | Sin soldaduras y sin cables Dupont que se aflojen |
-| Dos cables de 7 hilos, 50–80 cm | — | Del pouch a las cajas de radar; sirven cables USB o Ethernet viejos |
+| Dos cables de 7 hilos, 50–80 cm | — | Del pouch a las cajas de radar. Sirve un cable Ethernet viejo (8 hilos) por caja, o dos cables USB viejos (4 hilos cada uno) por caja. |
 | USB power bank | — | El cinturón consume unos 300 mA a 5 V, así que 10.000 mAh duran holgadamente más de 15 h |
 | Samsung Galaxy Watch 7 | — | Wear OS 6 (API 36); otros relojes Wear OS sin probar |
-| Cajas de radar impresas en 3D | — | Mantienen los ángulos, detienen balines y dejan pasar la señal de 24 GHz por una ventana maciza (sin metal frente al radar) |
+| Cajas de radar impresas en 3D | — | Mantienen los ángulos, detienen balines y dejan pasar la señal de 24 GHz por una ventana maciza (sin metal frente al radar). Un trozo de papel aluminio o de lata entre cada radar y tu cuerpo, aislado de la electrónica, reduce el lóbulo trasero del radar, que si no captaría tus propios movimientos. |
 
 ## Cómo funciona (versión corta)
 
-1. **El cinturón se mantiene simple.** El ESP32 nunca interpreta objetivos. Cada 100 ms empaqueta las tramas crudas del LD2450 y las lecturas de 50 Hz del IMU, cada una con su propia marca de tiempo, en una sola notificación BLE.
+1. **El cinturón se mantiene simple.** El ESP32 nunca interpreta objetivos. Cada 100 ms empaqueta las tramas crudas del LD2450 y las lecturas de 50 Hz de los dos IMU, cada una con su propia marca de tiempo, en una sola notificación BLE, o en varias seguidas cuando no cabe.
 2. **El reloj se encarga de pensar.** El procesamiento reside en `radar-core`, un módulo puro de Kotlin que puedes probar con pruebas unitarias en una PC. Para cada paquete:
    - decodifica las tramas del radar (su inusual formato de bit de signo se gestiona explícitamente);
    - descarta lecturas de tus propios brazos y rifle;
@@ -101,21 +101,23 @@ El diseño completo (en español) está en [docs/superpowers/specs/2026-09-30-bl
   - asistentes de calibración;
   - grabación de partidas.
 - **v1.5:**
-  - un cinturón háptico de 3 motores que indica la dirección por ubicación;
+  - motores de vibración en las cajas de radar, para que el propio cinturón indique la dirección por ubicación (requiere compra);
   - silenciamiento automático cuando estás apuntando;
   - tocar un contacto para marcarlo como amigo;
+  - un perfil para jugar de rodilla;
+  - un cambio rápido de hombro a mitad de partida;
   - un visor de reproducciones y mapa de calor;
   - un nodo centinela que vigila una puerta y alerta a tu muñeca;
   - un modo clásico estilo "COD" con una captura cada 4 segundos;
   - un modo torneo;
-  - motores de vibración en las cajas de radar;
   - tal vez un sensor térmico, si las grabaciones demuestran que es necesario.
 - **v2:**
   - identificación amigo-enemigo por UWB;
   - enlace de escuadrón vía ESP-NOW;
   - cobertura de 360°;
   - un nodo para riel de rifle;
-  - una aplicación para teléfono y exportación a ATAK/CoT.
+  - una aplicación para teléfono y exportación a ATAK/CoT;
+  - audio espacial por auricular.
 
 ## Estructura del repositorio
 
@@ -141,13 +143,13 @@ watch/                   (próximamente) radar-core (Kotlin puro) + wear-app (We
   - La hoja de datos del LD2450 especifica un barrido de 24.00–24.25 GHz, así que en Colombia los 50 MHz inferiores (24.00–24.05 GHz) quedan en una zona gris (una adición de 2024, la Res. ANE 153/2024, podría cubrirlos; sin verificar).
   - No modifiques el firmware, la antena ni la potencia del LD2450.
   - Publicar el código no tiene problema; vender kits armados puede requerir homologación, marcado CE o certificación FCC.
-- **Seguridad:** el LD2450 viene de fábrica con su propio Bluetooth activo, de modo que cualquiera en las cercanías podría reconfigurarlo; el firmware de Blindside lo apaga. El cinturón acepta una única conexión, exclusivamente desde tu reloj emparejado.
+- **Seguridad:** el LD2450 viene de fábrica con su propio Bluetooth activo, de modo que cualquiera en las cercanías podría reconfigurarlo; el firmware de Blindside lo apaga. El cinturón acepta una única conexión. Solo admite un emparejamiento nuevo durante una ventana de 60 s, que se abre cuando aún no hay reloj emparejado o al mantener 3 s el botón BOOT del ESP32 durante su primer minuto encendido (mantenerlo al encender lo pone en modo descarga). El emparejamiento usa una clave aleatoria de 6 dígitos propia de cada cinturón. Fuera de esa ventana solo puede conectarse el reloj emparejado. Dentro de ella otro dispositivo podría conectarse, pero sin la clave no lee nada, así que conviene emparejar lejos de los demás jugadores. Mantener BOOT 10 s o más (también en el primer minuto) borra el emparejamiento; después hay que olvidar el cinturón en los ajustes Bluetooth del reloj y volver a emparejar.
 - **No es un dispositivo de seguridad.** No confíes en él para proteger a nadie.
 - **Sin afiliación** con Activision (Call of Duty), 20th Century Studios (Aliens) ni Hi-Link.
 
 ## Antecedentes y créditos
 
-Blindside se apoya en el trabajo de estos proyectos. Ninguno cuenta todavía con una licencia de código abierto, por lo que las ideas se acreditan aquí y no se copia código:
+Blindside se apoya en el trabajo de estos proyectos. Dos no tienen licencia, y el código de Rob Smith usa una licencia no comercial que no es de código abierto y es incompatible con la AGPL, por lo que las ideas se acreditan aquí y no se copia código:
 
 - **ScienceShack: [Heartbeat Sensor from Modern Warfare 2](https://hackaday.io/project/205879-heartbeat-sensor-from-modern-warfare-2)** ([código](https://github.com/jrtage/MW2-Heartbeat-Sensor)). LD2450, XIAO RP2350 y una pantalla OLED en una montura para riel M-LOK. Su apunte sobre la orientación del eje X del módulo nos ahorró dolores de cabeza.
 - **[Bronsonalan/mw2-heartbeat-sensor](https://github.com/Bronsonalan/mw2-heartbeat-sensor).** Raspberry Pi y LD2450, con pantalla estilo fósforo y una capa de seguimiento.

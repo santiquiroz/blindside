@@ -89,6 +89,7 @@ TLV sections: u8 type | u8 len | payload[len]
   0x01 RADAR  (len 29): u8 radar_id | u32 t_ms | 24 B raw LD2450 targets (3 × [u16 x | u16 y | u16 speed | u16 res], sign-magnitude for x/y/speed)
   0x02 IMU    (len 18+12n): u8 imu_id | u32 t_first_ms | u8 n | n × i16[ax, ay, az, gx, gy, gz] | u32 sum_gx | u32 sum_gy | u32 sum_gz
   0x03 STATUS (len 10): 2 × [u8 radar_id | u16 bad_frames | u8 restarts | u8 baud_index]
+  0x04 LINK   (len 6): u16 interval (×1.25 ms) | u16 latency | u16 supervision_timeout (×10 ms) — sent after onConnParamsUpdate and once after CCCD subscription
   unknown types: skipped using len. If len > remaining bytes: drop the rest, mark the packet truncated.
 ```
 
@@ -96,7 +97,9 @@ TLV sections: u8 type | u8 len | payload[len]
 - Each sample is the average of 4 raw readings taken at 200 Hz.
 - Gyro full scale is ±500 °/s (65.5 LSB per °/s). Accel full scale is ±8 g (4096 LSB per g).
 - `sum_g*` are running sums of the **raw 200 Hz** gyro readings since boot. They wrap as u32; the watch takes the difference and reads it as int32.
-- Every packet is ≤ 244 B. The bundler splits a cut into several packets and never splits a section.
+- IMU timing: each 50 Hz sample is the average of one block of exactly 4 raw readings on a fixed 20 ms grid. The sample's `t` is the centre of its block, and `t_last = t_first_ms + (n−1)·20`. A failed or skipped raw read repeats the previous reading, so the sums advance exactly 4 readings per block. The sums cover up to the end of the section's last block.
+- `max_payload = min(getPeerMTU() − 3, 244)`. The ESP32 does not notify until the CCCD is active and `getPeerMTU() ≥ 247`.
+- **Fill order** when a cut is split: IMU, STATUS and LINK sections go first, then the RADAR frames of both radars sorted by `t_ms`. Every RADAR frame in packet k has `t_ms` ≤ those in packet k+1. A section is never split.
 
 ### `control` writes
 
@@ -112,7 +115,7 @@ TLV sections: u8 type | u8 len | payload[len]
 {"proto":1,"fw":"0.1.0","boot_id":"9f3a12c4","reset":"POWERON","mtu":255,
  "radars":[{"id":0,"fw":"V2.04.23101915","baud":256000},{"id":1,"fw":"V2.04.23101915","baud":256000}],
  "imus":[{"id":0,"who":104,"gyro_lsb_dps":65.5,"accel_lsb_g":4096},{"id":1,"who":112,"gyro_lsb_dps":65.5,"accel_lsb_g":4096}],
- "uptime_s":42}
+ "tx_power_dbm":9,"conn":{"interval_ms":45.0,"latency":0,"timeout_ms":5000},"uptime_s":42}
 ```
 
 ## `radar-core` public API (consumed by `wear-app`)
@@ -154,13 +157,15 @@ class RadarPipeline(config: PipelineConfig) {
     fun onBlePacket(bytes: ByteArray, arrivalNanos: Long): List<PipelineEvent>
     fun onWatchGravity(x: Float, y: Float, z: Float, eventNanos: Long)
     fun onWatchStep(eventNanos: Long)
+    fun onWatchGyro(x: Float, y: Float, z: Float, eventNanos: Long)   // rad/s, witness for the belt-bias calibration
+    fun onBeltInfo(json: String, nowNanos: Long)                     // every (re-)read of `info`: scales, boot_id
     fun onLinkState(connected: Boolean, nowNanos: Long): List<PipelineEvent>
     fun setEliminated(on: Boolean)
     fun scene(nowNanos: Long): RadarScene
 }
 
 // .replay
-enum class RecordType(val code: Int) { BLE_PACKET(1), WATCH_GRAVITY(2), WATCH_STEP(3), MANUAL_MARKER(4), TRACK_CONFIRMED(5), VIBRATION_STARTED(6), MODE_CHANGE(7) }
+enum class RecordType(val code: Int) { BLE_PACKET(1), WATCH_GRAVITY(2), WATCH_STEP(3), MANUAL_MARKER(4), TRACK_CONFIRMED(5), VIBRATION_STARTED(6), MODE_CHANGE(7), INFO_REREAD(8), WATCH_GYRO(9), RSSI(10) }
 data class BsrecRecord(val type: RecordType, val tMsSinceStart: Long, val payload: ByteArray)
 class BsrecWriter(out: java.io.OutputStream, headerJson: String) { fun write(record: BsrecRecord); fun close() }
 class BsrecReader(input: java.io.InputStream) { val headerJson: String; fun records(): Sequence<BsrecRecord> }
@@ -186,6 +191,23 @@ records: u8 type | u32 t_ms_since_start | u16 payload_len | payload
 - Track confirmed: i32 displayId.
 - Vibration started: i32 displayId + u8 side.
 - Mode change: UTF-8 mode name.
+- Info re-read: UTF-8 JSON.
+- Watch gyro: 3 × f32 (rad/s) + i64 event nanos.
+- RSSI: i16 dBm, read with `readRemoteRssi()` at 1 Hz.
+- Watch gravity is recorded at ≤ 10 Hz in the MVP.
+
+## Behaviour contracts that cross the core/app boundary
+
+- **Alert limiter** (spec §5.5):
+  - The first alert fires immediately.
+  - After that, confirmed contacts become *pending*. When ≥ 1 s has passed since the last vibration, one vibration fires for the highest-priority pending contact that is still confirmed. Priority is centre > sides, then nearest. Its side is recomputed at fire time.
+  - A pending contact that is no longer confirmed when its turn comes is shown on screen only.
+  - Per-sector pause of 5 s, except when the contact count in that sector increases.
+  - Cap: **10 contact alerts in any rolling 60 s window**. System alerts never count and are never silenced.
+  - One alert per display ID.
+  - Eliminated mode emits no contact alerts.
+  - `radar-core` emits `ContactAlert` only when a vibration must start. The app never re-limits.
+- **MVP gate "detenerse y escanear"** (spec §6.6): while the state is WALKING or TURNING, and for 0.5 s after, no tentative track is promoted. After that tail, promotion requires 3 hits in evaluable windows later than the tail. Tracks confirmed earlier keep their ID and don't re-alert. In the MVP this gate replaces ghost rules 1-3.
 
 ## Plan ownership and parallelism
 

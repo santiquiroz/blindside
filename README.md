@@ -25,7 +25,7 @@ A distinct buzz on your wrist when someone new moves into view.
   - follows each contact over time;
   - compensates for your own turns and steps;
   - draws the contacts on a round radar display.
-- **Newly confirmed contacts buzz your wrist** with a different rhythm for left, center or right. You don't have to look. Alerts are rate-limited: ones that arrive together are grouped, and there's a per-sector pause and a per-minute cap, so a crowd doesn't turn into one long buzz.
+- **Newly confirmed contacts buzz your wrist** with a different rhythm for left, center or right. You don't have to look. Alerts are paced: at most one buzz per second, so contacts that show up together queue and buzz one after another (center first). There's also a per-sector pause and a cap of 10 per minute, so a crowd doesn't turn into one long buzz.
 - No phone, no Wi-Fi and no cloud: the belt talks only to the watch you paired it with.
 
 ```
@@ -37,7 +37,7 @@ A distinct buzz on your wrist when someone new moves into view.
 
 ## What's different
 
-DIY "heartbeat sensors" built on the same radar already exist; see [Prior art](#prior-art--credits). They mount a radar and a small screen on the rifle. Blindside takes a different approach:
+DIY "heartbeat sensors" built on the same radar already exist; see [Prior art](#prior-art--credits). The best-documented one mounts a radar and a small screen on the rifle, and another is a fixed Raspberry Pi display. Blindside takes a different approach:
 
 - **Belt sensors, wrist display.** The radars follow your hips, the most stable part of your body when you move. The display is where you already glance.
 - **Two radars, fused.** Wider coverage, and a center zone where a contact seen by both radars earns higher confidence.
@@ -49,7 +49,7 @@ DIY "heartbeat sensors" built on the same radar already exist; see [Prior art](#
 - **Stealth first.**
   - The screen stays off by default and vibration is the main channel.
   - The belt emits no light during play: the status LED stays off, and the always-on power LEDs are removed or taped over during assembly.
-  - The radar module's own Bluetooth is switched off, and only your paired watch can connect to the belt.
+  - The radar module's own Bluetooth is switched off, and outside a short pairing window that you open yourself, only your paired watch can connect to the belt.
 - **Record and replay.** A match can be recorded raw and replayed on a PC to tune the filters against real data.
 
 ## Honest limits
@@ -70,14 +70,14 @@ DIY "heartbeat sensors" built on the same radar already exist; see [Prior art](#
 | 2× MPU6050 (GY-521) | ~US$1–3 each | One inside each radar box, rigid with its radar; no magnetometer needed |
 | JST ZH 1.5 mm 4-pin cables | ~US$5–10 per kit | The LD2450 connector is not 2.54 mm |
 | ESP32 screw-terminal board | ~US$5–10 | No soldering, and no Dupont connectors to wiggle loose |
-| Two 7-wire cables, 50–80 cm | — | Pouch to radar boxes; old USB or Ethernet cables work |
+| Two 7-wire cables, 50–80 cm | — | Pouch to radar boxes. One old Ethernet cable (8 wires) per box works, or two old USB cables (4 wires each) per box. |
 | USB power bank | — | The belt draws about 300 mA at 5 V, so 10,000 mAh lasts well over 15 h |
 | Samsung Galaxy Watch 7 | — | Wear OS 6 (API 36); other Wear OS watches untested |
-| 3D-printed radar boxes | — | Hold the angles, stop BBs, and pass the 24 GHz signal through a solid-infill window (no metal in front of the radar) |
+| 3D-printed radar boxes | — | Hold the angles, stop BBs, and pass the 24 GHz signal through a solid-infill window (no metal in front of the radar). Aluminum foil or a piece of tin can between each radar and your body, insulated from the electronics, cuts down the radar's rear lobe, which would otherwise pick up your own movement. |
 
 ## How it works (short version)
 
-1. **The belt stays simple.** The ESP32 never interprets targets. Every 100 ms it bundles the raw LD2450 frames and the 50 Hz IMU readings, each with its own timestamp, into one BLE notification.
+1. **The belt stays simple.** The ESP32 never interprets targets. Every 100 ms it bundles the raw LD2450 frames and the 50 Hz readings of both IMUs, each with its own timestamp, into one BLE notification, or several consecutive ones when the bundle doesn't fit.
 2. **The watch does the thinking.** The processing lives in `radar-core`, a pure Kotlin module you can unit-test on a PC. For each bundle it:
    - decodes the radar frames (their unusual sign-bit format is handled explicitly);
    - drops readings from your own arms and rifle;
@@ -101,21 +101,23 @@ The full design (in Spanish) is in [docs/superpowers/specs/2026-09-30-blindside-
   - calibration wizards;
   - match recording.
 - **v1.5:**
-  - a 3-motor haptic belt that tells direction by location;
+  - vibration motors in the radar boxes, so the belt itself tells direction by location (needs a purchase);
   - auto-silence when you're aiming;
   - tap a contact to mark it as a friend;
+  - a kneeling profile;
+  - a quick shoulder switch mid-game;
   - a replay viewer and heatmap;
   - a sentry node that guards a doorway and alerts your wrist;
   - a classic "COD" mode with a snapshot every 4 seconds;
   - a tournament mode;
-  - vibration motors in the radar boxes;
   - maybe a thermal sensor, if the recordings show it's needed.
 - **v2:**
   - UWB friend-or-foe;
   - squad link over ESP-NOW;
   - 360° coverage;
   - a rifle-rail node;
-  - a phone app and ATAK/CoT export.
+  - a phone app and ATAK/CoT export;
+  - spatial audio through an earpiece.
 
 ## Repository layout
 
@@ -141,13 +143,13 @@ watch/                   (coming) radar-core (pure Kotlin) + wear-app (Wear OS)
   - The LD2450 datasheet states a 24.00–24.25 GHz sweep, so in Colombia the lowest 50 MHz (24.00–24.05 GHz) sits in a grey zone (a 2024 addition, Res. ANE 153/2024, may cover it; unverified).
   - Don't modify the LD2450's firmware, antenna or power.
   - Publishing the code is fine; selling assembled kits may require homologation, CE marking or FCC certification.
-- **Security:** the LD2450 ships with its own Bluetooth on, so anyone nearby could reconfigure it; Blindside's firmware turns it off. The belt accepts a single connection, only from your paired watch.
+- **Security:** the LD2450 ships with its own Bluetooth on, so anyone nearby could reconfigure it; Blindside's firmware turns it off. The belt accepts a single connection. It takes a new pairing only during a 60-second window, which opens when no watch is paired yet or when you hold the ESP32's BOOT button for 3 s within the first minute after it starts up (holding it while powering on enters flash mode instead). Pairing uses a random 6-digit key unique to each belt. Outside that window only the paired watch can connect. Inside it, another device can connect but can't read anything without the key, so pair away from other players. Holding BOOT for 10 s or more (also within the first minute) clears the pairing; after that, forget the belt in the watch's Bluetooth settings and pair again.
 - **Not a safety device.** Don't rely on it to protect anyone.
 - **Not affiliated** with Activision (Call of Duty), 20th Century Studios (Aliens) or Hi-Link.
 
 ## Prior art & credits
 
-Blindside stands on the shoulders of these projects. None has an open-source license yet, so ideas are credited here and no code is copied:
+Blindside stands on the shoulders of these projects. Two have no license, and Rob Smith's code uses a non-commercial license that is not open source and is incompatible with the AGPL, so ideas are credited here and no code is copied:
 
 - **ScienceShack: [Heartbeat Sensor from Modern Warfare 2](https://hackaday.io/project/205879-heartbeat-sensor-from-modern-warfare-2)** ([code](https://github.com/jrtage/MW2-Heartbeat-Sensor)). LD2450, XIAO RP2350 and an OLED on an M-LOK rail mount. Their note on the module's X-axis orientation saved us a headache.
 - **[Bronsonalan/mw2-heartbeat-sensor](https://github.com/Bronsonalan/mw2-heartbeat-sensor).** Raspberry Pi and LD2450, with a phosphor-style display and a tracking layer.
