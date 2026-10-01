@@ -3,8 +3,13 @@
 set -u
 export MSYS_NO_PATHCONV=1
 
-HERE="$(cd "$(dirname "$0")" && pwd)"
-WATCH_DIR="$(cd "$HERE/../.." && pwd)"
+# With MSYS_NO_PATHCONV Git Bash no longer rewrites /c/... for Windows tools (python, adb), so paths must already be native.
+native_dir() {
+    (cd "$1" && { pwd -W 2>/dev/null || pwd; })
+}
+
+HERE="$(native_dir "$(dirname "$0")")"
+WATCH_DIR="$(native_dir "$HERE/../..")"
 TOOLS=(python "$HERE/e2e_tools.py")
 PKG=io.github.santiquiroz.blindside
 PHONE_ACTIVITY="$PKG/io.github.santiquiroz.blindside.phone.MainActivity"
