@@ -38,7 +38,7 @@ data class MotionDetector(
         (if (turnFromWatch) watchTurnEmaDps else turnRateEmaDps) > params.turningRateDps
 
     fun isWalking(tMs: Long, params: MotionParams): Boolean =
-        beltAccel.values.any { it.spreadG() > params.walkingAccelStdG } || steppedRecently(tMs, params)
+        beltAccel.values.any { it.spreadG(tMs, params) > params.walkingAccelStdG } || steppedRecently(tMs, params)
 
     fun isMoving(tMs: Long, params: MotionParams): Boolean = isWalking(tMs, params) || isTurning(params)
 

@@ -58,6 +58,15 @@ class MotionDetectorTest {
     }
 
     @Test
+    fun `walking ends 1 s after the last box reading even if no reading follows`() {
+        val walked = walk(MotionDetector(), 0 until 50, amplitudeG = 0.25)
+        val lastStepMs = walked.lastStepMs!!
+
+        assertTrue(walked.isWalking(980, params))
+        assertFalse(walked.isWalking(maxOf(980L + 1_000, lastStepMs + 1_300), params))
+    }
+
+    @Test
     fun `a constant zero-g offset above the step rise is not a step`() {
         val offset = walk(MotionDetector(), 0 until 100, amplitudeG = 0.0, offsetG = 0.3)
 

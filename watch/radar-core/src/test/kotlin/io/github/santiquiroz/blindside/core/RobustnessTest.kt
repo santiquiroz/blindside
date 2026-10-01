@@ -8,6 +8,7 @@ import io.github.santiquiroz.blindside.core.sim.Scenario
 import io.github.santiquiroz.blindside.core.sim.Scenarios
 import io.github.santiquiroz.blindside.core.sim.Stand
 import io.github.santiquiroz.blindside.core.sim.Walk
+import io.github.santiquiroz.blindside.core.sim.simEspMs
 import io.github.santiquiroz.blindside.core.sim.walker
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -71,6 +72,14 @@ class RobustnessTest {
 
         assertEquals(1, run.alerts.size)
         assertEquals(MotionState.STILL, run.sceneAt(7_000).motion)
+    }
+
+    @Test
+    fun `both imu cables dropping mid-walk do not keep the player walking once he stops`() {
+        val run = runScenario(Scenarios.rivalWhileWalking()) { if (it.tMs >= simEspMs(3_500)) it.copy(flags = it.flags and 0x03) else it }
+
+        assertEquals(1, run.alerts.size)
+        assertEquals(MotionState.STILL, run.sceneAt(8_000).motion)
     }
 
     private fun withAccelOffset(bundle: Bundle, imuId: Int, azLsb: Int): Bundle = bundle.copy(

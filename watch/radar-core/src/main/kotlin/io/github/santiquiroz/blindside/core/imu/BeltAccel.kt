@@ -13,7 +13,9 @@ data class BeltAccel(
         return copy(norms = window).withStepCheck(tMs, normG - window.meanValue(), params)
     }
 
-    fun spreadG(): Double = norms.map { it.value }.standardDeviation()
+    // Measured at query time: when the IMU stops reporting, its last walking second must age out instead of freezing.
+    fun spreadG(tMs: Long, params: MotionParams): Double =
+        norms.filter { it.tMs > tMs - params.walkingWindowMs }.map { it.value }.standardDeviation()
 
     // The excess is measured from the chip's own 1 s mean |a|, not from 1 g, so a constant offset is never a step.
     private fun withStepCheck(tMs: Long, excessG: Double, params: MotionParams): BeltAccel {
