@@ -1,0 +1,250 @@
+{
+  "sign_magnitude": [
+    {
+      "raw": 0,
+      "value": 0
+    },
+    {
+      "raw": 782,
+      "value": -782
+    },
+    {
+      "raw": 34481,
+      "value": 1713
+    },
+    {
+      "raw": 16,
+      "value": -16
+    },
+    {
+      "raw": 32784,
+      "value": 16
+    },
+    {
+      "raw": 32768,
+      "value": 0
+    },
+    {
+      "raw": 65535,
+      "value": 32767
+    },
+    {
+      "raw": 32767,
+      "value": -32767
+    }
+  ],
+  "ld2450_official_frame": {
+    "hex": "aaff03000e03b186100040010000000000000000000000000000000055cc",
+    "targets": [
+      {
+        "x_mm": -782,
+        "y_mm": 1713,
+        "speed_cms": -16,
+        "resolution_mm": 320
+      }
+    ]
+  },
+  "ld2450_commands": {
+    "enable_config": "fdfcfbfa0400ff00010004030201",
+    "end_config": "fdfcfbfa0200fe0004030201",
+    "multi_target": "fdfcfbfa0200900004030201",
+    "read_firmware": "fdfcfbfa0200a00004030201",
+    "set_baud_256000": "fdfcfbfa0400a100070004030201",
+    "restart": "fdfcfbfa0200a30004030201",
+    "bluetooth_off": "fdfcfbfa0400a400000004030201"
+  },
+  "bundle_one_radar": {
+    "hex": "010f0100e8030000011d00e30300000e03b1861000400100000000000000000000000000000000",
+    "expected": {
+      "version": 1,
+      "flags": 15,
+      "seq": 1,
+      "t_ms": 1000,
+      "truncated": false,
+      "radar_frames": [
+        {
+          "radar_id": 0,
+          "t_ms": 995,
+          "targets": [
+            {
+              "x_mm": -782,
+              "y_mm": 1713,
+              "speed_cms": -16,
+              "resolution_mm": 320
+            }
+          ]
+        }
+      ],
+      "imu_batches": [],
+      "statuses": []
+    }
+  },
+  "bundle_typical": {
+    "hex": "010fffff40e20100011d0008e201000e03b1861000400100000000000000000000000000000000011d0112e20100f481b88b1980680100000000000000000000000000000000024e00f4e10100050000000000100a00fbff03000100ffffff0f0b00fbff03000200fefffe0f0c00fcff0200ffff010001100900faff04000000000000100a00fbff030064000000faffffff07000000024e01f4e10100050a001400fa0ffdff00008f020b001500fb0ffdff010090020c001600fc0ffeff010091020d001700fd0ffeff000092020e001800fe0fffff00009302e0b1ffff03000000005ed0b2030a00020000070100000107",
+    "size": 242,
+    "expected": {
+      "version": 1,
+      "flags": 15,
+      "seq": 65535,
+      "t_ms": 123456,
+      "truncated": false,
+      "radar_frames": [
+        {
+          "radar_id": 0,
+          "t_ms": 123400,
+          "targets": [
+            {
+              "x_mm": -782,
+              "y_mm": 1713,
+              "speed_cms": -16,
+              "resolution_mm": 320
+            }
+          ]
+        },
+        {
+          "radar_id": 1,
+          "t_ms": 123410,
+          "targets": [
+            {
+              "x_mm": 500,
+              "y_mm": 3000,
+              "speed_cms": 25,
+              "resolution_mm": 360
+            }
+          ]
+        }
+      ],
+      "imu_batches": [
+        {
+          "imu_id": 0,
+          "t_first_ms": 123380,
+          "samples": [
+            [
+              0,
+              0,
+              4096,
+              10,
+              -5,
+              3
+            ],
+            [
+              1,
+              -1,
+              4095,
+              11,
+              -5,
+              3
+            ],
+            [
+              2,
+              -2,
+              4094,
+              12,
+              -4,
+              2
+            ],
+            [
+              -1,
+              1,
+              4097,
+              9,
+              -6,
+              4
+            ],
+            [
+              0,
+              0,
+              4096,
+              10,
+              -5,
+              3
+            ]
+          ],
+          "gyro_sums_u32": [
+            100,
+            4294967290,
+            7
+          ]
+        },
+        {
+          "imu_id": 1,
+          "t_first_ms": 123380,
+          "samples": [
+            [
+              10,
+              20,
+              4090,
+              -3,
+              0,
+              655
+            ],
+            [
+              11,
+              21,
+              4091,
+              -3,
+              1,
+              656
+            ],
+            [
+              12,
+              22,
+              4092,
+              -2,
+              1,
+              657
+            ],
+            [
+              13,
+              23,
+              4093,
+              -2,
+              0,
+              658
+            ],
+            [
+              14,
+              24,
+              4094,
+              -1,
+              0,
+              659
+            ]
+          ],
+          "gyro_sums_u32": [
+            4294947296,
+            3,
+            3000000000
+          ]
+        }
+      ],
+      "statuses": [
+        {
+          "radar_id": 0,
+          "bad_frames": 2,
+          "restarts": 0,
+          "baud_index": 7
+        },
+        {
+          "radar_id": 1,
+          "bad_frames": 0,
+          "restarts": 1,
+          "baud_index": 7
+        }
+      ]
+    }
+  },
+  "bundle_unknown_tlv": {
+    "hex": "01030700881300007e03010203011d017e130000f481b88b1980680100000000000000000000000000000000",
+    "expected_radar_ids": [
+      1
+    ]
+  },
+  "bundle_truncated": {
+    "hex": "01010800ec130000011d007e1300000e03b18610",
+    "expected": {
+      "truncated": true,
+      "radar_frames": 0
+    }
+  }
+}
