@@ -23,13 +23,6 @@ void clear_whitelist() {
     }
 }
 
-BondIdentity identity_bytes(const NimBLEAddress& address) {
-    BondIdentity identity{};
-    memcpy(identity.address, address.getVal(), kBondAddressSize);
-    identity.type = address.getType();
-    return identity;
-}
-
 RoleRecords stored_role_records() {
     RoleRecords records{};
     Preferences preferences;
@@ -40,16 +33,41 @@ RoleRecords stored_role_records() {
     return records;
 }
 
+void fill_identities(const NimBLEAddress* addresses, size_t count, BondIdentity* out) {
+    for (size_t i = 0; i < count; ++i) {
+        out[i] = bond_store_identity(addresses[i]);
+    }
+}
+
+size_t forget_stale_bonds(IdentityList trusted, IdentityList connected) {
+    size_t forgotten = 0;
+    for (int i = static_cast<int>(stored_bond_count()) - 1; i >= 0; --i) {
+        NimBLEAddress bonded = NimBLEDevice::getBondedAddress(i);
+        if (bond_is_stale(bond_store_identity(bonded), trusted, connected)) {
+            NimBLEDevice::deleteBond(bonded);
+            forgotten++;
+        }
+    }
+    return forgotten;
+}
+
 TrustedBonds with_recorded_roles(const TrustedBonds& bonds) {
     RoleRecords records = stored_role_records();
     TrustedBonds next = bonds;
     for (size_t i = 0; i < next.count; ++i) {
-        next.roles[i] = recorded_role(records.entries, records.count, identity_bytes(next.identities[i]));
+        next.roles[i] = recorded_role(records.entries, records.count, bond_store_identity(next.identities[i]));
     }
     return next;
 }
 
 }  // namespace
+
+BondIdentity bond_store_identity(const NimBLEAddress& address) {
+    BondIdentity identity{};
+    memcpy(identity.address, address.getVal(), kBondAddressSize);
+    identity.type = address.getType();
+    return identity;
+}
 
 // NimBLE lists bonds in storage order, oldest first, so a crash mid-adoption loses only the newest bond.
 TrustedBonds bond_store_load() {
@@ -109,7 +127,8 @@ TrustedBonds bond_store_with_role(const TrustedBonds& bonds, size_t index, LinkR
 void bond_store_save_roles(const TrustedBonds& bonds) {
     RoleRecords records{};
     for (size_t i = 0; i < bonds.count; ++i) {
-        records.entries[i] = BondRoleRecord{identity_bytes(bonds.identities[i]), static_cast<uint8_t>(bonds.roles[i])};
+        records.entries[i] =
+            BondRoleRecord{bond_store_identity(bonds.identities[i]), static_cast<uint8_t>(bonds.roles[i])};
     }
     Preferences preferences;
     preferences.begin(config::kPreferencesNamespace, false);
@@ -122,12 +141,17 @@ void bond_store_forget(const NimBLEAddress& identity) {
 }
 
 void bond_store_forget_untrusted(const TrustedBonds& bonds) {
-    for (int i = static_cast<int>(stored_bond_count()) - 1; i >= 0; --i) {
-        NimBLEAddress bonded = NimBLEDevice::getBondedAddress(i);
-        if (!bond_store_contains(bonds, bonded)) {
-            NimBLEDevice::deleteBond(bonded);
-        }
-    }
+    bond_store_forget_stale(bonds, nullptr, 0);
+}
+
+// A connected identity may be a newcomer whose bond the belt has not decided on yet, so it stays.
+size_t bond_store_forget_stale(const TrustedBonds& bonds, const NimBLEAddress* connected, size_t connected_count) {
+    BondIdentity trusted_ids[kMaxBonds];
+    BondIdentity connected_ids[kMaxLinks];
+    size_t links = connected_count < kMaxLinks ? connected_count : kMaxLinks;
+    fill_identities(bonds.identities, bonds.count, trusted_ids);
+    fill_identities(connected, links, connected_ids);
+    return forget_stale_bonds(IdentityList{trusted_ids, bonds.count}, IdentityList{connected_ids, links});
 }
 
 void bond_store_forget_all() {

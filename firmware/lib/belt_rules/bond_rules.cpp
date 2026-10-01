@@ -35,6 +35,15 @@ bool same_identity(const BondIdentity& a, const BondIdentity& b) {
     return a.type == b.type && memcmp(a.address, b.address, kBondAddressSize) == 0;
 }
 
+bool listed(IdentityList list, const BondIdentity& identity) {
+    for (size_t i = 0; i < list.count; ++i) {
+        if (same_identity(list.items[i], identity)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 uint8_t bond_bit(size_t bond_index) {
     return static_cast<uint8_t>(1u << bond_index);
 }
@@ -101,4 +110,18 @@ bool session_running(uint8_t session_flags, const KeptBond* kept, size_t kept_co
         }
     }
     return false;
+}
+
+bool bond_is_stale(const BondIdentity& stored, IdentityList trusted, IdentityList connected) {
+    return !listed(trusted, stored) && !listed(connected, stored);
+}
+
+// Storage order is oldest first, and the record being written belongs to a pairing still in progress.
+size_t bond_to_evict(IdentityList stored, IdentityList trusted, const BondIdentity& writer) {
+    for (size_t i = 0; i < stored.count; ++i) {
+        if (bond_is_stale(stored.items[i], trusted, IdentityList{&writer, 1})) {
+            return i;
+        }
+    }
+    return stored.count;
 }

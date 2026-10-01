@@ -8,6 +8,7 @@
 
 #include "ble_link.h"
 #include "blindside_config.h"
+#include "bond_guard.h"
 #include "serial_command.h"
 
 namespace {
@@ -16,6 +17,11 @@ constexpr uint32_t kNoStoredPasskey = UINT32_MAX;
 
 struct KeptBonds {
     KeptBond bonds[kMaxBonds];
+};
+
+struct ConnectedIdentities {
+    NimBLEAddress identities[kMaxLinks];
+    size_t count;
 };
 
 std::atomic<uint8_t> g_bond_count{0};
@@ -55,6 +61,7 @@ void install_passkey(PairingState& state, uint32_t passkey) {
 void adopt_trusted(PairingState& state, const TrustedBonds& trusted) {
     state.trusted = trusted;
     bond_store_refresh_whitelist(trusted);
+    bond_guard_trust(trusted);
     g_bond_count = static_cast<uint8_t>(trusted.count);
 }
 
@@ -128,10 +135,12 @@ void handle_serial(PairingState& state) {
     }
 }
 
-void track_slot(PairingState& state, uint8_t slot, const LinkSnapshot& link) {
-    if (link.link_id != state.slots[slot].link_id) {
-        state.slots[slot] = SlotPairing{link.link_id, state.window.open, false};
+bool track_slot(PairingState& state, uint8_t slot, const LinkSnapshot& link) {
+    if (link.link_id == state.slots[slot].link_id) {
+        return false;
     }
+    state.slots[slot] = SlotPairing{link.link_id, state.window.open, false};
+    return true;
 }
 
 bool pairing_allowed(const PairingState& state, uint8_t slot) {
@@ -246,15 +255,57 @@ int bond_index_of_slot(const PairingState& state, uint8_t slot) {
     return peer.valid ? bond_store_index_of(state.trusted, peer.identity) : -1;
 }
 
-void poll_slot(PairingState& state, uint8_t slot, uint32_t now_ms) {
-    track_slot(state, slot, ble_link_snapshot(slot));
+bool poll_slot(PairingState& state, uint8_t slot, uint32_t now_ms) {
+    bool link_changed = track_slot(state, slot, ble_link_snapshot(slot));
     handle_auth_event(state, slot);
     drop_unwanted_peer(state, slot, now_ms);
+    return link_changed;
+}
+
+ConnectedIdentities connected_identities() {
+    ConnectedIdentities connected{};
+    for (uint8_t slot = 0; slot < kMaxLinks; ++slot) {
+        PeerSecurity peer = ble_link_peer_security(slot);
+        if (peer.valid) {
+            connected.identities[connected.count++] = peer.identity;
+        }
+    }
+    return connected;
+}
+
+// A device that bonds and drops before its auth event is handled leaves a bond that would fill NimBLE's store.
+void forget_stale_bonds(const PairingState& state) {
+    ConnectedIdentities connected = connected_identities();
+    size_t forgotten = bond_store_forget_stale(state.trusted, connected.identities, connected.count);
+    if (forgotten > 0) {
+        Serial.printf("pairing: forgot %u stale bond(s)\n", static_cast<unsigned>(forgotten));
+    }
+}
+
+void report_store_guard() {
+    BondGuardEvents events = bond_guard_take_events();
+    if (events.evicted > 0) {
+        Serial.printf("pairing: bond store full, deleted %lu untrusted bond(s)\n",
+                      static_cast<unsigned long>(events.evicted));
+    }
+    if (events.refused > 0) {
+        Serial.printf("pairing: bond store full, refused %lu write(s) to keep the trusted bonds\n",
+                      static_cast<unsigned long>(events.refused));
+    }
+}
+
+bool poll_slots(PairingState& state, uint32_t now_ms) {
+    bool links_changed = false;
+    for (uint8_t slot = 0; slot < kMaxLinks; ++slot) {
+        links_changed = poll_slot(state, slot, now_ms) || links_changed;
+    }
+    return links_changed;
 }
 
 }  // namespace
 
 PairingState pairing_begin(uint32_t now_ms) {
+    bond_guard_install();
     PairingState state{};
     install_passkey(state, load_or_create_passkey());
     adopt_trusted(state, bond_store_load());
@@ -266,9 +317,10 @@ void pairing_poll(PairingState& state, uint32_t now_ms) {
     handle_button(state, now_ms);
     handle_serial(state);
     state.window = window_after_tick(state.window, now_ms, state.trusted.count > 0);
-    for (uint8_t slot = 0; slot < kMaxLinks; ++slot) {
-        poll_slot(state, slot, now_ms);
+    if (poll_slots(state, now_ms)) {
+        forget_stale_bonds(state);
     }
+    report_store_guard();
 }
 
 void pairing_open_window(PairingState& state, uint32_t now_ms) {

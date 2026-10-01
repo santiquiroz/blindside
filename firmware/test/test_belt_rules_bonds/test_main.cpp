@@ -27,6 +27,12 @@ BondIdentity identity(uint8_t last_byte, uint8_t type) {
     return BondIdentity{{0x24, 0x6F, 0x28, 0xAB, 0x0C, last_byte}, type};
 }
 
+const BondIdentity kWatch = identity(0x1E, 0);
+const BondIdentity kPhone = identity(0x2F, 1);
+const BondIdentity kStranger = identity(0x3A, 1);
+const BondIdentity kNewcomer = identity(0x4B, 1);
+const IdentityList kNobody{nullptr, 0};
+
 }  // namespace
 
 void setUp() {}
@@ -128,6 +134,45 @@ void test_replacing_a_bond_drops_its_session_flag_and_keeps_the_other() {
     TEST_ASSERT_EQUAL_UINT8(0, session_flags_without_bond(second_only, 1));
 }
 
+void test_a_bond_neither_kept_nor_connected_is_stale() {
+    const BondIdentity trusted[] = {kWatch, kPhone};
+    TEST_ASSERT_TRUE(bond_is_stale(kStranger, IdentityList{trusted, 2}, kNobody));
+    TEST_ASSERT_TRUE(bond_is_stale(identity(0x1E, 1), IdentityList{trusted, 2}, kNobody));
+}
+
+void test_a_kept_bond_is_never_stale_even_when_its_device_is_away() {
+    const BondIdentity trusted[] = {kWatch, kPhone};
+    TEST_ASSERT_FALSE(bond_is_stale(kWatch, IdentityList{trusted, 2}, kNobody));
+    TEST_ASSERT_FALSE(bond_is_stale(kPhone, IdentityList{trusted, 2}, kNobody));
+}
+
+void test_a_connected_newcomer_bond_is_not_stale_before_the_belt_decides() {
+    const BondIdentity trusted[] = {kWatch, kPhone};
+    const BondIdentity connected[] = {kWatch, kNewcomer};
+    TEST_ASSERT_FALSE(bond_is_stale(kNewcomer, IdentityList{trusted, 2}, IdentityList{connected, 2}));
+    TEST_ASSERT_TRUE(bond_is_stale(kStranger, IdentityList{trusted, 2}, IdentityList{connected, 2}));
+}
+
+void test_an_overflow_evicts_the_oldest_untrusted_bond_and_never_the_watch() {
+    const BondIdentity stored[] = {kWatch, kStranger, kPhone, kNewcomer};
+    const BondIdentity trusted[] = {kWatch, kPhone};
+    TEST_ASSERT_EQUAL_UINT(1, bond_to_evict(IdentityList{stored, 4}, IdentityList{trusted, 2}, identity(0x5C, 0)));
+}
+
+void test_an_overflow_never_evicts_the_bond_being_written() {
+    const BondIdentity stored[] = {kWatch, kNewcomer, kPhone, kStranger};
+    const BondIdentity trusted[] = {kWatch, kPhone};
+    TEST_ASSERT_EQUAL_UINT(3, bond_to_evict(IdentityList{stored, 4}, IdentityList{trusted, 2}, kNewcomer));
+}
+
+void test_an_overflow_with_only_kept_bonds_is_refused() {
+    const BondIdentity stored[] = {kWatch, kPhone, kNewcomer};
+    const BondIdentity trusted[] = {kWatch, kPhone};
+    TEST_ASSERT_EQUAL_UINT(3, bond_to_evict(IdentityList{stored, 3}, IdentityList{trusted, 2}, kNewcomer));
+    TEST_ASSERT_EQUAL_UINT(2, bond_to_evict(IdentityList{stored, 2}, IdentityList{trusted, 2}, kNewcomer));
+    TEST_ASSERT_EQUAL_UINT(0, bond_to_evict(kNobody, IdentityList{trusted, 2}, kNewcomer));
+}
+
 int run_all_tests() {
     UNITY_BEGIN();
     RUN_TEST(test_a_new_bond_is_added_while_there_is_room);
@@ -145,5 +190,11 @@ int run_all_tests() {
     RUN_TEST(test_a_watch_session_survives_the_watch_dropping);
     RUN_TEST(test_a_flag_without_a_kept_bond_never_runs_a_session);
     RUN_TEST(test_replacing_a_bond_drops_its_session_flag_and_keeps_the_other);
+    RUN_TEST(test_a_bond_neither_kept_nor_connected_is_stale);
+    RUN_TEST(test_a_kept_bond_is_never_stale_even_when_its_device_is_away);
+    RUN_TEST(test_a_connected_newcomer_bond_is_not_stale_before_the_belt_decides);
+    RUN_TEST(test_an_overflow_evicts_the_oldest_untrusted_bond_and_never_the_watch);
+    RUN_TEST(test_an_overflow_never_evicts_the_bond_being_written);
+    RUN_TEST(test_an_overflow_with_only_kept_bonds_is_refused);
     return UNITY_END();
 }
