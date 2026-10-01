@@ -81,8 +81,14 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      # setup-android@v3 fails on the runner image ("Failed to find package 'tools'"); the SDK is already there.
       - if: steps.scaffold.outputs.present == 'true'
-        uses: android-actions/setup-android@v3
+        name: install SDK packages with the preinstalled sdkmanager
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-36' 'build-tools;35.0.0' > /dev/null
+      - if: steps.scaffold.outputs.present == 'true'
+        name: point gradle at the preinstalled SDK
+        working-directory: watch
+        run: echo "sdk.dir=$ANDROID_HOME" > local.properties
       - if: steps.scaffold.outputs.present == 'true'
         uses: gradle/actions/setup-gradle@v4
       - if: steps.scaffold.outputs.present == 'true'
