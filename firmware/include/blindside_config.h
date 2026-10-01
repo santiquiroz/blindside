@@ -65,5 +65,6 @@ constexpr bool kRequireMitm = true;
 
 constexpr char kPreferencesNamespace[] = "blindside";
 constexpr char kPasskeyKey[] = "passkey";
+constexpr char kBondRolesKey[] = "bond_roles";
 
 }  // namespace config

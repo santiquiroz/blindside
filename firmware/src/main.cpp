@@ -139,10 +139,8 @@ void show_led(uint32_t now_ms) {
     status_led_show(LedInputs{now_ms, g_pairing.window.open, g_identify_active, g_identify_started_ms});
 }
 
-// The MVP pairing keeps a single bond; Task 4 counts both.
 AdvertisingPlan advertising_plan() {
-    size_t bonds = g_pairing.trusted.isNull() ? 0 : 1;
-    return AdvertisingPlan{pairing_whitelist_only(g_pairing), g_pairing.window.open, bonds};
+    return AdvertisingPlan{pairing_whitelist_only(g_pairing), g_pairing.window.open, g_pairing.trusted.count};
 }
 
 void print_diagnostics_if_due(uint32_t now_ms) {
