@@ -19,6 +19,7 @@ data class SessionUiState(
     val lastRecordingName: String? = null,
     val startError: StartError? = null,
     val eliminated: Boolean = false,
+    val dndMaySilenceAlerts: Boolean = false,
 )
 
 object SessionStore {

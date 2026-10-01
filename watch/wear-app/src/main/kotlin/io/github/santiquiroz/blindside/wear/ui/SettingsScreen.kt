@@ -29,16 +29,24 @@ import io.github.santiquiroz.blindside.wear.settings.withSpeedSignFlipped
 import io.github.santiquiroz.blindside.wear.settings.withYawNudged
 
 @Composable
-fun SettingsScreen(settings: AppSettings, onUpdate: (SettingsTransform) -> Unit, onOpenSpikes: () -> Unit) {
+fun SettingsScreen(
+    settings: AppSettings,
+    onUpdate: (SettingsTransform) -> Unit,
+    onNavigate: (String) -> Unit,
+    onStartDemo: (() -> Unit)?,
+) {
     ScalingLazyColumn(Modifier.fillMaxSize()) {
-        item { ListHeader { Text("Ajustes") } }
+        item { ListHeader { Text(SETTINGS_ENTRY_LABEL) } }
+        item { SettingChip(AUTO_START_SETTING_LABEL, yesNo(settings.autoStartRadar)) { onUpdate { it.copy(autoStartRadar = !it.autoStartRadar) } } }
         item { SettingChip("Mano", handednessLabel(settings.handedness)) { onUpdate { it.withHandedness(nextHandedness(it.handedness)) } } }
         item { SettingChip("Postura del reloj", postureLabel(settings.posture)) { onUpdate { it.copy(posture = nextPosture(it.posture)) } } }
         item { SettingChip("Pantalla", screenModeLabel(settings.screenMode)) { onUpdate { it.copy(screenMode = toggledScreenMode(it.screenMode)) } } }
         item { SettingChip("Vibración", usageLabel(settings.vibrationUsage)) { onUpdate { it.copy(vibrationUsage = toggledUsage(it.vibrationUsage)) } } }
+        item { NavChip(VIBRATION_TEST_LABEL) { onNavigate(ROUTE_PRACTICE) } }
         DEFAULT_RADARS.forEach { radarItems(settings, it.radarId, onUpdate) }
         item { SettingChip("Cinturón", settings.beltAddress ?: "sin emparejar") { onUpdate { it.copy(beltAddress = null) } } }
-        item { NavChip(SPIKES_ENTRY_LABEL, onOpenSpikes) }
+        onStartDemo?.let { start -> item { NavChip(DEMO_LABEL, start) } }
+        item { NavChip(SPIKES_ENTRY_LABEL) { onNavigate(ROUTE_SPIKES) } }
         item { Notice(APPLY_ON_START_MESSAGE) }
     }
 }

@@ -26,3 +26,6 @@ fun startDecision(grants: Map<String, Boolean>): StartDecision =
 
 fun bluetoothGranted(grants: Map<String, Boolean>): Boolean =
     grants[PERMISSION_BLUETOOTH_SCAN] == true && grants[PERMISSION_BLUETOOTH_CONNECT] == true
+
+// Steps and notifications are optional and ride along with Bluetooth's prompt; asking for them on every start would add a step.
+fun shouldRequestPermissions(grants: Map<String, Boolean>): Boolean = !bluetoothGranted(grants)

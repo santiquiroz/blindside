@@ -5,7 +5,6 @@ import kotlin.random.Random
 
 const val QUIZ_LENGTH = 10
 const val QUIZ_PASS_MIN_CORRECT = 9
-const val PRACTICE_VALID_MS = 12 * 60 * 60 * 1_000L
 
 data class QuizAnswer(val expected: Side, val given: Side) {
     val isCorrect: Boolean get() = expected == given
@@ -33,6 +32,3 @@ fun answer(state: QuizState, given: Side): QuizState {
 }
 
 fun passed(state: QuizState): Boolean = isFinished(state) && state.correct >= QUIZ_PASS_MIN_CORRECT
-
-fun needsPractice(lastPassedEpochMs: Long?, nowEpochMs: Long): Boolean =
-    lastPassedEpochMs == null || nowEpochMs - lastPassedEpochMs > PRACTICE_VALID_MS

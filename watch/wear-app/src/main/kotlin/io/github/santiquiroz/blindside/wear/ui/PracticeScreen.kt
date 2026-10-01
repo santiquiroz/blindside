@@ -1,7 +1,5 @@
 package io.github.santiquiroz.blindside.wear.ui
 
-import android.app.NotificationManager
-import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,42 +19,39 @@ import androidx.wear.compose.material.ListHeader
 import androidx.wear.compose.material.Text
 import io.github.santiquiroz.blindside.core.scene.Side
 import io.github.santiquiroz.blindside.wear.haptics.HapticPlayer
-import io.github.santiquiroz.blindside.wear.haptics.InterruptionFilter
-import io.github.santiquiroz.blindside.wear.haptics.dndMaySilence
-import io.github.santiquiroz.blindside.wear.haptics.interruptionFilterFrom
+import io.github.santiquiroz.blindside.wear.haptics.dndMaySilenceNow
 import io.github.santiquiroz.blindside.wear.haptics.patternFor
 import io.github.santiquiroz.blindside.wear.practice.QuizState
 import io.github.santiquiroz.blindside.wear.practice.answer
 import io.github.santiquiroz.blindside.wear.practice.currentSide
 import io.github.santiquiroz.blindside.wear.practice.isFinished
 import io.github.santiquiroz.blindside.wear.practice.newQuiz
-import io.github.santiquiroz.blindside.wear.practice.passed
 import io.github.santiquiroz.blindside.wear.settings.AppSettings
 import kotlin.random.Random
 
 @Composable
-fun PracticeScreen(settings: AppSettings, onQuizPassed: () -> Unit) {
+fun PracticeScreen(settings: AppSettings) {
     val context = LocalContext.current
     val player = remember(settings.vibrationUsage) { HapticPlayer.create(context, settings.vibrationUsage) }
-    val dndWarning = dndMaySilence(currentInterruptionFilter(context), settings.vibrationUsage)
+    val dndWarning = dndMaySilenceNow(context, settings.vibrationUsage)
     ScalingLazyColumn(Modifier.fillMaxSize()) {
-        item { ListHeader { Text("Práctica") } }
+        item { ListHeader { Text(VIBRATION_TEST_LABEL) } }
         if (dndWarning) item { Text(DND_WARNING_MESSAGE, color = WARNING_AMBER) }
         item { Notice(motorLabel(player.hasAmplitudeControl(), player.supportsPrimitives())) }
         PRACTICE_RHYTHMS.forEach { rhythm -> item { NavChip("Probar ${rhythm.label}") { player.play(rhythm.pattern) } } }
-        item { QuizPanel(player, onQuizPassed) }
+        item { QuizPanel(player) }
     }
 }
 
 @Composable
-private fun QuizPanel(player: HapticPlayer, onPassed: () -> Unit) {
+private fun QuizPanel(player: HapticPlayer) {
     var quiz by remember { mutableStateOf<QuizState?>(null) }
     val current = quiz
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         when {
             current == null -> NavChip("Empezar quiz") { quiz = newQuiz(Random.Default) }
             isFinished(current) -> QuizResult(current) { quiz = newQuiz(Random.Default) }
-            else -> QuizRound(current, player) { side -> quiz = answerAndReport(current, side, onPassed) }
+            else -> QuizRound(current, player) { side -> quiz = answer(current, side) }
         }
     }
 }
@@ -78,9 +73,3 @@ private fun QuizResult(state: QuizState, onRestart: () -> Unit) {
     Notice(quizResultLabel(state))
     NavChip("Repetir quiz", onRestart)
 }
-
-private fun answerAndReport(state: QuizState, side: Side, onPassed: () -> Unit): QuizState =
-    answer(state, side).also { if (passed(it)) onPassed() }
-
-private fun currentInterruptionFilter(context: Context): InterruptionFilter =
-    interruptionFilterFrom(context.getSystemService(NotificationManager::class.java).currentInterruptionFilter)

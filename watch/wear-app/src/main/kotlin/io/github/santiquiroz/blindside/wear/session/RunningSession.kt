@@ -14,6 +14,7 @@ import io.github.santiquiroz.blindside.wear.ble.BeltLink
 import io.github.santiquiroz.blindside.wear.demo.DemoSource
 import io.github.santiquiroz.blindside.wear.demo.demoPackets
 import io.github.santiquiroz.blindside.wear.haptics.HapticPlayer
+import io.github.santiquiroz.blindside.wear.haptics.dndMaySilenceNow
 import io.github.santiquiroz.blindside.wear.haptics.millisUntil
 import io.github.santiquiroz.blindside.wear.permissions.PERMISSION_ACTIVITY_RECOGNITION
 import io.github.santiquiroz.blindside.wear.recording.InfoHeaderSink
@@ -73,6 +74,7 @@ class RunningSession(
     suspend fun start() {
         settings.update { it.forNewSession() }
         val initial = settings.current()
+        flagDndRisk(initial)
         consumer = scope.launch(pipelineDispatcher) { consume(createEngine(initial)) }
         holdWakeLock()
         launchLoops()
@@ -185,6 +187,11 @@ class RunningSession(
         combine(SessionStore.state.map { it.eliminated }, settings.settings.map { it.screenMode }) { eliminated, mode ->
             eliminated to mode
         }.distinctUntilChanged()
+
+    private fun flagDndRisk(initial: AppSettings) {
+        val atRisk = dndMaySilenceNow(context, initial.vibrationUsage)
+        SessionStore.update { it.copy(dndMaySilenceAlerts = atRisk) }
+    }
 
     private fun startSensors() {
         val availability = sensors.start(stepsAllowed = hasActivityRecognition())

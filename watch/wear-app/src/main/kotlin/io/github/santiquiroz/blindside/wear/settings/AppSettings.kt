@@ -29,8 +29,8 @@ data class AppSettings(
     val vibrationUsage: VibrationUsage = VibrationUsage.ALARM,
     val eliminated: Boolean = false,
     val beltAddress: String? = null,
-    val quizPassedAtEpochMs: Long? = null,
     val posture: WatchPosture = WatchPosture.NORMAL,
+    val autoStartRadar: Boolean = true,
 )
 
 typealias SettingsTransform = (AppSettings) -> AppSettings

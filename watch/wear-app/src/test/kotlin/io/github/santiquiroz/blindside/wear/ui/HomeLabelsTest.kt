@@ -37,9 +37,9 @@ class HomeLabelsTest {
     }
 
     @Test
-    fun `the start chip asks for practice when it is due`() {
-        assertEquals("Práctica pendiente", startChipLabel(practiceDue = true))
-        assertEquals("Iniciar partida", startChipLabel(practiceDue = false))
+    fun `the home offers starting the radar and the settings`() {
+        assertEquals("Iniciar radar", START_RADAR_LABEL)
+        assertEquals("Ajustes", SETTINGS_ENTRY_LABEL)
     }
 
     @Test

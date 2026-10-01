@@ -90,7 +90,11 @@ fun startErrorMessage(error: StartError): String = when (error) {
     StartError.BLUETOOTH_UNAVAILABLE -> "Este reloj no tiene Bluetooth disponible."
 }
 
-fun startChipLabel(practiceDue: Boolean): String = if (practiceDue) "Práctica pendiente" else "Iniciar partida"
+const val START_RADAR_LABEL = "Iniciar radar"
+const val SETTINGS_ENTRY_LABEL = "Ajustes"
+const val AUTO_START_SETTING_LABEL = "Iniciar radar al abrir"
+const val VIBRATION_TEST_LABEL = "Probar vibraciones"
+const val DEMO_LABEL = "Demo"
 
 fun stopLabel(confirming: Boolean): String = if (confirming) "¿Detener? Toca otra vez" else "Detener partida"
 
