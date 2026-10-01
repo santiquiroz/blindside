@@ -34,7 +34,7 @@ class BeltGatt(
     val device: BluetoothDevice,
     private val handler: Handler,
     private val events: BeltGattEvents,
-    private val profile: BeltLinkProfile = BeltLinkProfile(),
+    private val profile: BeltLinkProfile,
 ) {
     @Volatile private var gatt: BluetoothGatt? = null
     private var queue = OpQueue()
@@ -127,7 +127,7 @@ class BeltGatt(
 
     private fun applyEffects(effects: List<SetupEffect>) {
         if (SetupEffect.REPORT_LINK_UP in effects) events.onStreamReady(this)
-        if (SetupEffect.LOWER_PRIORITY in effects) gatt?.requestConnectionPriority(androidPriority(settledPriorityFor(profile.role)))
+        if (SetupEffect.LOWER_PRIORITY in effects) settledPriorityFor(profile.role)?.let(::requestPriority)
     }
 
     private fun handleConnectionState(status: Int, newState: Int) {
@@ -137,7 +137,7 @@ class BeltGatt(
     }
 
     private fun handleConnected() {
-        gatt?.requestConnectionPriority(androidPriority(connectPriorityFor(profile.role)))
+        requestPriority(connectPriorityFor(profile.role))
         events.onConnected(this)
         enqueueOp(GattOp.DiscoverServices)
     }
@@ -203,10 +203,13 @@ class BeltGatt(
         return REQUIRED_CHARACTERISTICS.all { characteristic(current, it) != null }
     }
 
+    private fun requestPriority(priority: LinkPriority) {
+        gatt?.requestConnectionPriority(androidPriority(priority))
+    }
+
     private fun androidPriority(priority: LinkPriority): Int = when (priority) {
         LinkPriority.HIGH -> BluetoothGatt.CONNECTION_PRIORITY_HIGH
         LinkPriority.BALANCED -> BluetoothGatt.CONNECTION_PRIORITY_BALANCED
-        LinkPriority.LOW_POWER -> BluetoothGatt.CONNECTION_PRIORITY_LOW_POWER
     }
 
     private val callback = object : BluetoothGattCallback() {

@@ -2,6 +2,8 @@ package io.github.santiquiroz.blindside.shared.ble
 
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class BeltCommandsTest {
@@ -14,6 +16,12 @@ class BeltCommandsTest {
     @Test
     fun `identify is a single byte`() {
         assertArrayEquals(byteArrayOf(0x03), commandBytes(BeltCommand.Identify))
+    }
+
+    @Test
+    fun `each manual command becomes its control bytes`() {
+        assertArrayEquals(restartRadarCommand(1), commandBytes(BeltCommand.RestartRadar(1)))
+        assertArrayEquals(identifyCommand(), commandBytes(BeltCommand.Identify))
     }
 
     @Test
@@ -34,8 +42,13 @@ class BeltCommandsTest {
     }
 
     @Test
-    fun `the phone never asks for the fast interval the watch needs`() {
+    fun `the phone never settles a priority so the belt's 60 to 100 ms request stands`() {
         assertEquals(LinkPriority.BALANCED, connectPriorityFor(BeltRole.PHONE))
-        assertEquals(LinkPriority.LOW_POWER, settledPriorityFor(BeltRole.PHONE))
+        assertNull(settledPriorityFor(BeltRole.PHONE))
+    }
+
+    @Test
+    fun `a link profile activates the session unless told otherwise`() {
+        assertTrue(BeltLinkProfile(BeltRole.PHONE).activatesSession)
     }
 }

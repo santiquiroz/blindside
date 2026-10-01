@@ -13,6 +13,13 @@ class BleIdsTest {
     }
 
     @Test
+    fun `restart radar carries the radar id and identify is one byte`() {
+        assertEquals(listOf<Byte>(1, 0), restartRadarCommand(0).toList())
+        assertEquals(listOf<Byte>(1, 1), restartRadarCommand(1).toList())
+        assertEquals(listOf<Byte>(3), identifyCommand().toList())
+    }
+
+    @Test
     fun `belt names start with Blindside dash`() {
         assertTrue(isBlindsideName("Blindside-3F2A"))
         assertFalse(isBlindsideName("Galaxy Buds"))

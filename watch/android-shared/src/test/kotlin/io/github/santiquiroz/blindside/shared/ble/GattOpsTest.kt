@@ -83,13 +83,36 @@ class GattOpsTest {
     }
 
     @Test
-    fun `a diagnostic link never marks the session active and settles once subscribed`() {
+    fun `a diagnostic link settles once subscribed`() {
         val diagnostic = BeltLinkProfile(BeltRole.PHONE, activatesSession = false)
-        assertFalse(setupOpsAfterDiscovery(diagnostic).any { it is GattOp.WriteSessionActive })
         assertEquals(
             listOf(SetupEffect.REPORT_LINK_UP, SetupEffect.LOWER_PRIORITY),
             effectsAfter(GattOp.EnableStreamNotify, GATT_SUCCESS_STATUS, diagnostic),
         )
+    }
+
+    @Test
+    fun `a diagnostic link marks its slot inactive instead of starting a session`() {
+        val expected = listOf(
+            GattOp.RequestMtu(REQUESTED_MTU),
+            GattOp.ReadInfo,
+            GattOp.WriteCommand(BeltCommand.SetRole(BeltRole.PHONE)),
+            GattOp.EnableStreamNotify,
+            GattOp.WriteSessionActive(false),
+        )
+        assertEquals(expected, setupOpsAfterDiscovery(BeltLinkProfile(BeltRole.PHONE, activatesSession = false)))
+    }
+
+    @Test
+    fun `a refused session reset or manual command never ends the setup`() {
+        assertEquals(nothing, effectsAfter(GattOp.WriteSessionActive(false), 3))
+        assertEquals(nothing, effectsAfter(GattOp.WriteCommand(BeltCommand.Identify), LOCAL_FAILURE_STATUS))
+        assertEquals(nothing, effectsAfter(GattOp.WriteCommand(BeltCommand.RestartRadar(0)), GATT_SUCCESS_STATUS))
+    }
+
+    @Test
+    fun `manual commands use the regular write timeout`() {
+        assertEquals(GATT_OP_TIMEOUT_MS, timeoutMsFor(GattOp.WriteCommand(BeltCommand.Identify)))
     }
 
     @Test

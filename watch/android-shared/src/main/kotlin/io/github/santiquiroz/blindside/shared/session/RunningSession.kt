@@ -214,7 +214,7 @@ class RunningSession(
     }
 
     private fun startBelt(savedAddress: String?) {
-        belt = BeltLink(context, BeltInputs(inputs), onBeltFound = ::rememberBelt, profile = host.beltProfile).also { it.start(savedAddress) }
+        belt = BeltLink(context, BeltInputs(inputs), host.beltProfile, onBeltFound = ::rememberBelt).also { it.start(savedAddress) }
     }
 
     private fun rememberBelt(address: String) {
