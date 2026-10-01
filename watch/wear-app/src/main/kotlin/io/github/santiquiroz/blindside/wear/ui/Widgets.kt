@@ -8,6 +8,7 @@ import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material.Chip
 import androidx.wear.compose.material.ChipDefaults
 import androidx.wear.compose.material.Text
+import io.github.santiquiroz.blindside.shared.theme.BlindsideColors
 
 @Composable
 fun NavChip(label: String, onClick: () -> Unit) {
@@ -32,5 +33,5 @@ fun SettingChip(title: String, value: String, onClick: () -> Unit) {
 
 @Composable
 fun Notice(text: String) {
-    Text(text, color = LABEL_GRAY, fontSize = 12.sp, textAlign = TextAlign.Center)
+    Text(text, color = BlindsideColors.Text2, fontSize = 12.sp, textAlign = TextAlign.Center)
 }

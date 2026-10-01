@@ -29,6 +29,7 @@ import io.github.santiquiroz.blindside.shared.settings.withFlipXToggled
 import io.github.santiquiroz.blindside.shared.settings.withHandedness
 import io.github.santiquiroz.blindside.shared.settings.withSpeedSignFlipped
 import io.github.santiquiroz.blindside.shared.settings.withYawNudged
+import io.github.santiquiroz.blindside.shared.theme.BlindsideFonts
 
 @Composable
 fun SettingsScreen(
@@ -68,7 +69,7 @@ private fun ScalingLazyListScope.radarItems(settings: AppSettings, radarId: Int,
 private fun YawRow(settings: AppSettings, radarId: Int, onUpdate: (SettingsTransform) -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         CompactChip(onClick = { onUpdate { it.withYawNudged(radarId, -YAW_STEP_DEG) } }, label = { Text("-5°") })
-        Text(yawLabel(radarId, effectiveYawDeg(settings, radarId)), fontSize = 12.sp)
+        Text(yawLabel(radarId, effectiveYawDeg(settings, radarId)), fontSize = 12.sp, fontFamily = BlindsideFonts.Mono)
         CompactChip(onClick = { onUpdate { it.withYawNudged(radarId, YAW_STEP_DEG) } }, label = { Text("+5°") })
     }
 }

@@ -27,6 +27,7 @@ import io.github.santiquiroz.blindside.wear.practice.currentSide
 import io.github.santiquiroz.blindside.wear.practice.isFinished
 import io.github.santiquiroz.blindside.wear.practice.newQuiz
 import io.github.santiquiroz.blindside.shared.settings.AppSettings
+import io.github.santiquiroz.blindside.shared.theme.BlindsideColors
 import kotlin.random.Random
 
 @Composable
@@ -36,7 +37,7 @@ fun PracticeScreen(settings: AppSettings) {
     val dndWarning = dndMaySilenceNow(context, settings.vibrationUsage)
     ScalingLazyColumn(Modifier.fillMaxSize()) {
         item { ListHeader { Text(VIBRATION_TEST_LABEL) } }
-        if (dndWarning) item { Text(DND_WARNING_MESSAGE, color = WARNING_AMBER) }
+        if (dndWarning) item { Text(DND_WARNING_MESSAGE, color = BlindsideColors.Warn) }
         item { Notice(motorLabel(player.hasAmplitudeControl(), player.supportsPrimitives())) }
         PRACTICE_RHYTHMS.forEach { rhythm -> item { NavChip("Probar ${rhythm.label}") { player.play(rhythm.pattern) } } }
         item { QuizPanel(player) }

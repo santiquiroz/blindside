@@ -68,10 +68,10 @@ Ajustes → "Diagnóstico (spikes)" abre la pantalla de los spikes S1, S3, S10 y
 Marca cada punto en el reloj real. Si un punto falla, anota qué viste y la hora, para ubicarlo en la grabación. `adb logcat -s BeltGatt BeltLink` muestra cada paso del enlace.
 
 **Antes de jugar (app)**
-1. [ ] La app abre y muestra "Blindside" con Iniciar/Demo/Práctica/Ajustes. Ajustes → "Diagnóstico (spikes)" abre "Blindside (spikes)" con sus botones.
+1. [ ] La app abre en Inicio con el botón circular verde "Iniciar radar" en el centro y el chip "Ajustes" debajo. Ajustes → "Diagnóstico (spikes)" abre "Blindside (spikes)" con sus botones.
 2. [ ] **Permisos:** deniega Bluetooth → la partida no arranca, aparece el mensaje y "Abrir ajustes" lleva a los ajustes del reloj. Concédelo y deniega actividad física → la partida arranca y el estado mínimo muestra "SIN PASOS". Después, con la app cerrada, quita el permiso de Bluetooth en los ajustes del reloj y vuelve a iniciar una partida: la app lo pide otra vez y, si lo niegas, muestra el mensaje sin cerrarse.
 3. [ ] **Práctica (S3):** "Probar izquierda/centro/derecha/sistema" se distinguen con el brazo en movimiento. El quiz pasa con 9/10 o más. Repítelo con No molestar, modo teatro y modo dormir, y con la intensidad de vibración del sistema baja. Anota qué combinación silencia la vibración y cambia Ajustes → Vibración (Alarma/Notificación) según el resultado. Con No molestar activo debe aparecer el aviso.
-4. [ ] **Demo:** el radar dibuja el abanico y contactos rojos que se mueven, vibra con el ritmo del lado correcto y en "Inicio" aparece el nombre de la grabación.
+4. [ ] **Demo:** el radar dibuja el abanico y contactos verdes (rojos con Ajustes → Color de contactos → Rojo) que se mueven, vibra con el ritmo del lado correcto y en "Inicio" aparece el nombre de la grabación.
 5. [ ] **Emparejamiento (S12):** el primer emparejamiento con la clave de la etiqueta funciona (el diálogo aparece al leer `info`); tras reiniciar el reloj, "Iniciar partida" reconecta solo, sin pedir la clave. Con la ventana cerrada o una clave equivocada sale "Clave incorrecta o ventana cerrada"; al abrir la ventana y tocar "Reintentar", empareja.
 6. [ ] **Bond perdido:** con la partida activa, apaga el cinturón y vuelve a encenderlo manteniendo BOOT 10 s (borra los bonds). Tras dos intentos sale "El cinturón olvidó este reloj…", y `logcat` deja de mostrar conexiones nuevas. Olvida el cinturón en Bluetooth del reloj y toca "Reintentar": empareja de nuevo.
 
@@ -103,3 +103,9 @@ Marca cada punto en el reloj real. Si un punto falla, anota qué viste y la hora
     - Con la partida corriendo, el celular muestra el estado del reloj cada 5 s, y "sesión inactiva" al detenerla.
     - "Emparejar este celular" desde el celular pide la ventana igual que el chip del reloj.
 23. [ ] **Sin celular:** con el Bluetooth del celular apagado, una partida de 10 min en el reloj se comporta igual. `adb logcat -s BridgeListener DataLayer` puede mostrar avisos, pero nada se detiene.
+24. [ ] **Pasada visual:** todas las pantallas tienen fondo negro.
+    - En el radar, los anillos son verde oscuro. Los contactos son verdes: relleno = los dos radares, contorno = uno, punteado y más oscuro = sin medida nueva.
+    - Ajustes → "Color de contactos" cambia a "Rojo": los contactos pasan a rojo (`alert-red`), con las mismas formas, y el ajuste sobrevive a reiniciar la app.
+    - Los chips de estado llevan un punto lleno (bien) o hueco (falla), y "SIN PASOS" va en su propia fila.
+    - Los ángulos de Ajustes y los chips usan letra monoespaciada.
+    - El botón "Iniciar radar" y el resto de controles se pueden tocar sin errar con el guante.
