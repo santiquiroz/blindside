@@ -9,7 +9,7 @@ sealed interface BeltCommand {
     data object OpenPairingWindow : BeltCommand
 }
 
-enum class LinkPriority { HIGH, BALANCED, LOW_POWER }
+enum class LinkPriority { HIGH, BALANCED }
 
 data class BeltLinkProfile(val role: BeltRole = BeltRole.WATCH, val activatesSession: Boolean = true)
 
@@ -28,6 +28,6 @@ fun commandBytes(command: BeltCommand): ByteArray = when (command) {
 fun connectPriorityFor(role: BeltRole): LinkPriority =
     if (role == BeltRole.WATCH) LinkPriority.HIGH else LinkPriority.BALANCED
 
-// Spec §2: the belt gives the phone 60-100 ms; LOW_POWER lets the belt's request win instead of competing with the watch.
-fun settledPriorityFor(role: BeltRole): LinkPriority =
-    if (role == BeltRole.WATCH) LinkPriority.BALANCED else LinkPriority.LOW_POWER
+// Spec §2: after 06 01 the belt asks for 60-100 ms itself, and any later request from the phone would override it.
+fun settledPriorityFor(role: BeltRole): LinkPriority? =
+    if (role == BeltRole.WATCH) LinkPriority.BALANCED else null

@@ -2,6 +2,7 @@ package io.github.santiquiroz.blindside.shared.ble
 
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 
 class BeltCommandsTest {
@@ -34,8 +35,8 @@ class BeltCommandsTest {
     }
 
     @Test
-    fun `the phone never asks for the fast interval the watch needs`() {
+    fun `the phone never settles a priority so the belt's 60 to 100 ms request stands`() {
         assertEquals(LinkPriority.BALANCED, connectPriorityFor(BeltRole.PHONE))
-        assertEquals(LinkPriority.LOW_POWER, settledPriorityFor(BeltRole.PHONE))
+        assertNull(settledPriorityFor(BeltRole.PHONE))
     }
 }
