@@ -2,3 +2,6 @@
 *.png binary
 *.jpg binary
 *.bsrec binary
+watch/gradlew text eol=lf
+*.bat text eol=crlf
+*.jar binary
