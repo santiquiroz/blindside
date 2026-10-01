@@ -31,6 +31,7 @@ abstract class SessionService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate + logFailedTask)
     private var session: RunningSession? = null
     private var currentSource = SessionSource.BELT
+    private var currentPurpose = SessionPurpose.GAME
     private var notificationSync: Job? = null
     private var companions: List<Job> = emptyList()
 
@@ -38,12 +39,14 @@ abstract class SessionService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            SessionActions.ACTION_START -> onStart(sourceOf(intent), intent.getBooleanExtra(SessionActions.EXTRA_WAKE_LOCK, true))
+            SessionActions.ACTION_START -> onStart(sourceOf(intent), intent.getBooleanExtra(SessionActions.EXTRA_WAKE_LOCK, true), purposeOf(intent))
             SessionActions.ACTION_STOP -> onStop()
             SessionActions.ACTION_MARKER -> session?.mark() ?: stopSelf()
             SessionActions.ACTION_RETRY_LINK -> session?.retryLink() ?: stopSelf()
             SessionActions.ACTION_TOGGLE_ELIMINATED -> if (session != null) toggleEliminated(scope, settingsRepository()) else stopSelf()
             SessionActions.ACTION_OPEN_PAIRING -> requestPairingWindow()
+            SessionActions.ACTION_SEND_COMMAND -> sendCommand(intent)
+            SessionActions.ACTION_REFRESH_INFO -> refreshInfo()
             else -> stopIfIdle()
         }
         return START_NOT_STICKY
@@ -56,36 +59,44 @@ abstract class SessionService : Service() {
 
     private fun sourceOf(intent: Intent): SessionSource = sourceFrom(intent.getStringExtra(SessionActions.EXTRA_SOURCE))
 
-    private fun onStart(source: SessionSource, wakeLock: Boolean) {
-        if (session != null) {
-            goForeground(currentSource)
-            return
+    private fun purposeOf(intent: Intent): SessionPurpose = purposeFrom(intent.getStringExtra(SessionActions.EXTRA_PURPOSE))
+
+    private fun onStart(source: SessionSource, wakeLock: Boolean, purpose: SessionPurpose) {
+        when (startTransition(session?.let { currentPurpose }, purpose)) {
+            StartTransition.KEEP -> goForeground(currentSource)
+            StartTransition.START -> startIfAllowed(source, wakeLock, purpose)
+            StartTransition.RESTART -> restartAs(source, wakeLock, purpose)
         }
-        val blocker = startBlocker(source, hasBluetoothPermissions(), hasBluetoothAdapter())
-        if (blocker != null) {
-            rejectStart(blocker)
-            return
-        }
-        beginSession(source, wakeLock)
     }
 
-    private fun beginSession(source: SessionSource, wakeLock: Boolean) {
+    private fun startIfAllowed(source: SessionSource, wakeLock: Boolean, purpose: SessionPurpose) {
+        val blocker = startBlocker(source, hasBluetoothPermissions(), hasBluetoothAdapter())
+        if (blocker == null) beginSession(source, wakeLock, purpose) else rejectStart(blocker)
+    }
+
+    private fun beginSession(source: SessionSource, wakeLock: Boolean, purpose: SessionPurpose) {
         currentSource = source
+        currentPurpose = purpose
         goForeground(source)
-        SessionStore.update { startedState(it, source) }
-        val created = RunningSession(this, source, settingsRepository(), scope, wakeLock, host)
+        SessionStore.update { startedState(it, source, purpose) }
+        val created = RunningSession(this, source, settingsRepository(), scope, wakeLock, host, purpose)
         session = created
         scope.launch { created.start() }
-        notificationSync = scope.launch { syncNotification(source) }
+        notificationSync = scope.launch { syncNotification(source, purpose) }
         companions = host.launchCompanions(this, scope)
     }
 
+    // A purpose change (diagnostic and game) keeps the foreground service: the old link closes before the new one opens.
+    private fun restartAs(source: SessionSource, wakeLock: Boolean, purpose: SessionPurpose) {
+        val previous = detachSession() ?: return startIfAllowed(source, wakeLock, purpose)
+        scope.launch {
+            previous.stop()
+            startIfAllowed(source, wakeLock, purpose)
+        }
+    }
+
     private fun onStop() {
-        val current = session ?: return stopSelf()
-        session = null
-        notificationSync?.cancel()
-        companions.forEach { it.cancel() }
-        companions = emptyList()
+        val current = detachSession() ?: return stopSelf()
         scope.launch {
             current.stop()
             SessionStore.update(::stoppedState)
@@ -94,16 +105,13 @@ abstract class SessionService : Service() {
         }
     }
 
-    private fun rejectStart(error: StartError) {
-        SessionStore.update { blockedState(it, error) }
-        answerForegroundStart()
-        stopSelf()
-    }
-
-    // startForegroundService() must be answered with startForeground() even when the start is refused, or Android kills the app.
-    private fun answerForegroundStart() {
-        goForeground(SessionSource.DEMO)
-        stopForeground(STOP_FOREGROUND_REMOVE)
+    private fun detachSession(): RunningSession? {
+        val current = session ?: return null
+        session = null
+        notificationSync?.cancel()
+        companions.forEach { it.cancel() }
+        companions = emptyList()
+        return current
     }
 
     private fun requestPairingWindow() {
@@ -112,19 +120,47 @@ abstract class SessionService : Service() {
         stopIfIdle()
     }
 
+    private fun sendCommand(intent: Intent) {
+        val current = session ?: return stopSelf()
+        val command = commandFrom(commandExtrasOf(intent))
+        if (command == null || !current.send(command)) Log.w(TAG, "command not sent: ${intent.getStringExtra(SessionActions.EXTRA_COMMAND)}")
+    }
+
+    private fun refreshInfo() {
+        val current = session ?: return stopSelf()
+        if (!current.refreshInfo()) Log.w(TAG, "info refresh skipped: link not streaming")
+    }
+
+    private fun commandExtrasOf(intent: Intent): CommandExtras = CommandExtras(
+        intent.getStringExtra(SessionActions.EXTRA_COMMAND).orEmpty(),
+        intent.getIntExtra(SessionActions.EXTRA_RADAR_ID, NO_RADAR_ID),
+    )
+
+    private fun rejectStart(error: StartError) {
+        SessionStore.update { blockedState(it, error) }
+        answerForegroundStart()
+        stopSelf()
+    }
+
+    // startForegroundService() must be answered with startForeground(); a host whose only type needs Bluetooth may fail here, which is logged.
+    private fun answerForegroundStart() {
+        runCatching { goForeground(SessionSource.DEMO) }.onFailure { Log.w(TAG, "could not answer the foreground start", it) }
+        stopForeground(STOP_FOREGROUND_REMOVE)
+    }
+
     private fun stopIfIdle() {
         if (session == null) stopSelf()
     }
 
     private fun goForeground(source: SessionSource) {
         host.ensureNotificationChannel(this)
-        val notification = host.notification(this, ongoingStatus(eliminated = false, source = source))
-        startForeground(host.notificationId, notification, foregroundTypesFor(source))
+        val notification = host.notification(this, ongoingStatus(eliminated = false, source = source, purpose = currentPurpose))
+        startForeground(host.notificationId, notification, host.foregroundTypes(source))
     }
 
-    private suspend fun syncNotification(source: SessionSource) {
+    private suspend fun syncNotification(source: SessionSource, purpose: SessionPurpose) {
         SessionStore.state.map { it.eliminated }.distinctUntilChanged().collect { eliminated ->
-            val notification = host.notification(this, ongoingStatus(eliminated, source))
+            val notification = host.notification(this, ongoingStatus(eliminated, source, purpose))
             getSystemService(NotificationManager::class.java).notify(host.notificationId, notification)
         }
     }

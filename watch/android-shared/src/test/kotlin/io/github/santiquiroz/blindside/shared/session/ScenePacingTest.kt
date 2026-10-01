@@ -25,4 +25,15 @@ class ScenePacingTest {
     fun `sigilo draws at the belt data rate`() {
         assertEquals(SIGILO_FRAME_MS, scenePeriodMs(radarVisible = true, mode = ScreenMode.SIGILO, ambient = false))
     }
+
+    @Test
+    fun `a fixed frame period replaces the screen mode only while the radar is on screen`() {
+        assertEquals(33L, pacedPeriodMs(33L, radarVisible = true, mode = ScreenMode.SIGILO, ambient = false))
+        assertNull(pacedPeriodMs(33L, radarVisible = false, mode = ScreenMode.VISTA, ambient = false))
+        assertNull(pacedPeriodMs(33L, radarVisible = true, mode = ScreenMode.VISTA, ambient = true))
+        assertEquals(
+            scenePeriodMs(radarVisible = true, mode = ScreenMode.SIGILO, ambient = false),
+            pacedPeriodMs(null, radarVisible = true, mode = ScreenMode.SIGILO, ambient = false),
+        )
+    }
 }
