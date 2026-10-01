@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -44,6 +45,7 @@ import io.github.santiquiroz.blindside.shared.radar.StatusMark
 import io.github.santiquiroz.blindside.shared.radar.centerLabel
 import io.github.santiquiroz.blindside.shared.radar.drawRadar
 import io.github.santiquiroz.blindside.shared.radar.eliminatedActionLabel
+import io.github.santiquiroz.blindside.shared.radar.fanHalfAngleFor
 import io.github.santiquiroz.blindside.shared.radar.radarColorsFor
 import io.github.santiquiroz.blindside.shared.radar.rotatedAbout
 import io.github.santiquiroz.blindside.shared.radar.screenCenter
@@ -86,6 +88,7 @@ fun RadarScreen(
     val shift = burnInOffset(settings.screenMode, elapsedMs)
     val contacts = showContacts(session.scene, ambient)
     val rotationDeg = settings.posture.rotationDeg
+    val fitHalfAngleDeg = remember(settings.handedness, settings.radars) { fanHalfAngleFor(settings) }
     val compassOn = settings.compass && !ambient
     val compass by rememberCompassReading(compassOn)
     val reading = compass.takeIf { compassOn }
@@ -95,7 +98,7 @@ fun RadarScreen(
         Canvas(Modifier.fillMaxSize()) {
             val margin = if (compassOn) bandPx else 0f
             val pivot = screenCenter(size.width, size.height, shift)
-            val logical = toDrawModel(session.scene, size.width, size.height, shift, contacts, margin)
+            val logical = toDrawModel(session.scene, size.width, size.height, shift, contacts, margin, fitHalfAngleDeg)
             drawRadar(logical.rotatedAbout(pivot, rotationDeg), radarColorsFor(settings.contactColor))
             reading?.let {
                 val ring = RingGeometry(pivot, size.minDimension / 2f, bandPx)

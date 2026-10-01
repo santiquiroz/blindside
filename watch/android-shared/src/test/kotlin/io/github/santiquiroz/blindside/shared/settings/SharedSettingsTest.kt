@@ -1,8 +1,12 @@
 package io.github.santiquiroz.blindside.shared.settings
 
+import androidx.datastore.preferences.core.preferencesOf
 import io.github.santiquiroz.blindside.core.config.Handedness
 import io.github.santiquiroz.blindside.core.config.RADAR_A
 import io.github.santiquiroz.blindside.core.config.RADAR_B
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -62,5 +66,44 @@ class SharedSettingsTest {
     fun `only stamped settings are published`() {
         assertFalse(isStamped(sharedSettingsOf(AppSettings())))
         assertTrue(isStamped(sharedSettingsOf(base)))
+    }
+
+    private val legacyWatch = settingsFrom(
+        preferencesOf(
+            Keys.HANDEDNESS to "LEFT",
+            Keys.POSTURE to "TACTICAL_LEFT",
+            Keys.yaw(RADAR_A) to -25.0,
+            Keys.flipX(RADAR_A) to true,
+            Keys.speedSign(RADAR_B) to -1,
+        ),
+    )
+
+    private fun published(vararg settings: AppSettings): List<SharedSettings> =
+        runBlocking { publishableSharedSettings(flowOf(*settings)).toList() }
+
+    @Test
+    fun `settings saved before stamps existed are published and a fresh peer adopts them`() {
+        val fromWatch = published(legacyWatch).single()
+        assertEquals(sharedSettingsOf(legacyWatch), sharedSettingsOf(AppSettings().adoptingNewer(fromWatch)))
+    }
+
+    @Test
+    fun `a fresh peer's defaults never replace a migrated calibration`() {
+        assertTrue(published(AppSettings()).isEmpty())
+        assertEquals(legacyWatch, legacyWatch.adoptingNewer(sharedSettingsOf(AppSettings()).copy(updatedMs = MIGRATED_STAMP_MS)))
+    }
+
+    @Test
+    fun `a real edit after adopting a migrated calibration still wins`() {
+        val atPhone = AppSettings().adoptingNewer(sharedSettingsOf(legacyWatch))
+        val phoneEdit = stampSharedEdit(atPhone, atPhone.copy(posture = WatchPosture.NORMAL), nowMs = 5_000L)
+        val atWatch = legacyWatch.adoptingNewer(published(phoneEdit).single())
+        assertEquals(WatchPosture.NORMAL, atWatch.posture)
+        assertEquals(legacyWatch.radars, atWatch.radars)
+    }
+
+    @Test
+    fun `the publisher sends each stamped change once`() {
+        assertEquals(listOf(sharedSettingsOf(base)), published(base, base.copy(screenMode = ScreenMode.VISTA)))
     }
 }

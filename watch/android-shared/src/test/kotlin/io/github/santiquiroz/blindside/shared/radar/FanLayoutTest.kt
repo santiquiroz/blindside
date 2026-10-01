@@ -1,6 +1,16 @@
 package io.github.santiquiroz.blindside.shared.radar
 
+import io.github.santiquiroz.blindside.core.config.DecodeParams
+import io.github.santiquiroz.blindside.core.config.RADAR_A
+import io.github.santiquiroz.blindside.core.config.RADAR_B
 import io.github.santiquiroz.blindside.core.scene.CoverageSector
+import io.github.santiquiroz.blindside.core.scene.MotionState
+import io.github.santiquiroz.blindside.core.scene.RadarScene
+import io.github.santiquiroz.blindside.core.scene.SensorStatus
+import io.github.santiquiroz.blindside.core.scene.coverageOf
+import io.github.santiquiroz.blindside.shared.settings.AppSettings
+import io.github.santiquiroz.blindside.shared.settings.RadarSettings
+import io.github.santiquiroz.blindside.shared.settings.mountsFor
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -47,5 +57,39 @@ class FanLayoutTest {
     @Test
     fun `a negative usable radius collapses to zero instead of drawing inside out`() {
         assertEquals(0f, fitFan(20f, 32f, 90.0).radiusPx, 1e-3f)
+    }
+
+    private val rightHanded = AppSettings()
+
+    private fun sceneWithAlive(vararg alive: Int): RadarScene = RadarScene(
+        blips = emptyList(),
+        coverage = coverageOf(mountsFor(rightHanded), alive.toSet(), DecodeParams()),
+        linkUp = true,
+        radars = listOf(SensorStatus(RADAR_A, RADAR_A in alive), SensorStatus(RADAR_B, RADAR_B in alive)),
+        imus = emptyList(),
+        motion = MotionState.STILL,
+        warnings = emptySet(),
+        eliminated = false,
+    )
+
+    private fun drawn(scene: RadarScene, fit: Double): RadarDrawModel =
+        toDrawModel(scene, 480f, 480f, PointPx(0f, 0f), showContacts = true, edgeMarginPx = 32f, fitHalfAngleDeg = fit)
+
+    @Test
+    fun `the configured belt sizes the fan`() {
+        assertEquals(90.0, fanHalfAngleFor(rightHanded))
+        val inward = rightHanded.copy(radars = listOf(RadarSettings(RADAR_A, yawDegOverride = 0.0), RadarSettings(RADAR_B, yawDegOverride = 0.0)))
+        assertEquals(60.0, fanHalfAngleFor(inward))
+    }
+
+    @Test
+    fun `losing one radar keeps the origin and radius unchanged`() {
+        val fit = fanHalfAngleFor(rightHanded)
+        val both = drawn(sceneWithAlive(RADAR_A, RADAR_B), fit)
+        val flankDown = drawn(sceneWithAlive(RADAR_B), fit)
+        assertEquals(80.0, fanHalfAngleDeg(sceneWithAlive(RADAR_B).coverage))
+        assertEquals(both.origin, flankDown.origin)
+        assertEquals(both.radiusPx, flankDown.radiusPx)
+        assertEquals(1, flankDown.sectors.size)
     }
 }
