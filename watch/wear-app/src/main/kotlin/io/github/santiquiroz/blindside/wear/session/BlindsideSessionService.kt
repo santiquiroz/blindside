@@ -6,10 +6,12 @@ import android.bluetooth.BluetoothManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.IBinder
+import android.util.Log
 import androidx.core.content.ContextCompat
 import io.github.santiquiroz.blindside.wear.permissions.PERMISSION_BLUETOOTH_CONNECT
 import io.github.santiquiroz.blindside.wear.permissions.PERMISSION_BLUETOOTH_SCAN
 import io.github.santiquiroz.blindside.wear.settings.settingsRepository
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -19,8 +21,13 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
+private const val TAG = "BlindsideService"
+
+// RunningSession launches in this scope too, so one failed task is logged instead of killing the whole game.
+private val logFailedTask = CoroutineExceptionHandler { _, error -> Log.e(TAG, "session task failed", error) }
+
 class BlindsideSessionService : Service() {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate + logFailedTask)
     private var session: RunningSession? = null
     private var currentSource = SessionSource.BELT
     private var notificationSync: Job? = null
@@ -33,7 +40,7 @@ class BlindsideSessionService : Service() {
             SessionCommands.ACTION_STOP -> onStop()
             SessionCommands.ACTION_MARKER -> session?.mark() ?: stopSelf()
             SessionCommands.ACTION_RETRY_LINK -> session?.retryLink() ?: stopSelf()
-            SessionCommands.ACTION_TOGGLE_ELIMINATED -> if (session != null) toggleEliminated() else stopSelf()
+            SessionCommands.ACTION_TOGGLE_ELIMINATED -> if (session != null) toggleEliminated(scope, settingsRepository()) else stopSelf()
             else -> stopIfIdle()
         }
         return START_NOT_STICKY
@@ -97,10 +104,6 @@ class BlindsideSessionService : Service() {
         if (session == null) stopSelf()
     }
 
-    private fun toggleEliminated() {
-        scope.launch { settingsRepository().update { it.copy(eliminated = !it.eliminated) } }
-    }
-
     private fun goForeground(source: SessionSource) {
         SessionNotification.ensureChannel(this)
         val notification = SessionNotification.build(this, ongoingStatus(eliminated = false, source = source))
@@ -108,7 +111,7 @@ class BlindsideSessionService : Service() {
     }
 
     private suspend fun syncNotification(source: SessionSource) {
-        settingsRepository().settings.map { it.eliminated }.distinctUntilChanged().collect { eliminated ->
+        SessionStore.state.map { it.eliminated }.distinctUntilChanged().collect { eliminated ->
             val notification = SessionNotification.build(this, ongoingStatus(eliminated, source))
             getSystemService(NotificationManager::class.java).notify(SessionNotification.NOTIFICATION_ID, notification)
         }

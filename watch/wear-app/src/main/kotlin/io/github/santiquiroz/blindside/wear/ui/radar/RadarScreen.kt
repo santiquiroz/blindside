@@ -48,7 +48,7 @@ fun RadarScreen(
     onToggleEliminated: () -> Unit,
 ) {
     ReportRadarVisibility()
-    KeepScreenOn(keepScreenOn(settings.screenMode, settings.eliminated))
+    KeepScreenOn(keepScreenOn(settings.screenMode, session.eliminated))
     val elapsedMs by rememberElapsedMs()
     val shift = burnInOffset(settings.screenMode, elapsedMs)
     val scene = session.scene
@@ -57,7 +57,7 @@ fun RadarScreen(
         Canvas(Modifier.fillMaxSize()) {
             drawRadar(toDrawModel(scene, size.width, size.height, shift, contacts))
         }
-        RadarOverlay(scene, ambient, session.watchSteps, settings.eliminated, shift, onToggleEliminated)
+        RadarOverlay(scene, ambient, session.watchSteps, session.eliminated, shift, onToggleEliminated)
     }
 }
 

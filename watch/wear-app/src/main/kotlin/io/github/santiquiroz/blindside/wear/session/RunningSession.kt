@@ -38,6 +38,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
@@ -173,11 +175,16 @@ class RunningSession(
     }
 
     private suspend fun forwardMode() {
-        settings.settings.map { it.eliminated to it.screenMode }.distinctUntilChanged().collect { (eliminated, mode) ->
+        modeChanges().collect { (eliminated, mode) ->
             screenMode = mode
             inputs.trySend(SessionInput.ModeChanged(eliminated, mode, nowNanos()))
         }
     }
+
+    private fun modeChanges(): Flow<Pair<Boolean, ScreenMode>> =
+        combine(SessionStore.state.map { it.eliminated }, settings.settings.map { it.screenMode }) { eliminated, mode ->
+            eliminated to mode
+        }.distinctUntilChanged()
 
     private fun startSensors() {
         val availability = sensors.start(stepsAllowed = hasActivityRecognition())

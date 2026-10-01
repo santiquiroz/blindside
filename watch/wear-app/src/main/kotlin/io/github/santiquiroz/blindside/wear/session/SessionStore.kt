@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.updateAndGet
 
 data class SessionUiState(
     val running: Boolean = false,
@@ -17,6 +18,7 @@ data class SessionUiState(
     val recordingFailed: Boolean = false,
     val lastRecordingName: String? = null,
     val startError: StartError? = null,
+    val eliminated: Boolean = false,
 )
 
 object SessionStore {
@@ -29,6 +31,8 @@ object SessionStore {
     val ambient: StateFlow<Boolean> = mutableAmbient.asStateFlow()
 
     fun update(transform: (SessionUiState) -> SessionUiState) = mutableState.update(transform)
+
+    fun toggleEliminated(): Boolean = mutableState.updateAndGet(::eliminatedToggled).eliminated
 
     fun setRadarVisible(visible: Boolean) {
         mutableRadarVisible.value = visible
@@ -47,3 +51,5 @@ fun stoppedState(previous: SessionUiState): SessionUiState =
 
 fun blockedState(previous: SessionUiState, error: StartError): SessionUiState =
     stoppedState(previous).copy(startError = error)
+
+fun eliminatedToggled(previous: SessionUiState): SessionUiState = previous.copy(eliminated = !previous.eliminated)

@@ -32,7 +32,6 @@ import io.github.santiquiroz.blindside.wear.session.SessionCommands
 import io.github.santiquiroz.blindside.wear.session.SessionSource
 import io.github.santiquiroz.blindside.wear.session.SessionUiState
 import io.github.santiquiroz.blindside.wear.settings.AppSettings
-import io.github.santiquiroz.blindside.wear.settings.SettingsTransform
 import io.github.santiquiroz.blindside.wear.ui.radar.eliminatedActionLabel
 
 @Composable
@@ -40,9 +39,9 @@ fun HomeScreen(
     session: SessionUiState,
     settings: AppSettings,
     onNavigate: (String) -> Unit,
-    onUpdateSettings: (SettingsTransform) -> Unit,
+    onToggleEliminated: () -> Unit,
 ) {
-    if (session.running) RunningHome(session, settings, onNavigate, onUpdateSettings) else IdleHome(session, settings, onNavigate)
+    if (session.running) RunningHome(session, onNavigate, onToggleEliminated) else IdleHome(session, settings, onNavigate)
 }
 
 @Composable
@@ -74,9 +73,8 @@ private fun IdleHome(session: SessionUiState, settings: AppSettings, onNavigate:
 @Composable
 private fun RunningHome(
     session: SessionUiState,
-    settings: AppSettings,
     onNavigate: (String) -> Unit,
-    onUpdateSettings: (SettingsTransform) -> Unit,
+    onToggleEliminated: () -> Unit,
 ) {
     val context = LocalContext.current
     var confirmingStop by remember { mutableStateOf(false) }
@@ -85,7 +83,7 @@ private fun RunningHome(
         if (needsRetry(session.ble)) item { RetryNotice(bleStatusLabel(session.ble)) { SessionCommands.retryLink(context) } }
         if (session.recordingFailed) item { Text(RECORDING_FAILED_MESSAGE, color = WARNING_AMBER) }
         item { NavChip("Ver radar") { onNavigate(ROUTE_RADAR) } }
-        item { NavChip(eliminatedActionLabel(settings.eliminated)) { onUpdateSettings { it.copy(eliminated = !it.eliminated) } } }
+        item { NavChip(eliminatedActionLabel(session.eliminated), onToggleEliminated) }
         item { NavChip("Marcar rival") { SessionCommands.marker(context) } }
         item { NavChip(stopLabel(confirmingStop)) { confirmingStop = handleStopTap(context, confirmingStop) } }
         session.recordingName?.let { name -> item { Notice(name) } }

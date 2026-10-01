@@ -28,6 +28,20 @@ class SessionStoreTest {
     }
 
     @Test
+    fun `toggling eliminated flips only that flag`() {
+        val playing = SessionUiState(running = true, ble = BleStatus.STREAMING, recordingName = "new.bsrec")
+        val hit = eliminatedToggled(playing)
+        assertEquals(playing.copy(eliminated = true), hit)
+        assertEquals(playing, eliminatedToggled(hit))
+    }
+
+    @Test
+    fun `a new session never starts eliminated`() {
+        val leftOver = SessionUiState(eliminated = true)
+        assertFalse(startedState(leftOver, SessionSource.BELT).eliminated)
+    }
+
+    @Test
     fun `a blocked start reports why`() {
         val blocked = blockedState(SessionUiState(), StartError.BLUETOOTH_PERMISSION_MISSING)
         assertFalse(blocked.running)

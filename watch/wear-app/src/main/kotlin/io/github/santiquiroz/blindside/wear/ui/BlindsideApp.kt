@@ -10,6 +10,7 @@ import androidx.wear.compose.navigation.composable
 import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
 import io.github.santiquiroz.blindside.wear.SpikeScreen
 import io.github.santiquiroz.blindside.wear.session.SessionStore
+import io.github.santiquiroz.blindside.wear.session.toggleEliminated
 import io.github.santiquiroz.blindside.wear.settings.AppSettings
 import io.github.santiquiroz.blindside.wear.settings.SettingsRepository
 import io.github.santiquiroz.blindside.wear.settings.SettingsTransform
@@ -25,12 +26,11 @@ fun BlindsideApp(settingsRepository: SettingsRepository) {
     val navController = rememberSwipeDismissableNavController()
     val update: (SettingsTransform) -> Unit = { transform -> scope.launch { settingsRepository.update(transform) } }
     val navigate: (String) -> Unit = { route -> navController.navigate(route) }
+    val onToggleEliminated: () -> Unit = { toggleEliminated(scope, settingsRepository) }
     MaterialTheme {
         SwipeDismissableNavHost(navController = navController, startDestination = ROUTE_HOME) {
-            composable(ROUTE_HOME) { HomeScreen(session, settings, navigate, update) }
-            composable(ROUTE_RADAR) {
-                RadarScreen(session, settings, ambient, onToggleEliminated = { update { it.copy(eliminated = !it.eliminated) } })
-            }
+            composable(ROUTE_HOME) { HomeScreen(session, settings, navigate, onToggleEliminated) }
+            composable(ROUTE_RADAR) { RadarScreen(session, settings, ambient, onToggleEliminated) }
             composable(ROUTE_SETTINGS) { SettingsScreen(settings, update, onOpenSpikes = { navigate(ROUTE_SPIKES) }) }
             composable(ROUTE_PRACTICE) {
                 PracticeScreen(settings, onQuizPassed = { update { it.copy(quizPassedAtEpochMs = System.currentTimeMillis()) } })
