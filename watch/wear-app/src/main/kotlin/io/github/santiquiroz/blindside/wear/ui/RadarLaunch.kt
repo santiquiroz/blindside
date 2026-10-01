@@ -12,7 +12,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import io.github.santiquiroz.blindside.shared.permissions.SESSION_PERMISSIONS
 import io.github.santiquiroz.blindside.shared.permissions.bluetoothGranted
-import io.github.santiquiroz.blindside.wear.session.SessionCommands
+import io.github.santiquiroz.blindside.wear.session.WearSessionCommands
 import io.github.santiquiroz.blindside.wear.session.SessionSource
 import io.github.santiquiroz.blindside.wear.session.SessionStore
 import io.github.santiquiroz.blindside.shared.settings.SettingsRepository
@@ -32,7 +32,7 @@ fun LaunchRadarOnOpen(settingsRepository: SettingsRepository, onShowRadar: () ->
 }
 
 fun startRadar(context: Context, source: SessionSource, onShowRadar: () -> Unit) {
-    SessionCommands.start(context, source)
+    WearSessionCommands.start(context, source)
     onShowRadar()
 }
 

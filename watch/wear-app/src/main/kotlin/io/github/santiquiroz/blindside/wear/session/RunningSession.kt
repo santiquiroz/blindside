@@ -9,7 +9,6 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import io.github.santiquiroz.blindside.core.RadarPipeline
 import io.github.santiquiroz.blindside.core.alerts.ContactAlert
-import io.github.santiquiroz.blindside.wear.BuildConfig
 import io.github.santiquiroz.blindside.shared.ble.BeltLink
 import io.github.santiquiroz.blindside.wear.demo.DemoSource
 import io.github.santiquiroz.blindside.wear.demo.demoPackets
@@ -59,6 +58,7 @@ class RunningSession(
     private val settings: SettingsRepository,
     private val scope: CoroutineScope,
     private val useWakeLock: Boolean,
+    private val host: SessionHost,
 ) {
     private val pipelineDispatcher = Dispatchers.Default.limitedParallelism(1)
     private val inputs = Channel<SessionInput>(Channel.UNLIMITED)
@@ -133,7 +133,7 @@ class RunningSession(
         val stamp = SessionClockStamp(epochMs = System.currentTimeMillis(), elapsedNanos = startNanos)
         val name = recordingFileName(stamp.epochMs, ZoneId.systemDefault(), source.name)
         val meta = recordingMeta(
-            initial, source.name, stamp, Build.MODEL, BuildConfig.VERSION_NAME,
+            initial, source.name, stamp, Build.MODEL, host.appVersion,
             haptics.hasAmplitudeControl(), haptics.supportsPrimitives(),
         )
         SessionStore.update { it.copy(recordingName = name, recordingFailed = false) }

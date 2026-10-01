@@ -35,7 +35,7 @@ import io.github.santiquiroz.blindside.shared.ble.needsRetry
 import io.github.santiquiroz.blindside.shared.permissions.SESSION_PERMISSIONS
 import io.github.santiquiroz.blindside.shared.permissions.StartDecision
 import io.github.santiquiroz.blindside.shared.permissions.startDecision
-import io.github.santiquiroz.blindside.wear.session.SessionCommands
+import io.github.santiquiroz.blindside.wear.session.WearSessionCommands
 import io.github.santiquiroz.blindside.wear.session.SessionSource
 import io.github.santiquiroz.blindside.wear.session.SessionUiState
 import io.github.santiquiroz.blindside.wear.ui.radar.eliminatedActionLabel
@@ -81,11 +81,11 @@ private fun RunningHome(
     var confirmingStop by remember { mutableStateOf(false) }
     ScalingLazyColumn(Modifier.fillMaxSize()) {
         item { ListHeader { Text(sessionHeadline(session)) } }
-        if (needsRetry(session.ble)) item { RetryNotice(bleStatusLabel(session.ble)) { SessionCommands.retryLink(context) } }
+        if (needsRetry(session.ble)) item { RetryNotice(bleStatusLabel(session.ble)) { WearSessionCommands.retryLink(context) } }
         if (session.recordingFailed) item { Text(RECORDING_FAILED_MESSAGE, color = WARNING_AMBER) }
         item { NavChip("Ver radar", onShowRadar) }
         item { NavChip(eliminatedActionLabel(session.eliminated), onToggleEliminated) }
-        item { NavChip("Marcar rival") { SessionCommands.marker(context) } }
+        item { NavChip("Marcar rival") { WearSessionCommands.marker(context) } }
         item { NavChip(stopLabel(confirmingStop)) { confirmingStop = handleStopTap(context, confirmingStop) } }
         session.recordingName?.let { name -> item { Notice(name) } }
     }
@@ -135,7 +135,7 @@ private fun startBeltSession(context: Context, decision: StartDecision, onShowRa
     }
 
 private fun handleStopTap(context: Context, confirming: Boolean): Boolean {
-    if (confirming) SessionCommands.stop(context)
+    if (confirming) WearSessionCommands.stop(context)
     return !confirming
 }
 
