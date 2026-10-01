@@ -1,0 +1,42 @@
+package io.github.santiquiroz.blindside.wear.session
+
+import io.github.santiquiroz.blindside.wear.ble.BeltListener
+import io.github.santiquiroz.blindside.wear.ble.BleStatus
+import io.github.santiquiroz.blindside.wear.sensors.WatchSensorListener
+import kotlinx.coroutines.channels.SendChannel
+
+class SensorInputs(private val inputs: SendChannel<SessionInput>) : WatchSensorListener {
+    override fun onGravity(x: Float, y: Float, z: Float, eventNanos: Long) {
+        inputs.trySend(SessionInput.Gravity(x, y, z, eventNanos))
+    }
+
+    override fun onGyro(x: Float, y: Float, z: Float, eventNanos: Long) {
+        inputs.trySend(SessionInput.Gyro(x, y, z, eventNanos))
+    }
+
+    override fun onStep(eventNanos: Long) {
+        inputs.trySend(SessionInput.Step(eventNanos))
+    }
+}
+
+class BeltInputs(private val inputs: SendChannel<SessionInput>) : BeltListener {
+    override fun onPacket(bytes: ByteArray, arrivalNanos: Long) {
+        inputs.trySend(SessionInput.Packet(bytes, arrivalNanos))
+    }
+
+    override fun onBeltInfo(json: String, nowNanos: Long) {
+        inputs.trySend(SessionInput.BeltInfo(json, nowNanos))
+    }
+
+    override fun onRssi(dbm: Int, nowNanos: Long) {
+        inputs.trySend(SessionInput.Rssi(dbm, nowNanos))
+    }
+
+    override fun onLinkChanged(connected: Boolean, nowNanos: Long) {
+        inputs.trySend(SessionInput.Link(connected, nowNanos))
+    }
+
+    override fun onStatus(status: BleStatus) {
+        SessionStore.update { it.copy(ble = status) }
+    }
+}

@@ -8,6 +8,10 @@ coroutines = "1.9.0"
 datastore = "1.1.4"
 junit5 = "5.13.1"
 orgJson = "20231013"
+androidxWear = "1.3.0"
+wearOngoing = "1.0.0"
+androidxCore = "1.13.1"
+lifecycle = "2.8.7"
 
 [libraries]
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
@@ -23,6 +27,12 @@ junit5-bom = { group = "org.junit", name = "junit-bom", version.ref = "junit5" }
 junit5-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter" }
 junit5-launcher = { group = "org.junit.platform", name = "junit-platform-launcher" }
 org-json = { group = "org.json", name = "json", version.ref = "orgJson" }
+compose-foundation = { group = "androidx.compose.foundation", name = "foundation" }
+wear-compose-navigation = { group = "androidx.wear.compose", name = "compose-navigation", version.ref = "wearCompose" }
+androidx-wear = { group = "androidx.wear", name = "wear", version.ref = "androidxWear" }
+androidx-wear-ongoing = { group = "androidx.wear", name = "wear-ongoing", version.ref = "wearOngoing" }
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "androidxCore" }
+lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycle" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
