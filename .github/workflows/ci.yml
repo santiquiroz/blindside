@@ -36,6 +36,7 @@ jobs:
             ~/.platformio/platforms
           key: pio-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
       - run: pip install --upgrade platformio
+      - run: python tools/bench_e2e.py --self-test
       - run: pio test -e native
       - run: pio run -e esp32dev
 
