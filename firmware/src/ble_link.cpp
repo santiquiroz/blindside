@@ -392,31 +392,3 @@ void ble_link_disconnect_all() {
         ble_link_disconnect(slot);
     }
 }
-
-LinkSnapshot ble_link_snapshot() {
-    return ble_link_snapshot(0);
-}
-
-bool ble_link_take_auth_event() {
-    return ble_link_take_auth_event(0);
-}
-
-PeerSecurity ble_link_peer_security() {
-    return ble_link_peer_security(0);
-}
-
-void ble_link_set_trusted(bool trusted) {
-    ble_link_set_trusted(0, trusted);
-}
-
-ControlCommand ble_link_take_control() {
-    return ble_link_take_control(0);
-}
-
-bool ble_link_notify(const uint8_t* bytes, size_t length) {
-    return ble_link_notify(0, g_slots[0].link_id.load(), bytes, length);
-}
-
-void ble_link_disconnect() {
-    ble_link_disconnect(0);
-}

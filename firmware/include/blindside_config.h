@@ -5,7 +5,7 @@
 
 namespace config {
 
-constexpr char kFirmwareVersion[] = "0.1.0";
+constexpr char kFirmwareVersion[] = "0.2.0";
 constexpr uint32_t kSerialBaud = 115200;
 constexpr size_t kSerialTxBufferBytes = 1024;
 

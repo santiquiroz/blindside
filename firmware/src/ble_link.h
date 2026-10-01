@@ -46,12 +46,3 @@ uint16_t ble_link_backlog(uint8_t slot);
 bool ble_link_notify(uint8_t slot, uint32_t link_id, const uint8_t* bytes, size_t length);
 void ble_link_disconnect(uint8_t slot);
 void ble_link_disconnect_all();
-
-// Single-link calls on slot 0, kept only until every caller moves to slots.
-LinkSnapshot ble_link_snapshot();
-bool ble_link_take_auth_event();
-PeerSecurity ble_link_peer_security();
-void ble_link_set_trusted(bool trusted);
-ControlCommand ble_link_take_control();
-bool ble_link_notify(const uint8_t* bytes, size_t length);
-void ble_link_disconnect();
