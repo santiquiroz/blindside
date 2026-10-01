@@ -167,8 +167,13 @@ class BeltLink(
         val known = device
         when {
             known == null -> adoptScanned(found)
-            found.address == known.address && !reporter.up -> connectDirect(SystemClock.elapsedRealtime())
+            found.address == known.address && mayReplaceCurrentAttempt() -> connectScanned()
         }
+    }
+
+    private fun connectScanned() {
+        scanner.stop()
+        connectDirect(SystemClock.elapsedRealtime())
     }
 
     private fun adoptScanned(found: BluetoothDevice) {
@@ -213,7 +218,7 @@ class BeltLink(
 
     private fun reconnectIfDue(nowMs: Long) {
         val state = reconnect ?: return
-        if (directDeadlineMs != null) return
+        if (!mayReplaceCurrentAttempt()) return
         val action = nextReconnectAction(state, nowMs) ?: return
         reconnect = recordAction(state, action, nowMs)
         if (action == ReconnectAction.DIRECT_CONNECT) connectDirect(nowMs) else scanner.start(nowMs)
@@ -252,6 +257,7 @@ class BeltLink(
     private fun dropConnection() {
         gatt?.close()
         gatt = null
+        attempt = ConnectionAttempt()
         directDeadlineMs = null
     }
 
@@ -275,6 +281,8 @@ class BeltLink(
         reporter = step.reporter
         step.change?.let { listener.onLinkChanged(it, SystemClock.elapsedRealtimeNanos()) }
     }
+
+    private fun mayReplaceCurrentAttempt(): Boolean = mayReplaceAttempt(attempt, reporter.up, directDeadlineMs != null)
 
     private fun connectingStatus(): BleStatus = if (everStreamed) BleStatus.RECONNECTING else BleStatus.CONNECTING
 

@@ -1,7 +1,9 @@
 package io.github.santiquiroz.blindside.wear.ble
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class ReconnectPolicyTest {
@@ -40,5 +42,23 @@ class ReconnectPolicyTest {
     fun `recording an action only touches its own timestamp`() {
         val scanned = recordAction(lost, ReconnectAction.SCAN, 31_000L)
         assertEquals(ReconnectState(lostAtMs = 0L, lastDirectAtMs = null, lastScanAtMs = 31_000L), scanned)
+    }
+
+    @Test
+    fun `a connected attempt in setup is never replaced`() {
+        val waitingForPasskey = ConnectionAttempt(pairing = true, connected = true)
+        assertFalse(mayReplaceAttempt(waitingForPasskey, linkUp = false, directPending = false))
+        assertFalse(mayReplaceAttempt(ConnectionAttempt(connected = true), linkUp = false, directPending = false))
+    }
+
+    @Test
+    fun `an attempt still waiting to connect may be replaced`() {
+        assertTrue(mayReplaceAttempt(ConnectionAttempt(), linkUp = false, directPending = false))
+    }
+
+    @Test
+    fun `a pending direct attempt or a live link is left alone`() {
+        assertFalse(mayReplaceAttempt(ConnectionAttempt(), linkUp = false, directPending = true))
+        assertFalse(mayReplaceAttempt(ConnectionAttempt(connected = true, subscribed = true), linkUp = true, directPending = false))
     }
 }

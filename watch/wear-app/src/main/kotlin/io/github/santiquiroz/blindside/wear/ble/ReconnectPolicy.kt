@@ -21,5 +21,9 @@ fun recordAction(state: ReconnectState, action: ReconnectAction, nowMs: Long): R
     ReconnectAction.SCAN -> state.copy(lastScanAtMs = nowMs)
 }
 
+// A connected attempt still in setup has its own op timeouts and always ends in onDisconnected.
+fun mayReplaceAttempt(attempt: ConnectionAttempt, linkUp: Boolean, directPending: Boolean): Boolean =
+    !linkUp && !attempt.connected && !directPending
+
 private fun isDue(lostAtMs: Long, lastAtMs: Long?, nowMs: Long, afterMs: Long, everyMs: Long): Boolean =
     nowMs - lostAtMs >= afterMs && (lastAtMs == null || nowMs - lastAtMs >= everyMs)
