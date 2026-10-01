@@ -53,11 +53,4 @@ class QuizTest {
         val done = play(newQuiz(Random(4)), mistakes = 0)
         assertEquals(done, answer(done, Side.LEFT))
     }
-
-    @Test
-    fun `practice is due when never passed or older than twelve hours`() {
-        assertTrue(needsPractice(lastPassedEpochMs = null, nowEpochMs = 0L))
-        assertFalse(needsPractice(lastPassedEpochMs = 0L, nowEpochMs = PRACTICE_VALID_MS))
-        assertTrue(needsPractice(lastPassedEpochMs = 0L, nowEpochMs = PRACTICE_VALID_MS + 1))
-    }
 }

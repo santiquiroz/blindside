@@ -7,7 +7,9 @@ import io.github.santiquiroz.blindside.core.config.Handedness
 import io.github.santiquiroz.blindside.core.config.RADAR_A
 import io.github.santiquiroz.blindside.core.config.RADAR_B
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class SettingsPreferencesTest {
@@ -28,7 +30,8 @@ class SettingsPreferencesTest {
             vibrationUsage = VibrationUsage.NOTIFICATION,
             eliminated = true,
             beltAddress = "AA:BB:CC:DD:EE:FF",
-            quizPassedAtEpochMs = 1_760_000_000_000L,
+            posture = WatchPosture.TACTICAL_RIGHT,
+            autoStartRadar = false,
         )
         val prefs = mutablePreferencesOf()
         writeSettings(prefs, original)
@@ -41,11 +44,19 @@ class SettingsPreferencesTest {
             Keys.HANDEDNESS to "AMBIDEXTROUS",
             Keys.SCREEN_MODE to "NIGHT",
             Keys.VIBRATION_USAGE to "",
+            Keys.POSTURE to "UPSIDE_DOWN",
         )
         val settings = settingsFrom(prefs)
         assertEquals(Handedness.RIGHT, settings.handedness)
         assertEquals(ScreenMode.SIGILO, settings.screenMode)
         assertEquals(VibrationUsage.ALARM, settings.vibrationUsage)
+        assertEquals(WatchPosture.NORMAL, settings.posture)
+    }
+
+    @Test
+    fun `the radar starts on open unless it was turned off`() {
+        assertTrue(settingsFrom(emptyPreferences()).autoStartRadar)
+        assertFalse(settingsFrom(preferencesOf(Keys.AUTO_START_RADAR to false)).autoStartRadar)
     }
 
     @Test

@@ -5,7 +5,6 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
-import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 
 internal object Keys {
@@ -14,7 +13,8 @@ internal object Keys {
     val VIBRATION_USAGE = stringPreferencesKey("vibration_usage")
     val ELIMINATED = booleanPreferencesKey("eliminated")
     val BELT_ADDRESS = stringPreferencesKey("belt_address")
-    val QUIZ_PASSED_AT = longPreferencesKey("quiz_passed_at_epoch_ms")
+    val POSTURE = stringPreferencesKey("watch_posture")
+    val AUTO_START_RADAR = booleanPreferencesKey("auto_start_radar")
 
     fun yaw(radarId: Int) = doublePreferencesKey("radar${radarId}_yaw_deg")
     fun flipX(radarId: Int) = booleanPreferencesKey("radar${radarId}_flip_x")
@@ -30,7 +30,8 @@ fun settingsFrom(prefs: Preferences): AppSettings {
         vibrationUsage = enumOrDefault(prefs[Keys.VIBRATION_USAGE], defaults.vibrationUsage),
         eliminated = prefs[Keys.ELIMINATED] ?: defaults.eliminated,
         beltAddress = prefs[Keys.BELT_ADDRESS],
-        quizPassedAtEpochMs = prefs[Keys.QUIZ_PASSED_AT],
+        posture = enumOrDefault(prefs[Keys.POSTURE], defaults.posture),
+        autoStartRadar = prefs[Keys.AUTO_START_RADAR] ?: defaults.autoStartRadar,
     )
 }
 
@@ -39,8 +40,9 @@ fun writeSettings(prefs: MutablePreferences, settings: AppSettings) {
     prefs[Keys.SCREEN_MODE] = settings.screenMode.name
     prefs[Keys.VIBRATION_USAGE] = settings.vibrationUsage.name
     prefs[Keys.ELIMINATED] = settings.eliminated
+    prefs[Keys.POSTURE] = settings.posture.name
+    prefs[Keys.AUTO_START_RADAR] = settings.autoStartRadar
     writeOptional(prefs, Keys.BELT_ADDRESS, settings.beltAddress)
-    writeOptional(prefs, Keys.QUIZ_PASSED_AT, settings.quizPassedAtEpochMs)
     settings.radars.forEach { writeRadar(prefs, it) }
 }
 

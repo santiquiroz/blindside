@@ -1,6 +1,8 @@
 package io.github.santiquiroz.blindside.wear.permissions
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class SessionPermissionsTest {
@@ -37,6 +39,18 @@ class SessionPermissionsTest {
     @Test
     fun `blocks when bluetooth scan is missing from the result`() {
         assertEquals(StartDecision.BlockedBluetoothDenied, startDecision(allGranted - PERMISSION_BLUETOOTH_SCAN))
+    }
+
+    @Test
+    fun `starting skips the prompt once bluetooth is granted even if optional permissions were denied`() {
+        val grants = allGranted + (PERMISSION_ACTIVITY_RECOGNITION to false) + (PERMISSION_POST_NOTIFICATIONS to false)
+        assertFalse(shouldRequestPermissions(grants))
+    }
+
+    @Test
+    fun `starting prompts while any bluetooth permission is missing`() {
+        assertTrue(shouldRequestPermissions(emptyMap()))
+        assertTrue(shouldRequestPermissions(allGranted + (PERMISSION_BLUETOOTH_SCAN to false)))
     }
 
     @Test

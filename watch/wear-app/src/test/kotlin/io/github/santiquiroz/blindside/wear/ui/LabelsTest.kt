@@ -3,6 +3,7 @@ package io.github.santiquiroz.blindside.wear.ui
 import io.github.santiquiroz.blindside.core.scene.Side
 import io.github.santiquiroz.blindside.wear.practice.QuizAnswer
 import io.github.santiquiroz.blindside.wear.practice.QuizState
+import io.github.santiquiroz.blindside.wear.settings.WatchPosture
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -40,5 +41,12 @@ class LabelsTest {
     @Test
     fun `practice offers every rhythm including the system buzz`() {
         assertEquals(listOf("izquierda", "centro", "derecha", "sistema"), PRACTICE_RHYTHMS.map { it.label })
+    }
+
+    @Test
+    fun `posture labels name the wrist side and the quarter turn`() {
+        assertEquals("Normal", postureLabel(WatchPosture.NORMAL))
+        assertEquals("Táctica izquierda (+90°)", postureLabel(WatchPosture.TACTICAL_LEFT))
+        assertEquals("Táctica derecha (-90°)", postureLabel(WatchPosture.TACTICAL_RIGHT))
     }
 }

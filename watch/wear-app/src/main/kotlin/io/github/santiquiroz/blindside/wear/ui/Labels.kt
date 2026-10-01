@@ -18,6 +18,7 @@ import io.github.santiquiroz.blindside.wear.session.StartError
 import io.github.santiquiroz.blindside.core.config.RADAR_A
 import io.github.santiquiroz.blindside.wear.settings.ScreenMode
 import io.github.santiquiroz.blindside.wear.settings.VibrationUsage
+import io.github.santiquiroz.blindside.wear.settings.WatchPosture
 import kotlin.math.roundToInt
 
 data class PracticeRhythm(val label: String, val pattern: HapticPattern)
@@ -89,7 +90,11 @@ fun startErrorMessage(error: StartError): String = when (error) {
     StartError.BLUETOOTH_UNAVAILABLE -> "Este reloj no tiene Bluetooth disponible."
 }
 
-fun startChipLabel(practiceDue: Boolean): String = if (practiceDue) "Práctica pendiente" else "Iniciar partida"
+const val START_RADAR_LABEL = "Iniciar radar"
+const val SETTINGS_ENTRY_LABEL = "Ajustes"
+const val AUTO_START_SETTING_LABEL = "Iniciar radar al abrir"
+const val VIBRATION_TEST_LABEL = "Probar vibraciones"
+const val DEMO_LABEL = "Demo"
 
 fun stopLabel(confirming: Boolean): String = if (confirming) "¿Detener? Toca otra vez" else "Detener partida"
 
@@ -102,6 +107,12 @@ fun handednessLabel(handedness: Handedness): String = when (handedness) {
 fun screenModeLabel(mode: ScreenMode): String = when (mode) {
     ScreenMode.SIGILO -> "Sigilo"
     ScreenMode.VISTA -> "Vista (siempre encendida)"
+}
+
+fun postureLabel(posture: WatchPosture): String = when (posture) {
+    WatchPosture.NORMAL -> "Normal"
+    WatchPosture.TACTICAL_LEFT -> "Táctica izquierda (+90°)"
+    WatchPosture.TACTICAL_RIGHT -> "Táctica derecha (-90°)"
 }
 
 fun usageLabel(usage: VibrationUsage): String = when (usage) {

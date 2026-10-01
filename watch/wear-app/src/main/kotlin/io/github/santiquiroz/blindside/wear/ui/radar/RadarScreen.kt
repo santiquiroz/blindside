@@ -18,13 +18,14 @@ import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material.Chip
 import androidx.wear.compose.material.ChipDefaults
 import androidx.wear.compose.material.Text
-import io.github.santiquiroz.blindside.core.scene.RadarScene
 import io.github.santiquiroz.blindside.wear.session.SessionUiState
 import io.github.santiquiroz.blindside.wear.settings.AppSettings
 import io.github.santiquiroz.blindside.wear.ui.KeepScreenOn
@@ -39,6 +40,9 @@ import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
 private const val BURN_IN_CLOCK_TICK_MS = 30_000L
+private val CENTER_LABEL_SIZE = 26.sp
+private val LINK_MESSAGE_SIZE = 14.sp
+private val LINK_MESSAGE_SIDE_PADDING = 28.dp
 
 @Composable
 fun RadarScreen(
@@ -51,46 +55,57 @@ fun RadarScreen(
     KeepScreenOn(keepScreenOn(settings.screenMode, session.eliminated))
     val elapsedMs by rememberElapsedMs()
     val shift = burnInOffset(settings.screenMode, elapsedMs)
-    val scene = session.scene
-    val contacts = showContacts(scene, ambient)
+    val contacts = showContacts(session.scene, ambient)
+    val rotationDeg = settings.posture.rotationDeg
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         Canvas(Modifier.fillMaxSize()) {
-            drawRadar(toDrawModel(scene, size.width, size.height, shift, contacts))
+            val logical = toDrawModel(session.scene, size.width, size.height, shift, contacts)
+            drawRadar(logical.rotatedAbout(screenCenter(size.width, size.height, shift), rotationDeg))
         }
-        RadarOverlay(scene, ambient, session.watchSteps, session.eliminated, shift, onToggleEliminated)
+        RadarOverlay(session, ambient, shift, rotationDeg, onToggleEliminated)
     }
 }
 
 @Composable
 private fun RadarOverlay(
-    scene: RadarScene?,
+    session: SessionUiState,
     ambient: Boolean,
-    watchSteps: Boolean,
-    eliminated: Boolean,
     shift: PointPx,
+    rotationDeg: Float,
     onToggleEliminated: () -> Unit,
 ) {
-    Box(Modifier.fillMaxSize().offset { IntOffset(shift.x.roundToInt(), shift.y.roundToInt()) }) {
-        centerLabel(scene, ambient)?.let { label ->
-            Text(label, Modifier.align(Alignment.Center), color = LABEL_GRAY, fontSize = 26.sp)
+    val link = radarMessage(session)
+    val placement = Modifier.fillMaxSize()
+        .offset { IntOffset(shift.x.roundToInt(), shift.y.roundToInt()) }
+        // Turns after the shift, about the shifted center like the drawing, so the panel stays over the rear and off the flanks.
+        .graphicsLayer { rotationZ = rotationDeg }
+    Box(placement) {
+        centerLabel(session.scene, ambient, link)?.let { label ->
+            CenterLabel(label, isLinkMessage = label == link, Modifier.align(Alignment.Center))
         }
         // Spec §5.4: the dimmed screen keeps ≤ 15 % lit pixels, so ambient shows only the fan and "--".
-        if (!ambient) BottomPanel(scene, watchSteps, eliminated, onToggleEliminated, Modifier.align(Alignment.BottomCenter))
+        if (!ambient) BottomPanel(session, onToggleEliminated, Modifier.align(Alignment.BottomCenter))
     }
 }
 
 @Composable
-private fun BottomPanel(
-    scene: RadarScene?,
-    watchSteps: Boolean,
-    eliminated: Boolean,
-    onToggleEliminated: () -> Unit,
-    modifier: Modifier,
-) {
+private fun CenterLabel(label: String, isLinkMessage: Boolean, modifier: Modifier) {
+    Text(
+        label,
+        modifier.padding(horizontal = LINK_MESSAGE_SIDE_PADDING),
+        color = LABEL_GRAY,
+        fontSize = if (isLinkMessage) LINK_MESSAGE_SIZE else CENTER_LABEL_SIZE,
+        textAlign = TextAlign.Center,
+    )
+}
+
+@Composable
+private fun BottomPanel(session: SessionUiState, onToggleEliminated: () -> Unit, modifier: Modifier) {
     Column(modifier = modifier.padding(bottom = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        warningLabel(scene?.warnings.orEmpty())?.let { Text(it, color = WARNING_AMBER, fontSize = 11.sp) }
-        StatusRow(statusItems(scene, watchSteps))
-        EliminatedChip(eliminated, onToggleEliminated)
+        if (session.dndMaySilenceAlerts) Text(DND_RADAR_WARNING, color = WARNING_AMBER, fontSize = 11.sp, maxLines = 1)
+        warningLabel(session.scene?.warnings.orEmpty())?.let { Text(it, color = WARNING_AMBER, fontSize = 11.sp) }
+        StatusRow(statusItems(session.scene, session.watchSteps))
+        EliminatedChip(session.eliminated, onToggleEliminated)
     }
 }
 
