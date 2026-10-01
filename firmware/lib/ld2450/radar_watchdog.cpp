@@ -4,8 +4,9 @@ namespace {
 
 constexpr uint8_t kMaxRestartCount = 0xFF;
 
+// Signed, so a stamp a higher-priority task took after the reader's millis() counts as 0 ms ago, not 49 days.
 bool elapsed_at_least(uint32_t since_ms, uint32_t now_ms, uint32_t duration_ms) {
-    return now_ms - since_ms >= duration_ms;
+    return static_cast<int32_t>(now_ms - since_ms) >= static_cast<int32_t>(duration_ms);
 }
 
 bool is_silent(const RadarWatchdog& watchdog, uint32_t now_ms) {

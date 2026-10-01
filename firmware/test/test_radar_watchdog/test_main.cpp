@@ -69,6 +69,12 @@ void test_alive_only_within_two_seconds_of_a_frame() {
     TEST_ASSERT_FALSE(watchdog_radar_alive(watchdog, 3000));
 }
 
+void test_radar_seen_after_the_reader_clock_is_alive() {
+    RadarWatchdog watchdog = watchdog_saw_frame(watchdog_after_boot_config(0), 1001);
+    TEST_ASSERT_TRUE(watchdog_radar_alive(watchdog, 1000));
+    checked(watchdog, 1000, WatchdogAction::None);
+}
+
 void test_restart_counter_saturates_at_255() {
     RadarWatchdog watchdog = watchdog_after_boot_config(0);
     for (uint32_t i = 0; i < 300; ++i) {
@@ -92,6 +98,7 @@ int run_all_tests() {
     RUN_TEST(test_frames_after_a_restart_rearm_the_fast_restart);
     RUN_TEST(test_manual_restart_defers_the_automatic_one);
     RUN_TEST(test_alive_only_within_two_seconds_of_a_frame);
+    RUN_TEST(test_radar_seen_after_the_reader_clock_is_alive);
     RUN_TEST(test_restart_counter_saturates_at_255);
     RUN_TEST(test_millis_wrap_is_handled);
     return UNITY_END();
