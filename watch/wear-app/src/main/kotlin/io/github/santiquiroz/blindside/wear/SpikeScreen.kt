@@ -21,17 +21,17 @@ import androidx.wear.compose.material.Chip
 import androidx.wear.compose.material.ChipDefaults
 import androidx.wear.compose.material.ListHeader
 import androidx.wear.compose.material.Text
-import io.github.santiquiroz.blindside.wear.ble.needsRetry
-import io.github.santiquiroz.blindside.wear.permissions.SESSION_PERMISSIONS
-import io.github.santiquiroz.blindside.wear.permissions.StartDecision
-import io.github.santiquiroz.blindside.wear.permissions.startDecision
-import io.github.santiquiroz.blindside.wear.session.SessionCommands
-import io.github.santiquiroz.blindside.wear.session.SessionSource
-import io.github.santiquiroz.blindside.wear.session.SessionStore
-import io.github.santiquiroz.blindside.wear.session.SessionUiState
-import io.github.santiquiroz.blindside.wear.settings.AppSettings
-import io.github.santiquiroz.blindside.wear.settings.SettingsRepository
-import io.github.santiquiroz.blindside.wear.settings.toggledUsage
+import io.github.santiquiroz.blindside.shared.ble.needsRetry
+import io.github.santiquiroz.blindside.shared.permissions.SESSION_PERMISSIONS
+import io.github.santiquiroz.blindside.shared.permissions.StartDecision
+import io.github.santiquiroz.blindside.shared.permissions.startDecision
+import io.github.santiquiroz.blindside.wear.session.WearSessionCommands
+import io.github.santiquiroz.blindside.shared.session.SessionSource
+import io.github.santiquiroz.blindside.shared.session.SessionStore
+import io.github.santiquiroz.blindside.shared.session.SessionUiState
+import io.github.santiquiroz.blindside.shared.settings.AppSettings
+import io.github.santiquiroz.blindside.shared.settings.SettingsRepository
+import io.github.santiquiroz.blindside.shared.settings.toggledUsage
 import kotlinx.coroutines.launch
 
 @Composable
@@ -42,7 +42,7 @@ fun SpikeScreen(settingsRepository: SettingsRepository) {
     val scope = rememberCoroutineScope()
     var wakeLock by remember { mutableStateOf(true) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
-        if (startDecision(grants) is StartDecision.Start) SessionCommands.start(context, SessionSource.BELT, wakeLock)
+        if (startDecision(grants) is StartDecision.Start) WearSessionCommands.start(context, SessionSource.BELT, wakeLock)
     }
     val toggleUsage = { scope.launch { settingsRepository.update { it.copy(vibrationUsage = toggledUsage(it.vibrationUsage)) } } }
     ScalingLazyColumn(Modifier.fillMaxSize()) {
@@ -52,7 +52,7 @@ fun SpikeScreen(settingsRepository: SettingsRepository) {
             runningChips(context, session)
         } else {
             item { SpikeChip("Partida (cinturón)") { launcher.launch(SESSION_PERMISSIONS) } }
-            item { SpikeChip("Demo") { SessionCommands.start(context, SessionSource.DEMO, wakeLock) } }
+            item { SpikeChip("Demo") { WearSessionCommands.start(context, SessionSource.DEMO, wakeLock) } }
             item { SpikeChip("Wake lock: ${if (wakeLock) "sí" else "no (S1)"}") { wakeLock = !wakeLock } }
             item { SpikeChip("Vibración: ${settings.vibrationUsage.name}") { toggleUsage() } }
         }
@@ -61,9 +61,9 @@ fun SpikeScreen(settingsRepository: SettingsRepository) {
 }
 
 private fun ScalingLazyListScope.runningChips(context: Context, session: SessionUiState) {
-    if (needsRetry(session.ble)) item { SpikeChip("Reintentar") { SessionCommands.retryLink(context) } }
-    item { SpikeChip("Marcar") { SessionCommands.marker(context) } }
-    item { SpikeChip("Detener") { SessionCommands.stop(context) } }
+    if (needsRetry(session.ble)) item { SpikeChip("Reintentar") { WearSessionCommands.retryLink(context) } }
+    item { SpikeChip("Marcar") { WearSessionCommands.marker(context) } }
+    item { SpikeChip("Detener") { WearSessionCommands.stop(context) } }
 }
 
 @Composable

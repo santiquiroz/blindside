@@ -46,6 +46,7 @@ kotlin {
 
 dependencies {
     implementation(project(":radar-core"))
+    implementation(project(":android-shared"))
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)

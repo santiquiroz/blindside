@@ -1,24 +1,26 @@
 package io.github.santiquiroz.blindside.wear.ui
 
 import io.github.santiquiroz.blindside.core.scene.Side
-import io.github.santiquiroz.blindside.wear.haptics.CENTER_PATTERN
-import io.github.santiquiroz.blindside.wear.haptics.HapticPattern
-import io.github.santiquiroz.blindside.wear.haptics.LEFT_PATTERN
-import io.github.santiquiroz.blindside.wear.haptics.RIGHT_PATTERN
-import io.github.santiquiroz.blindside.wear.haptics.SYSTEM_PATTERN
+import io.github.santiquiroz.blindside.shared.haptics.CENTER_PATTERN
+import io.github.santiquiroz.blindside.shared.haptics.HapticPattern
+import io.github.santiquiroz.blindside.shared.haptics.LEFT_PATTERN
+import io.github.santiquiroz.blindside.shared.haptics.RIGHT_PATTERN
+import io.github.santiquiroz.blindside.shared.haptics.SYSTEM_PATTERN
 import io.github.santiquiroz.blindside.wear.practice.QuizAnswer
 import io.github.santiquiroz.blindside.wear.practice.QuizState
 import io.github.santiquiroz.blindside.wear.practice.passed
 import io.github.santiquiroz.blindside.core.config.Handedness
-import io.github.santiquiroz.blindside.wear.ble.BleStatus
-import io.github.santiquiroz.blindside.wear.ble.needsRetry
-import io.github.santiquiroz.blindside.wear.session.SessionSource
-import io.github.santiquiroz.blindside.wear.session.SessionUiState
-import io.github.santiquiroz.blindside.wear.session.StartError
+import io.github.santiquiroz.blindside.shared.ble.BleStatus
+import io.github.santiquiroz.blindside.shared.ble.needsRetry
+import io.github.santiquiroz.blindside.shared.session.PhonePairing
+import io.github.santiquiroz.blindside.shared.session.SessionSource
+import io.github.santiquiroz.blindside.shared.session.SessionUiState
+import io.github.santiquiroz.blindside.shared.session.StartError
 import io.github.santiquiroz.blindside.core.config.RADAR_A
-import io.github.santiquiroz.blindside.wear.settings.ScreenMode
-import io.github.santiquiroz.blindside.wear.settings.VibrationUsage
-import io.github.santiquiroz.blindside.wear.settings.WatchPosture
+import io.github.santiquiroz.blindside.shared.settings.ContactColor
+import io.github.santiquiroz.blindside.shared.settings.ScreenMode
+import io.github.santiquiroz.blindside.shared.settings.VibrationUsage
+import io.github.santiquiroz.blindside.shared.settings.WatchPosture
 import kotlin.math.roundToInt
 
 data class PracticeRhythm(val label: String, val pattern: HapticPattern)
@@ -120,6 +122,11 @@ fun usageLabel(usage: VibrationUsage): String = when (usage) {
     VibrationUsage.NOTIFICATION -> "Notificación"
 }
 
+fun contactColorLabel(color: ContactColor): String = when (color) {
+    ContactColor.GREEN -> "Verde"
+    ContactColor.RED -> "Rojo"
+}
+
 fun radarName(radarId: Int): String = if (radarId == RADAR_A) "Radar A (izq.)" else "Radar B (der.)"
 
 fun yawLabel(radarId: Int, yawDeg: Double): String = "${radarLetter(radarId)} ${yawDeg.roundToInt()}°"
@@ -127,3 +134,13 @@ fun yawLabel(radarId: Int, yawDeg: Double): String = "${radarLetter(radarId)} ${
 fun signLabel(sign: Int): String = if (sign < 0) "-1" else "+1"
 
 private fun radarLetter(radarId: Int): String = if (radarId == RADAR_A) "A" else "B"
+
+const val PAIR_PHONE_LABEL = "Emparejar celular"
+
+fun phonePairingLabel(state: PhonePairing): String = when (state) {
+    PhonePairing.IDLE -> "Abre la ventana 60 s"
+    PhonePairing.REQUESTED -> "Enviando al cinturón…"
+    PhonePairing.DELIVERED -> "Pedida al cinturón (60 s)"
+    PhonePairing.REFUSED -> "El cinturón no respondió"
+    PhonePairing.NO_LINK -> "Primero inicia el radar"
+}

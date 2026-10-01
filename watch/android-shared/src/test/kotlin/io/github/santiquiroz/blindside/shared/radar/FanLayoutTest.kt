@@ -1,0 +1,95 @@
+package io.github.santiquiroz.blindside.shared.radar
+
+import io.github.santiquiroz.blindside.core.config.DecodeParams
+import io.github.santiquiroz.blindside.core.config.RADAR_A
+import io.github.santiquiroz.blindside.core.config.RADAR_B
+import io.github.santiquiroz.blindside.core.scene.CoverageSector
+import io.github.santiquiroz.blindside.core.scene.MotionState
+import io.github.santiquiroz.blindside.core.scene.RadarScene
+import io.github.santiquiroz.blindside.core.scene.SensorStatus
+import io.github.santiquiroz.blindside.core.scene.coverageOf
+import io.github.santiquiroz.blindside.shared.settings.AppSettings
+import io.github.santiquiroz.blindside.shared.settings.RadarSettings
+import io.github.santiquiroz.blindside.shared.settings.mountsFor
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
+import kotlin.math.cos
+import kotlin.math.hypot
+import kotlin.math.sin
+
+class FanLayoutTest {
+    @Test
+    fun `the half angle is the widest sector edge clamped to forty five and ninety degrees`() {
+        assertEquals(90.0, fanHalfAngleDeg(listOf(CoverageSector(-100.0, 20.0), CoverageSector(-40.0, 80.0))))
+        assertEquals(60.0, fanHalfAngleDeg(listOf(CoverageSector(-60.0, 60.0))))
+        assertEquals(45.0, fanHalfAngleDeg(listOf(CoverageSector(-30.0, 30.0))))
+        assertEquals(90.0, fanHalfAngleDeg(emptyList()))
+    }
+
+    @Test
+    fun `a half disc fan sits on the centre and reaches the usable edge`() {
+        val fit = fitFan(480f, 32f, 90.0)
+        assertEquals(0f, fit.originYOffsetPx, 1e-3f)
+        assertEquals(208f, fit.radiusPx, 1e-3f)
+    }
+
+    @Test
+    fun `a sixty degree fan drops its origin and grows`() {
+        val fit = fitFan(480f, 32f, 60.0)
+        assertEquals(120.089f, fit.originYOffsetPx, 1e-2f)
+        assertEquals(240.177f, fit.radiusPx, 1e-2f)
+    }
+
+    @Test
+    fun `flank edge and six metre arc stay inside the usable circle for every half angle`() {
+        val limit = 208.0
+        (45..90 step 5).forEach { halfAngle ->
+            val fit = fitFan(480f, 32f, halfAngle.toDouble())
+            val radians = Math.toRadians(halfAngle.toDouble())
+            val flank = hypot(fit.radiusPx * sin(radians), fit.originYOffsetPx - fit.radiusPx * cos(radians))
+            val tip = kotlin.math.abs(fit.originYOffsetPx - fit.radiusPx)
+            assertTrue(flank <= limit + 1e-2, "flank at $halfAngle")
+            assertTrue(tip <= limit + 1e-2, "tip at $halfAngle")
+        }
+    }
+
+    @Test
+    fun `a negative usable radius collapses to zero instead of drawing inside out`() {
+        assertEquals(0f, fitFan(20f, 32f, 90.0).radiusPx, 1e-3f)
+    }
+
+    private val rightHanded = AppSettings()
+
+    private fun sceneWithAlive(vararg alive: Int): RadarScene = RadarScene(
+        blips = emptyList(),
+        coverage = coverageOf(mountsFor(rightHanded), alive.toSet(), DecodeParams()),
+        linkUp = true,
+        radars = listOf(SensorStatus(RADAR_A, RADAR_A in alive), SensorStatus(RADAR_B, RADAR_B in alive)),
+        imus = emptyList(),
+        motion = MotionState.STILL,
+        warnings = emptySet(),
+        eliminated = false,
+    )
+
+    private fun drawn(scene: RadarScene, fit: Double): RadarDrawModel =
+        toDrawModel(scene, 480f, 480f, PointPx(0f, 0f), showContacts = true, edgeMarginPx = 32f, fitHalfAngleDeg = fit)
+
+    @Test
+    fun `the configured belt sizes the fan`() {
+        assertEquals(90.0, fanHalfAngleFor(rightHanded))
+        val inward = rightHanded.copy(radars = listOf(RadarSettings(RADAR_A, yawDegOverride = 0.0), RadarSettings(RADAR_B, yawDegOverride = 0.0)))
+        assertEquals(60.0, fanHalfAngleFor(inward))
+    }
+
+    @Test
+    fun `losing one radar keeps the origin and radius unchanged`() {
+        val fit = fanHalfAngleFor(rightHanded)
+        val both = drawn(sceneWithAlive(RADAR_A, RADAR_B), fit)
+        val flankDown = drawn(sceneWithAlive(RADAR_B), fit)
+        assertEquals(80.0, fanHalfAngleDeg(sceneWithAlive(RADAR_B).coverage))
+        assertEquals(both.origin, flankDown.origin)
+        assertEquals(both.radiusPx, flankDown.radiusPx)
+        assertEquals(1, flankDown.sectors.size)
+    }
+}

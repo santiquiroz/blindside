@@ -9,8 +9,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -21,27 +19,35 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
-import androidx.wear.compose.material.Chip
-import androidx.wear.compose.material.ChipDefaults
+import androidx.wear.compose.material.Button
+import androidx.wear.compose.material.ButtonDefaults
 import androidx.wear.compose.material.CompactChip
 import androidx.wear.compose.material.Icon
 import androidx.wear.compose.material.ListHeader
 import androidx.wear.compose.material.Text
+import io.github.santiquiroz.blindside.shared.ble.needsRetry
+import io.github.santiquiroz.blindside.shared.permissions.SESSION_PERMISSIONS
+import io.github.santiquiroz.blindside.shared.permissions.StartDecision
+import io.github.santiquiroz.blindside.shared.permissions.startDecision
+import io.github.santiquiroz.blindside.shared.radar.eliminatedActionLabel
+import io.github.santiquiroz.blindside.shared.session.SessionSource
+import io.github.santiquiroz.blindside.shared.session.SessionUiState
+import io.github.santiquiroz.blindside.shared.theme.BlindsideColors
 import io.github.santiquiroz.blindside.wear.R
-import io.github.santiquiroz.blindside.wear.ble.needsRetry
-import io.github.santiquiroz.blindside.wear.permissions.SESSION_PERMISSIONS
-import io.github.santiquiroz.blindside.wear.permissions.StartDecision
-import io.github.santiquiroz.blindside.wear.permissions.startDecision
-import io.github.santiquiroz.blindside.wear.session.SessionCommands
-import io.github.santiquiroz.blindside.wear.session.SessionSource
-import io.github.santiquiroz.blindside.wear.session.SessionUiState
-import io.github.santiquiroz.blindside.wear.ui.radar.eliminatedActionLabel
+import io.github.santiquiroz.blindside.wear.session.WearSessionCommands
 
-private val START_CHIP_HEIGHT = 72.dp
-private val START_ICON_SIZE = 28.dp
+private val START_BUTTON_SIZE = 104.dp
+private val START_ICON_SIZE = 32.dp
+
+private data class IdleHomeActions(
+    val onStart: () -> Unit,
+    val onSettings: () -> Unit,
+    val onOpenAppSettings: () -> Unit,
+)
 
 @Composable
 fun HomeScreen(
@@ -60,14 +66,25 @@ private fun IdleHome(session: SessionUiState, onNavigate: (String) -> Unit, onSh
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
         bluetoothBlocked = !startBeltSession(context, startDecision(grants), onShowRadar)
     }
-    val onStart = { startOrAskPermissions(context, onShowRadar) { launcher.launch(SESSION_PERMISSIONS) } }
+    val actions = IdleHomeActions(
+        onStart = { startOrAskPermissions(context, onShowRadar) { launcher.launch(SESSION_PERMISSIONS) } },
+        onSettings = { onNavigate(ROUTE_SETTINGS) },
+        onOpenAppSettings = { openAppSettings(context) },
+    )
     ScalingLazyColumn(Modifier.fillMaxSize()) {
-        item { ListHeader { Text("Blindside") } }
-        if (bluetoothBlocked) item { BlockedNotice { openAppSettings(context) } }
-        session.startError?.let { error -> item { Notice(startErrorMessage(error)) } }
-        item { StartRadarChip(onStart) }
-        item { CompactChip(onClick = { onNavigate(ROUTE_SETTINGS) }, label = { Text(SETTINGS_ENTRY_LABEL) }) }
-        session.lastRecordingName?.let { name -> item { Notice("Última grabación: $name") } }
+        idleHomeItems(session, bluetoothBlocked).forEach { kind -> item { IdleHomeItem(kind, session, actions) } }
+    }
+}
+
+@Composable
+private fun IdleHomeItem(kind: HomeItem, session: SessionUiState, actions: IdleHomeActions) {
+    when (kind) {
+        HomeItem.HEADER -> ListHeader { Text("Blindside") }
+        HomeItem.START -> StartRadarButton(actions.onStart)
+        HomeItem.BLUETOOTH_BLOCKED -> BlockedNotice(actions.onOpenAppSettings)
+        HomeItem.START_ERROR -> session.startError?.let { Notice(startErrorMessage(it)) }
+        HomeItem.SETTINGS -> CompactChip(onClick = actions.onSettings, label = { Text(SETTINGS_ENTRY_LABEL) })
+        HomeItem.LAST_RECORDING -> session.lastRecordingName?.let { Notice("Última grabación: $it") }
     }
 }
 
@@ -81,25 +98,24 @@ private fun RunningHome(
     var confirmingStop by remember { mutableStateOf(false) }
     ScalingLazyColumn(Modifier.fillMaxSize()) {
         item { ListHeader { Text(sessionHeadline(session)) } }
-        if (needsRetry(session.ble)) item { RetryNotice(bleStatusLabel(session.ble)) { SessionCommands.retryLink(context) } }
-        if (session.recordingFailed) item { Text(RECORDING_FAILED_MESSAGE, color = WARNING_AMBER) }
+        if (needsRetry(session.ble)) item { RetryNotice(bleStatusLabel(session.ble)) { WearSessionCommands.retryLink(context) } }
+        if (session.recordingFailed) item { Text(RECORDING_FAILED_MESSAGE, color = BlindsideColors.Warn) }
         item { NavChip("Ver radar", onShowRadar) }
         item { NavChip(eliminatedActionLabel(session.eliminated), onToggleEliminated) }
-        item { NavChip("Marcar rival") { SessionCommands.marker(context) } }
+        item { NavChip("Marcar rival") { WearSessionCommands.marker(context) } }
         item { NavChip(stopLabel(confirmingStop)) { confirmingStop = handleStopTap(context, confirmingStop) } }
         session.recordingName?.let { name -> item { Notice(name) } }
     }
 }
 
 @Composable
-private fun StartRadarChip(onStart: () -> Unit) {
-    Chip(
-        label = { Text(START_RADAR_LABEL, fontSize = 18.sp, maxLines = 1) },
-        icon = { Icon(painterResource(R.drawable.ic_radar), contentDescription = null, Modifier.size(START_ICON_SIZE)) },
-        onClick = onStart,
-        colors = ChipDefaults.primaryChipColors(),
-        modifier = Modifier.fillMaxWidth().height(START_CHIP_HEIGHT),
-    )
+private fun StartRadarButton(onStart: () -> Unit) {
+    Button(onClick = onStart, modifier = Modifier.size(START_BUTTON_SIZE), colors = ButtonDefaults.primaryButtonColors()) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(painterResource(R.drawable.ic_radar), contentDescription = null, modifier = Modifier.size(START_ICON_SIZE))
+            Text(START_RADAR_LABEL, fontSize = 13.sp, textAlign = TextAlign.Center, maxLines = 2)
+        }
+    }
 }
 
 @Composable
@@ -113,7 +129,7 @@ private fun BlockedNotice(onOpenSettings: () -> Unit) {
 @Composable
 private fun RetryNotice(message: String, onRetry: () -> Unit) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(message, color = WARNING_AMBER)
+        Text(message, color = BlindsideColors.Warn)
         NavChip("Reintentar", onRetry)
     }
 }
@@ -135,7 +151,7 @@ private fun startBeltSession(context: Context, decision: StartDecision, onShowRa
     }
 
 private fun handleStopTap(context: Context, confirming: Boolean): Boolean {
-    if (confirming) SessionCommands.stop(context)
+    if (confirming) WearSessionCommands.stop(context)
     return !confirming
 }
 

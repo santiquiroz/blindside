@@ -1,7 +1,7 @@
 package io.github.santiquiroz.blindside.wear.ui
 
-import io.github.santiquiroz.blindside.wear.settings.ScreenMode
-import io.github.santiquiroz.blindside.wear.ui.radar.PointPx
+import io.github.santiquiroz.blindside.shared.settings.ScreenMode
+import io.github.santiquiroz.blindside.shared.radar.PointPx
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue

@@ -50,7 +50,7 @@ object SessionNotification {
     private fun toggleEliminatedIntent(context: Context): PendingIntent = PendingIntent.getService(
         context,
         1,
-        SessionCommands.toggleEliminatedIntent(context),
+        WearSessionCommands.toggleEliminatedIntent(context),
         PendingIntent.FLAG_IMMUTABLE,
     )
 }

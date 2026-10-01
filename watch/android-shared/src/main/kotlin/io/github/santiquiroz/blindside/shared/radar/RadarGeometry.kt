@@ -1,0 +1,104 @@
+package io.github.santiquiroz.blindside.shared.radar
+
+import io.github.santiquiroz.blindside.core.scene.Blip
+import io.github.santiquiroz.blindside.core.scene.Confidence
+import io.github.santiquiroz.blindside.core.scene.CoverageSector
+import io.github.santiquiroz.blindside.core.scene.RadarScene
+import kotlin.math.cos
+import kotlin.math.min
+import kotlin.math.sin
+
+data class PointPx(val x: Float, val y: Float)
+
+enum class BlipStyle { FILLED, OUTLINE, DASHED }
+
+data class BlipDraw(val center: PointPx, val style: BlipStyle, val alpha: Float)
+
+data class EdgeMarkerDraw(val inner: PointPx, val outer: PointPx, val alpha: Float)
+
+data class SectorDraw(val startAngleDeg: Float, val sweepDeg: Float)
+
+data class RadarDrawModel(
+    val origin: PointPx,
+    val radiusPx: Float,
+    val blipRadiusPx: Float,
+    val ringRadiiPx: List<Float>,
+    val sectors: List<SectorDraw>,
+    val blips: List<BlipDraw>,
+    val edgeMarkers: List<EdgeMarkerDraw>,
+    val dimmed: Boolean,
+)
+
+const val MAX_RANGE_M = 6.0
+const val BLIP_RADIUS_FRACTION = 0.035f
+const val MIN_BLIP_ALPHA = 0.3f
+
+private const val FULL_FADE_MS = 6_000.0
+private const val EDGE_MARKER_INNER_M = 5.4
+private const val CANVAS_ZERO_OFFSET_DEG = 90.0
+private val RING_RANGES_M = listOf(2.0, 4.0)
+
+fun toDrawModel(
+    scene: RadarScene?,
+    widthPx: Float,
+    heightPx: Float,
+    offset: PointPx,
+    showContacts: Boolean,
+    edgeMarginPx: Float = 0f,
+    fitHalfAngleDeg: Double = MAX_FIT_HALF_ANGLE_DEG,
+): RadarDrawModel {
+    val side = min(widthPx, heightPx)
+    val fit = fitFan(side, edgeMarginPx, fitHalfAngleDeg)
+    val origin = PointPx(widthPx / 2f + offset.x, heightPx / 2f + fit.originYOffsetPx + offset.y)
+    val radius = fit.radiusPx
+    val blips = if (showContacts) scene?.blips.orEmpty() else emptyList()
+    return RadarDrawModel(
+        origin = origin,
+        radiusPx = radius,
+        blipRadiusPx = side * BLIP_RADIUS_FRACTION,
+        ringRadiiPx = RING_RANGES_M.map { (it / MAX_RANGE_M).toFloat() * radius },
+        sectors = scene?.coverage.orEmpty().map(::sectorArc),
+        blips = blips.filterNot { it.outOfView }.map { blipDraw(it, origin, radius) },
+        edgeMarkers = blips.filter { it.outOfView }.map { edgeMarker(it, origin, radius) },
+        dimmed = !showContacts,
+    )
+}
+
+fun showContacts(scene: RadarScene?, ambient: Boolean): Boolean =
+    scene != null && scene.linkUp && !scene.eliminated && !ambient
+
+fun polarToPx(origin: PointPx, radiusPx: Float, bearingDeg: Double, rangeM: Double): PointPx {
+    val distance = rangeM.coerceIn(0.0, MAX_RANGE_M) / MAX_RANGE_M * radiusPx
+    val radians = Math.toRadians(bearingDeg)
+    return PointPx(origin.x + (distance * sin(radians)).toFloat(), origin.y - (distance * cos(radians)).toFloat())
+}
+
+fun sectorArc(sector: CoverageSector): SectorDraw =
+    SectorDraw((sector.fromDeg - CANVAS_ZERO_OFFSET_DEG).toFloat(), sweepDeg(sector).toFloat())
+
+fun blipStyle(confidence: Confidence): BlipStyle = when (confidence) {
+    Confidence.BOTH -> BlipStyle.FILLED
+    Confidence.SINGLE -> BlipStyle.OUTLINE
+    Confidence.COASTING -> BlipStyle.DASHED
+}
+
+enum class ContactTone { FULL, DIM }
+
+// Spec §6: accent-dim marks contacts kept alive without a fresh measurement.
+fun contactTone(style: BlipStyle): ContactTone = if (style == BlipStyle.DASHED) ContactTone.DIM else ContactTone.FULL
+
+fun blipAlpha(ageMs: Long): Float = (1.0 - ageMs / FULL_FADE_MS).toFloat().coerceIn(MIN_BLIP_ALPHA, 1f)
+
+private fun sweepDeg(sector: CoverageSector): Double {
+    val raw = sector.toDeg - sector.fromDeg
+    return if (raw < 0) raw + 360.0 else raw
+}
+
+private fun blipDraw(blip: Blip, origin: PointPx, radius: Float): BlipDraw =
+    BlipDraw(polarToPx(origin, radius, blip.bearingDeg, blip.rangeM), blipStyle(blip.confidence), blipAlpha(blip.ageMs))
+
+private fun edgeMarker(blip: Blip, origin: PointPx, radius: Float): EdgeMarkerDraw = EdgeMarkerDraw(
+    inner = polarToPx(origin, radius, blip.bearingDeg, EDGE_MARKER_INNER_M),
+    outer = polarToPx(origin, radius, blip.bearingDeg, MAX_RANGE_M),
+    alpha = blipAlpha(blip.ageMs),
+)

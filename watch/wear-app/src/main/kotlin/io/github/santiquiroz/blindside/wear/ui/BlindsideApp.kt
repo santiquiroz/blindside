@@ -1,23 +1,29 @@
 package io.github.santiquiroz.blindside.wear.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
-import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.navigation.SwipeDismissableNavHost
 import androidx.wear.compose.navigation.composable
 import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
 import io.github.santiquiroz.blindside.wear.SpikeScreen
-import io.github.santiquiroz.blindside.wear.session.SessionSource
-import io.github.santiquiroz.blindside.wear.session.SessionStore
-import io.github.santiquiroz.blindside.wear.session.toggleEliminated
-import io.github.santiquiroz.blindside.wear.settings.AppSettings
-import io.github.santiquiroz.blindside.wear.settings.SettingsRepository
-import io.github.santiquiroz.blindside.wear.settings.SettingsTransform
+import io.github.santiquiroz.blindside.wear.bridge.publishSharedSettings
+import io.github.santiquiroz.blindside.shared.session.SessionSource
+import io.github.santiquiroz.blindside.shared.session.SessionStore
+import io.github.santiquiroz.blindside.shared.session.toggleEliminated
+import io.github.santiquiroz.blindside.shared.settings.AppSettings
+import io.github.santiquiroz.blindside.shared.settings.SettingsRepository
+import io.github.santiquiroz.blindside.shared.settings.SettingsTransform
+import io.github.santiquiroz.blindside.shared.theme.BlindsideColors
+import io.github.santiquiroz.blindside.wear.session.WearSessionCommands
 import io.github.santiquiroz.blindside.wear.ui.radar.RadarScreen
+import io.github.santiquiroz.blindside.wear.ui.theme.BlindsideWearTheme
 import kotlinx.coroutines.launch
 
 @Composable
@@ -33,12 +39,16 @@ fun BlindsideApp(settingsRepository: SettingsRepository) {
     val showRadar: () -> Unit = { navigateToRadar(navController) }
     val startDemo: () -> Unit = { startRadar(context, SessionSource.DEMO, showRadar) }
     val onToggleEliminated: () -> Unit = { toggleEliminated(scope, settingsRepository) }
+    val onPairPhone: () -> Unit = { WearSessionCommands.openPairing(context) }
     LaunchRadarOnOpen(settingsRepository, showRadar)
-    MaterialTheme {
-        SwipeDismissableNavHost(navController = navController, startDestination = ROUTE_HOME) {
+    LaunchedEffect(settingsRepository) { publishSharedSettings(context, settingsRepository) }
+    BlindsideWearTheme {
+        SwipeDismissableNavHost(navController = navController, startDestination = ROUTE_HOME, modifier = Modifier.background(BlindsideColors.Bg)) {
             composable(ROUTE_HOME) { HomeScreen(session, navigate, showRadar, onToggleEliminated) }
             composable(ROUTE_RADAR) { RadarScreen(session, settings, ambient, onToggleEliminated) }
-            composable(ROUTE_SETTINGS) { SettingsScreen(settings, update, navigate, startDemo.takeUnless { session.running }) }
+            composable(ROUTE_SETTINGS) {
+                SettingsScreen(settings, update, navigate, startDemo.takeUnless { session.running }, rememberPhonePairing(session), onPairPhone)
+            }
             composable(ROUTE_PRACTICE) { PracticeScreen(settings) }
             composable(ROUTE_SPIKES) { SpikeScreen(settingsRepository) }
         }

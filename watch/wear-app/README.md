@@ -7,9 +7,11 @@ App de Wear OS para el Galaxy Watch 7. Recibe por BLE los paquetes del cinturón
 Desde `watch/`:
 
 ```bash
-./gradlew :wear-app:testDebugUnitTest   # pruebas JVM
+./gradlew :android-shared:testDebugUnitTest :wear-app:testDebugUnitTest   # pruebas JVM (código compartido y del reloj)
 ./gradlew :wear-app:assembleDebug       # APK en wear-app/build/outputs/apk/debug/wear-app-debug.apk
 ```
+
+El código que no depende de Wear OS (BLE, grabación, ajustes, vibración, sesión y dibujo del radar) vive en `watch/android-shared` y lo comparte la app del celular.
 
 ## Instalar en el reloj (depuración por Wi-Fi)
 
@@ -66,10 +68,10 @@ Ajustes → "Diagnóstico (spikes)" abre la pantalla de los spikes S1, S3, S10 y
 Marca cada punto en el reloj real. Si un punto falla, anota qué viste y la hora, para ubicarlo en la grabación. `adb logcat -s BeltGatt BeltLink` muestra cada paso del enlace.
 
 **Antes de jugar (app)**
-1. [ ] La app abre y muestra "Blindside" con Iniciar/Demo/Práctica/Ajustes. Ajustes → "Diagnóstico (spikes)" abre "Blindside (spikes)" con sus botones.
+1. [ ] La app abre en Inicio con el botón circular verde "Iniciar radar" en el centro y el chip "Ajustes" debajo. Ajustes → "Diagnóstico (spikes)" abre "Blindside (spikes)" con sus botones.
 2. [ ] **Permisos:** deniega Bluetooth → la partida no arranca, aparece el mensaje y "Abrir ajustes" lleva a los ajustes del reloj. Concédelo y deniega actividad física → la partida arranca y el estado mínimo muestra "SIN PASOS". Después, con la app cerrada, quita el permiso de Bluetooth en los ajustes del reloj y vuelve a iniciar una partida: la app lo pide otra vez y, si lo niegas, muestra el mensaje sin cerrarse.
 3. [ ] **Práctica (S3):** "Probar izquierda/centro/derecha/sistema" se distinguen con el brazo en movimiento. El quiz pasa con 9/10 o más. Repítelo con No molestar, modo teatro y modo dormir, y con la intensidad de vibración del sistema baja. Anota qué combinación silencia la vibración y cambia Ajustes → Vibración (Alarma/Notificación) según el resultado. Con No molestar activo debe aparecer el aviso.
-4. [ ] **Demo:** el radar dibuja el abanico y contactos rojos que se mueven, vibra con el ritmo del lado correcto y en "Inicio" aparece el nombre de la grabación.
+4. [ ] **Demo:** el radar dibuja el abanico y contactos verdes (rojos con Ajustes → Color de contactos → Rojo) que se mueven, vibra con el ritmo del lado correcto y en "Inicio" aparece el nombre de la grabación.
 5. [ ] **Emparejamiento (S12):** el primer emparejamiento con la clave de la etiqueta funciona (el diálogo aparece al leer `info`); tras reiniciar el reloj, "Iniciar partida" reconecta solo, sin pedir la clave. Con la ventana cerrada o una clave equivocada sale "Clave incorrecta o ventana cerrada"; al abrir la ventana y tocar "Reintentar", empareja.
 6. [ ] **Bond perdido:** con la partida activa, apaga el cinturón y vuelve a encenderlo manteniendo BOOT 10 s (borra los bonds). Tras dos intentos sale "El cinturón olvidó este reloj…", y `logcat` deja de mostrar conexiones nuevas. Olvida el cinturón en Bluetooth del reloj y toca "Reintentar": empareja de nuevo.
 
@@ -91,3 +93,28 @@ Marca cada punto en el reloj real. Si un punto falla, anota qué viste y la hora
 
 **Día de juego (10/11-oct)**
 19. [ ] Quiz de vibración aprobado el mismo día, No molestar apagado, reloj cargado, cargador del reloj en el power bank y modo Sigilo.
+
+**Fase 2: reloj y celular**
+20. [ ] **Rol del enlace:** al conectar, `adb logcat -s BeltGatt` muestra `WriteCommand(command=SetRole(role=WATCH)) -> status 0` después de `ReadInfo` y antes de `EnableStreamNotify`. Con el firmware del MVP, que ignora `06`, el radar recibe datos igual que antes.
+21. [ ] **Emparejar celular:** con el radar conectado, Ajustes → "Emparejar celular" pasa a "Pedida al cinturón (60 s)" y `adb logcat -s BeltGatt` muestra `WriteCommand(command=OpenPairingWindow) -> status 0`. Al minuto el chip vuelve a "Abre la ventana 60 s". Con el firmware de fase 2, la línea `diag` del cinturón muestra la ventana abierta 60 s; con el del MVP no se abre nada aunque el chip diga "Pedida". Sin partida, el chip dice "Primero inicia el radar", no se envía nada y no queda ninguna notificación.
+22. [ ] **Puente con el celular.** Requiere la app del celular, instalada con la misma clave de depuración que el reloj.
+    - "Traer del reloj" lista las grabaciones del reloj, sin la que se está grabando, y descarga una completa. Pedir una que no existe termina en un aviso, nunca en un archivo vacío.
+    - Al cambiar la mano en el celular, Ajustes del reloj la muestra.
+    - Con la partida corriendo, el celular muestra el estado del reloj cada 5 s, y "sesión inactiva" al detenerla.
+    - "Emparejar este celular" desde el celular pide la ventana igual que el chip del reloj.
+23. [ ] **Sin celular:** con el Bluetooth del celular apagado, una partida de 10 min en el reloj se comporta igual. `adb logcat -s BridgeListener DataLayer` puede mostrar avisos, pero nada se detiene.
+24. [ ] **Pasada visual:** todas las pantallas tienen fondo negro.
+    - En el radar, los anillos son verde oscuro. Los contactos son verdes: relleno = los dos radares, contorno = uno, punteado y más oscuro = sin medida nueva.
+    - Ajustes → "Color de contactos" cambia a "Rojo": los contactos pasan a rojo (`alert-red`), con las mismas formas, y el ajuste sobrevive a reiniciar la app.
+    - Los chips de estado llevan un punto lleno (bien) o hueco (falla), y "SIN PASOS" va en su propia fila.
+    - Los ángulos de Ajustes y los chips usan letra monoespaciada.
+    - El botón "Iniciar radar" y el resto de controles se pueden tocar sin errar con el guante.
+25. [ ] **Pantalla completa y brújula:**
+    - Con el cinturón diestro, el abanico nace en el centro de la pantalla y llega hasta el anillo de la brújula. La mitad de atrás muestra el estado y "Eliminado".
+    - El anillo gira al girar el cuerpo: la N señala el norte real y la raya verde de arriba marca el frente. La ventanita de abajo muestra el rumbo (por ejemplo `318° NO`).
+    - Comparar el rumbo con la brújula del celular: ±15° lejos de metales.
+    - Con la brújula sin calibrar, el anillo se ve tenue y sale "Brújula: calibra (mueve en 8)". Después de mover el reloj en ocho, desaparece.
+    - En postura táctica, las letras se leen derechas para quien mira y la raya de frente sigue al abanico.
+    - En ambiente o con la pantalla apagada (Sigilo) no hay anillo ni rumbo.
+    - Ajustes → "Brújula: no" quita el anillo y el abanico crece hasta el borde.
+    - Si el reloj reporta siempre precisión baja con el sensor de rotación, anotarlo como desviación: el anillo quedaría tenue todo el tiempo.
