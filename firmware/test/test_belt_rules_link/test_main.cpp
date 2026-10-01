@@ -3,6 +3,7 @@
 
 #include "../test_entry.h"
 #include "ble_rules.h"
+#include "bond_rules.h"
 #include "control_command.h"
 #include "info_json.h"
 
@@ -70,6 +71,54 @@ void test_valid_control_writes_are_parsed() {
     assert_command(parsed(identify, 1), ControlKind::Identify, 0);
     assert_command(parsed(session_on, 2), ControlKind::SessionActive, 1);
     assert_command(parsed(session_off, 2), ControlKind::SessionActive, 0);
+}
+
+void test_open_pairing_and_set_role_writes_are_parsed() {
+    const uint8_t open_pairing[] = {0x05};
+    const uint8_t role_watch[] = {0x06, 0x00};
+    const uint8_t role_phone[] = {0x06, 0x01};
+    assert_command(parsed(open_pairing, 1), ControlKind::OpenPairingWindow, 0);
+    assert_command(parsed(role_watch, 2), ControlKind::SetRole, 0);
+    assert_command(parsed(role_phone, 2), ControlKind::SetRole, 1);
+}
+
+void test_malformed_open_pairing_and_set_role_writes_are_invalid() {
+    const uint8_t open_pairing_long[] = {0x05, 0x01};
+    const uint8_t role_missing[] = {0x06};
+    const uint8_t role_two[] = {0x06, 0x02};
+    const uint8_t role_long[] = {0x06, 0x01, 0x00};
+    const uint8_t next_free[] = {0x07};
+    assert_command(parsed(open_pairing_long, 2), ControlKind::Invalid, 0);
+    assert_command(parsed(role_missing, 1), ControlKind::Invalid, 0);
+    assert_command(parsed(role_two, 2), ControlKind::Invalid, 0);
+    assert_command(parsed(role_long, 3), ControlKind::Invalid, 0);
+    assert_command(parsed(next_free, 1), ControlKind::Invalid, 0);
+}
+
+void test_an_untrusted_link_changes_nothing() {
+    const ControlKind kinds[] = {ControlKind::Invalid,       ControlKind::RestartRadar,      ControlKind::Identify,
+                                 ControlKind::SessionActive, ControlKind::OpenPairingWindow, ControlKind::SetRole};
+    for (ControlKind kind : kinds) {
+        TEST_ASSERT_TRUE(control_action(kind, false, false) == ControlAction::RejectUntrusted);
+    }
+    TEST_ASSERT_TRUE(control_action(ControlKind::None, false, false) == ControlAction::Ignore);
+}
+
+void test_a_trusted_link_gets_the_action_of_its_command() {
+    TEST_ASSERT_TRUE(control_action(ControlKind::None, true, false) == ControlAction::Ignore);
+    TEST_ASSERT_TRUE(control_action(ControlKind::Invalid, true, false) == ControlAction::RejectInvalid);
+    TEST_ASSERT_TRUE(control_action(ControlKind::RestartRadar, true, true) == ControlAction::RestartRadar);
+    TEST_ASSERT_TRUE(control_action(ControlKind::Identify, true, false) == ControlAction::Identify);
+    TEST_ASSERT_TRUE(control_action(ControlKind::SessionActive, true, true) == ControlAction::SetSession);
+    TEST_ASSERT_TRUE(control_action(ControlKind::OpenPairingWindow, true, true) == ControlAction::OpenPairingWindow);
+    TEST_ASSERT_TRUE(control_action(ControlKind::SetRole, true, true) == ControlAction::SetRole);
+}
+
+void test_identify_is_ignored_while_any_bonded_device_has_a_session() {
+    uint8_t watch_in_session = session_flags_after_write(0, 0, true);
+    TEST_ASSERT_TRUE(control_action(ControlKind::Identify, true, any_session_active(watch_in_session)) ==
+                     ControlAction::Ignore);
+    TEST_ASSERT_TRUE(control_action(ControlKind::Identify, true, any_session_active(0)) == ControlAction::Identify);
 }
 
 void test_malformed_control_writes_are_invalid() {
@@ -164,6 +213,11 @@ int run_all_tests() {
     UNITY_BEGIN();
     RUN_TEST(test_valid_control_writes_are_parsed);
     RUN_TEST(test_malformed_control_writes_are_invalid);
+    RUN_TEST(test_open_pairing_and_set_role_writes_are_parsed);
+    RUN_TEST(test_malformed_open_pairing_and_set_role_writes_are_invalid);
+    RUN_TEST(test_an_untrusted_link_changes_nothing);
+    RUN_TEST(test_a_trusted_link_gets_the_action_of_its_command);
+    RUN_TEST(test_identify_is_ignored_while_any_bonded_device_has_a_session);
     RUN_TEST(test_identify_is_refused_during_a_session);
     RUN_TEST(test_stream_gate_needs_subscribed_trusted_peer_and_mtu_247);
     RUN_TEST(test_advertising_is_fast_for_thirty_seconds);

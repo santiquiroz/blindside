@@ -10,6 +10,10 @@ bool identify_showing(const LedInputs& inputs) {
     return inputs.identify_active && !identify_finished(inputs.identify_started_ms, inputs.now_ms);
 }
 
+bool pairing_blink_showing(const LedInputs& inputs) {
+    return inputs.pairing_window_open && !inputs.session_active;
+}
+
 }  // namespace
 
 bool identify_finished(uint32_t identify_started_ms, uint32_t now_ms) {
@@ -20,7 +24,7 @@ bool led_on(const LedInputs& inputs) {
     if (identify_showing(inputs)) {
         return in_lit_half(inputs.now_ms - inputs.identify_started_ms, kIdentifyBlinkHalfPeriodMs);
     }
-    if (inputs.pairing_window_open) {
+    if (pairing_blink_showing(inputs)) {
         return in_lit_half(inputs.now_ms, kPairingBlinkHalfPeriodMs);
     }
     return inputs.now_ms < kBootLedMs;

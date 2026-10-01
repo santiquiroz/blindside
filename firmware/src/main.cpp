@@ -27,7 +27,6 @@ PairingState g_pairing;
 DiagnosticsMemory g_diagnostics;
 std::atomic<uint32_t> g_boot_id{0};
 uint32_t g_next_diagnostics_ms = 0;
-bool g_session_active = false;
 bool g_identify_active = false;
 uint32_t g_identify_started_ms = 0;
 
@@ -105,30 +104,59 @@ void start_tasks() {
 }
 
 void start_identify(uint32_t now_ms) {
-    if (!identify_allowed(g_session_active)) {
-        return;
-    }
     g_identify_active = true;
     g_identify_started_ms = now_ms;
 }
 
-void handle_control(uint32_t now_ms) {
-    ControlCommand command = ble_link_take_control();
-    switch (command.kind) {
-        case ControlKind::RestartRadar:
+void set_role(uint8_t slot, uint8_t argument) {
+    LinkRole role = role_from_argument(argument);
+    ble_link_set_role(slot, role);
+    pairing_note_role(g_pairing, slot, role);
+}
+
+// pairing_poll runs first in loop(), so a link that just authenticated is already trusted here.
+ControlAction action_for(uint8_t slot, const ControlCommand& command) {
+    return control_action(command.kind, ble_link_snapshot(slot).trusted, pairing_session_running(g_pairing));
+}
+
+void apply_control(uint8_t slot, const ControlCommand& command, uint32_t now_ms) {
+    switch (action_for(slot, command)) {
+        case ControlAction::RestartRadar:
             radar_port_request_restart(command.argument);
             break;
-        case ControlKind::Identify:
+        case ControlAction::Identify:
             start_identify(now_ms);
             break;
-        case ControlKind::SessionActive:
-            g_session_active = command.argument == 1;
+        case ControlAction::SetSession:
+            pairing_note_session(g_pairing, slot, command.argument == 1);
             break;
-        case ControlKind::Invalid:
+        case ControlAction::OpenPairingWindow:
+            pairing_open_window(g_pairing, now_ms);
+            break;
+        case ControlAction::SetRole:
+            set_role(slot, command.argument);
+            break;
+        case ControlAction::RejectInvalid:
             Serial.println("control: ignored invalid write");
             break;
-        case ControlKind::None:
+        case ControlAction::RejectUntrusted:
+            Serial.println("control: ignored a write from an untrusted link");
             break;
+        case ControlAction::Ignore:
+            break;
+    }
+}
+
+void handle_slot_control(uint8_t slot, uint32_t now_ms) {
+    for (ControlCommand command = ble_link_take_control(slot); command.kind != ControlKind::None;
+         command = ble_link_take_control(slot)) {
+        apply_control(slot, command, now_ms);
+    }
+}
+
+void handle_control(uint32_t now_ms) {
+    for (uint8_t slot = 0; slot < kMaxLinks; ++slot) {
+        handle_slot_control(slot, now_ms);
     }
 }
 
@@ -136,7 +164,8 @@ void show_led(uint32_t now_ms) {
     if (g_identify_active && identify_finished(g_identify_started_ms, now_ms)) {
         g_identify_active = false;
     }
-    status_led_show(LedInputs{now_ms, g_pairing.window.open, g_identify_active, g_identify_started_ms});
+    status_led_show(LedInputs{now_ms, g_pairing.window.open, g_identify_active, g_identify_started_ms,
+                              pairing_session_running(g_pairing)});
 }
 
 AdvertisingPlan advertising_plan() {
@@ -158,7 +187,7 @@ void setup() {
     Serial.setTxBufferSize(config::kSerialTxBufferBytes);
     Serial.begin(config::kSerialBaud);
     status_led_begin();
-    status_led_show(LedInputs{millis(), false, false, 0});
+    status_led_show(LedInputs{millis(), false, false, 0, false});
     pinMode(config::kBootButtonPin, INPUT_PULLUP);
     start_ble();
     // esp_random() is only truly random once the radio is on, which start_ble() just did.
