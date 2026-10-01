@@ -42,6 +42,7 @@ abstract class SessionService : Service() {
             SessionActions.ACTION_MARKER -> session?.mark() ?: stopSelf()
             SessionActions.ACTION_RETRY_LINK -> session?.retryLink() ?: stopSelf()
             SessionActions.ACTION_TOGGLE_ELIMINATED -> if (session != null) toggleEliminated(scope, settingsRepository()) else stopSelf()
+            SessionActions.ACTION_OPEN_PAIRING -> requestPairingWindow()
             else -> stopIfIdle()
         }
         return START_NOT_STICKY
@@ -99,6 +100,12 @@ abstract class SessionService : Service() {
     private fun answerForegroundStart() {
         goForeground(SessionSource.DEMO)
         stopForeground(STOP_FOREGROUND_REMOVE)
+    }
+
+    private fun requestPairingWindow() {
+        val queued = session?.openPairingWindow() ?: false
+        SessionStore.update { it.copy(phonePairing = pairingAfterRequest(queued)) }
+        stopIfIdle()
     }
 
     private fun stopIfIdle() {

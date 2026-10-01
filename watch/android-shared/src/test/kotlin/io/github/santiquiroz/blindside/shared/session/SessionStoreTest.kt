@@ -19,6 +19,14 @@ class SessionStoreTest {
     }
 
     @Test
+    fun `a new session forgets the last pairing request`() {
+        val previous = SessionUiState(phonePairing = PhonePairing.DELIVERED, phonePairingAtMs = 7L)
+        val started = startedState(previous, SessionSource.BELT)
+        assertEquals(PhonePairing.IDLE, started.phonePairing)
+        assertNull(started.phonePairingAtMs)
+    }
+
+    @Test
     fun `stopping remembers the recording that just ended`() {
         val running = SessionUiState(running = true, ble = BleStatus.STREAMING, recordingName = "new.bsrec")
         val stopped = stoppedState(running)

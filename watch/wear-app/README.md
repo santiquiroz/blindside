@@ -96,3 +96,4 @@ Marca cada punto en el reloj real. Si un punto falla, anota qué viste y la hora
 
 **Fase 2: reloj y celular**
 20. [ ] **Rol del enlace:** al conectar, `adb logcat -s BeltGatt` muestra `WriteCommand(command=SetRole(role=WATCH)) -> status 0` después de `ReadInfo` y antes de `EnableStreamNotify`. Con el firmware del MVP, que ignora `06`, el radar recibe datos igual que antes.
+21. [ ] **Emparejar celular:** con el radar conectado, Ajustes → "Emparejar celular" pasa a "Pedida al cinturón (60 s)" y `adb logcat -s BeltGatt` muestra `WriteCommand(command=OpenPairingWindow) -> status 0`. Al minuto el chip vuelve a "Abre la ventana 60 s". Con el firmware de fase 2, la línea `diag` del cinturón muestra la ventana abierta 60 s; con el del MVP no se abre nada aunque el chip diga "Pedida". Sin partida, el chip dice "Primero inicia el radar", no se envía nada y no queda ninguna notificación.

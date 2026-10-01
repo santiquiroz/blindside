@@ -17,6 +17,7 @@ import io.github.santiquiroz.blindside.shared.session.toggleEliminated
 import io.github.santiquiroz.blindside.shared.settings.AppSettings
 import io.github.santiquiroz.blindside.shared.settings.SettingsRepository
 import io.github.santiquiroz.blindside.shared.settings.SettingsTransform
+import io.github.santiquiroz.blindside.wear.session.WearSessionCommands
 import io.github.santiquiroz.blindside.wear.ui.radar.RadarScreen
 import kotlinx.coroutines.launch
 
@@ -33,12 +34,15 @@ fun BlindsideApp(settingsRepository: SettingsRepository) {
     val showRadar: () -> Unit = { navigateToRadar(navController) }
     val startDemo: () -> Unit = { startRadar(context, SessionSource.DEMO, showRadar) }
     val onToggleEliminated: () -> Unit = { toggleEliminated(scope, settingsRepository) }
+    val onPairPhone: () -> Unit = { WearSessionCommands.openPairing(context) }
     LaunchRadarOnOpen(settingsRepository, showRadar)
     MaterialTheme {
         SwipeDismissableNavHost(navController = navController, startDestination = ROUTE_HOME) {
             composable(ROUTE_HOME) { HomeScreen(session, navigate, showRadar, onToggleEliminated) }
             composable(ROUTE_RADAR) { RadarScreen(session, settings, ambient, onToggleEliminated) }
-            composable(ROUTE_SETTINGS) { SettingsScreen(settings, update, navigate, startDemo.takeUnless { session.running }) }
+            composable(ROUTE_SETTINGS) {
+                SettingsScreen(settings, update, navigate, startDemo.takeUnless { session.running }, rememberPhonePairing(session), onPairPhone)
+            }
             composable(ROUTE_PRACTICE) { PracticeScreen(settings) }
             composable(ROUTE_SPIKES) { SpikeScreen(settingsRepository) }
         }

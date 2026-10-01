@@ -13,6 +13,7 @@ import androidx.wear.compose.foundation.lazy.ScalingLazyListScope
 import androidx.wear.compose.material.CompactChip
 import androidx.wear.compose.material.ListHeader
 import androidx.wear.compose.material.Text
+import io.github.santiquiroz.blindside.shared.session.PhonePairing
 import io.github.santiquiroz.blindside.shared.settings.AppSettings
 import io.github.santiquiroz.blindside.shared.settings.DEFAULT_RADARS
 import io.github.santiquiroz.blindside.shared.settings.SettingsTransform
@@ -34,6 +35,8 @@ fun SettingsScreen(
     onUpdate: (SettingsTransform) -> Unit,
     onNavigate: (String) -> Unit,
     onStartDemo: (() -> Unit)?,
+    phonePairing: PhonePairing,
+    onPairPhone: () -> Unit,
 ) {
     ScalingLazyColumn(Modifier.fillMaxSize()) {
         item { ListHeader { Text(SETTINGS_ENTRY_LABEL) } }
@@ -45,6 +48,7 @@ fun SettingsScreen(
         item { NavChip(VIBRATION_TEST_LABEL) { onNavigate(ROUTE_PRACTICE) } }
         DEFAULT_RADARS.forEach { radarItems(settings, it.radarId, onUpdate) }
         item { SettingChip("Cinturón", settings.beltAddress ?: "sin emparejar") { onUpdate { it.copy(beltAddress = null) } } }
+        item { SettingChip(PAIR_PHONE_LABEL, phonePairingLabel(phonePairing), onPairPhone) }
         onStartDemo?.let { start -> item { NavChip(DEMO_LABEL, start) } }
         item { NavChip(SPIKES_ENTRY_LABEL) { onNavigate(ROUTE_SPIKES) } }
         item { Notice(APPLY_ON_START_MESSAGE) }

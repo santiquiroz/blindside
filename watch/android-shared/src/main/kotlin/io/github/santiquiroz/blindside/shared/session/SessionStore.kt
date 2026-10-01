@@ -20,6 +20,8 @@ data class SessionUiState(
     val startError: StartError? = null,
     val eliminated: Boolean = false,
     val dndMaySilenceAlerts: Boolean = false,
+    val phonePairing: PhonePairing = PhonePairing.IDLE,
+    val phonePairingAtMs: Long? = null,
 )
 
 object SessionStore {

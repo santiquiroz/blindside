@@ -9,6 +9,7 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import io.github.santiquiroz.blindside.core.RadarPipeline
 import io.github.santiquiroz.blindside.core.alerts.ContactAlert
+import io.github.santiquiroz.blindside.shared.ble.BeltCommand
 import io.github.santiquiroz.blindside.shared.ble.BeltLink
 import io.github.santiquiroz.blindside.shared.demo.DemoSource
 import io.github.santiquiroz.blindside.shared.demo.demoPackets
@@ -89,6 +90,8 @@ class RunningSession(
     fun retryLink() {
         belt?.retry()
     }
+
+    fun openPairingWindow(): Boolean = belt?.send(BeltCommand.OpenPairingWindow) ?: false
 
     suspend fun stop() {
         belt?.stop()

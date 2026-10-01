@@ -1,5 +1,8 @@
 package io.github.santiquiroz.blindside.shared.session
 
+import io.github.santiquiroz.blindside.shared.ble.BeltCommand
+import io.github.santiquiroz.blindside.shared.ble.BeltRole
+import io.github.santiquiroz.blindside.shared.ble.CommandResult
 import kotlinx.coroutines.channels.Channel
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -39,5 +42,19 @@ class InputAdaptersTest {
         val packet = drain().single() as SessionInput.Packet
         assertEquals(listOf<Byte>(5, 6), packet.bytes.toList())
         assertEquals(99L, packet.arrivalNanos)
+    }
+
+    @Test
+    fun `only the pairing write result reaches the session store`() {
+        SessionStore.update { SessionUiState() }
+        val belt = BeltInputs(inputs)
+        belt.onCommandWritten(CommandResult(BeltCommand.SetRole(BeltRole.WATCH), delivered = true), 1_000_000L)
+        assertEquals(PhonePairing.IDLE, SessionStore.state.value.phonePairing)
+        belt.onCommandWritten(CommandResult(BeltCommand.OpenPairingWindow, delivered = true), 2_000_000L)
+        assertEquals(PhonePairing.DELIVERED, SessionStore.state.value.phonePairing)
+        assertEquals(2L, SessionStore.state.value.phonePairingAtMs)
+        belt.onCommandWritten(CommandResult(BeltCommand.OpenPairingWindow, delivered = false), 3_000_000L)
+        assertEquals(PhonePairing.REFUSED, SessionStore.state.value.phonePairing)
+        SessionStore.update { SessionUiState() }
     }
 }

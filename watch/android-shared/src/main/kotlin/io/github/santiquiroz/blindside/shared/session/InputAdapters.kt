@@ -1,7 +1,9 @@
 package io.github.santiquiroz.blindside.shared.session
 
+import io.github.santiquiroz.blindside.shared.ble.BeltCommand
 import io.github.santiquiroz.blindside.shared.ble.BeltListener
 import io.github.santiquiroz.blindside.shared.ble.BleStatus
+import io.github.santiquiroz.blindside.shared.ble.CommandResult
 import io.github.santiquiroz.blindside.shared.sensors.DeviceSensorListener
 import kotlinx.coroutines.channels.SendChannel
 
@@ -38,5 +40,9 @@ class BeltInputs(private val inputs: SendChannel<SessionInput>) : BeltListener {
 
     override fun onStatus(status: BleStatus) {
         SessionStore.update { it.copy(ble = status) }
+    }
+
+    override fun onCommandWritten(result: CommandResult, nowNanos: Long) {
+        if (result.command == BeltCommand.OpenPairingWindow) SessionStore.update { recordPairingWrite(it, result.delivered, nowNanos) }
     }
 }

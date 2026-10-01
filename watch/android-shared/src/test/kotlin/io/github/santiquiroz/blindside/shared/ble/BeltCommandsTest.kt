@@ -23,6 +23,11 @@ class BeltCommandsTest {
     }
 
     @Test
+    fun `open pairing window is command five alone`() {
+        assertArrayEquals(byteArrayOf(0x05), commandBytes(BeltCommand.OpenPairingWindow))
+    }
+
+    @Test
     fun `the watch connects fast and settles balanced`() {
         assertEquals(LinkPriority.HIGH, connectPriorityFor(BeltRole.WATCH))
         assertEquals(LinkPriority.BALANCED, settledPriorityFor(BeltRole.WATCH))

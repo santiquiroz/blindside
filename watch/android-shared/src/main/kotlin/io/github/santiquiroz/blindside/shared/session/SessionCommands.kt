@@ -24,6 +24,10 @@ class SessionCommands(private val serviceClass: Class<out Service>) {
         context.startService(serviceIntent(context, SessionActions.ACTION_RETRY_LINK))
     }
 
+    fun openPairing(context: Context) {
+        context.startService(serviceIntent(context, SessionActions.ACTION_OPEN_PAIRING))
+    }
+
     fun toggleEliminatedIntent(context: Context): Intent = serviceIntent(context, SessionActions.ACTION_TOGGLE_ELIMINATED)
 
     private fun serviceIntent(context: Context, action: String): Intent =

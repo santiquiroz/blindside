@@ -12,6 +12,7 @@ import io.github.santiquiroz.blindside.wear.practice.passed
 import io.github.santiquiroz.blindside.core.config.Handedness
 import io.github.santiquiroz.blindside.shared.ble.BleStatus
 import io.github.santiquiroz.blindside.shared.ble.needsRetry
+import io.github.santiquiroz.blindside.shared.session.PhonePairing
 import io.github.santiquiroz.blindside.shared.session.SessionSource
 import io.github.santiquiroz.blindside.shared.session.SessionUiState
 import io.github.santiquiroz.blindside.shared.session.StartError
@@ -127,3 +128,13 @@ fun yawLabel(radarId: Int, yawDeg: Double): String = "${radarLetter(radarId)} ${
 fun signLabel(sign: Int): String = if (sign < 0) "-1" else "+1"
 
 private fun radarLetter(radarId: Int): String = if (radarId == RADAR_A) "A" else "B"
+
+const val PAIR_PHONE_LABEL = "Emparejar celular"
+
+fun phonePairingLabel(state: PhonePairing): String = when (state) {
+    PhonePairing.IDLE -> "Abre la ventana 60 s"
+    PhonePairing.REQUESTED -> "Enviando al cinturón…"
+    PhonePairing.DELIVERED -> "Pedida al cinturón (60 s)"
+    PhonePairing.REFUSED -> "El cinturón no respondió"
+    PhonePairing.NO_LINK -> "Primero inicia el radar"
+}
