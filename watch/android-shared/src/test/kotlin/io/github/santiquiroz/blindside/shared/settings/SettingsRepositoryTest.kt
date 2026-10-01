@@ -3,12 +3,14 @@ package io.github.santiquiroz.blindside.shared.settings
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -55,6 +57,20 @@ class SettingsRepositoryTest {
         }
         scope.cancel()
         assertEquals(1_234L, read.sharedUpdatedMs)
+    }
+
+    @Test
+    fun `a non shared edit on legacy settings persists the migrated stamp`(@TempDir dir: File) {
+        val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+        val store = PreferenceDataStoreFactory.create(scope = scope) { File(dir, "settings.preferences_pb") }
+        val repository = SettingsRepository(store, onWriteFailed = {}, clock = { 9_999L })
+        val stored = runBlocking {
+            store.edit { it[Keys.HANDEDNESS] = "LEFT" }
+            repository.update { it.copy(screenMode = ScreenMode.VISTA) }
+            store.data.first()[Keys.SHARED_UPDATED_MS]
+        }
+        scope.cancel()
+        assertEquals(MIGRATED_STAMP_MS, stored)
     }
 
     private class DiskFullStore : DataStore<Preferences> {

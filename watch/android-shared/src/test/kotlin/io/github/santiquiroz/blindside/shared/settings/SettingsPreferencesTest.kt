@@ -69,6 +69,17 @@ class SettingsPreferencesTest {
     }
 
     @Test
+    fun `settings saved before shared stamps read with the migrated stamp`() {
+        assertEquals(MIGRATED_STAMP_MS, settingsFrom(preferencesOf(Keys.HANDEDNESS to "LEFT")).sharedUpdatedMs)
+    }
+
+    @Test
+    fun `a stored stamp of zero stays zero`() {
+        val prefs = preferencesOf(Keys.HANDEDNESS to "LEFT", Keys.SHARED_UPDATED_MS to 0L)
+        assertEquals(0L, settingsFrom(prefs).sharedUpdatedMs)
+    }
+
+    @Test
     fun `clearing optional values removes their keys`() {
         val prefs = mutablePreferencesOf()
         writeSettings(prefs, AppSettings(beltAddress = "AA:BB:CC:DD:EE:FF").withRadar(RadarSettings(RADAR_B, 30.0)))

@@ -36,7 +36,7 @@ fun settingsFrom(prefs: Preferences): AppSettings {
         beltAddress = prefs[Keys.BELT_ADDRESS],
         posture = enumOrDefault(prefs[Keys.POSTURE], defaults.posture),
         autoStartRadar = prefs[Keys.AUTO_START_RADAR] ?: defaults.autoStartRadar,
-        sharedUpdatedMs = prefs[Keys.SHARED_UPDATED_MS] ?: defaults.sharedUpdatedMs,
+        sharedUpdatedMs = prefs[Keys.SHARED_UPDATED_MS] ?: missingStampFor(prefs),
         contactColor = enumOrDefault(prefs[Keys.CONTACT_COLOR], defaults.contactColor),
         compass = prefs[Keys.COMPASS] ?: defaults.compass,
     )
@@ -55,6 +55,9 @@ fun writeSettings(prefs: MutablePreferences, settings: AppSettings) {
     writeOptional(prefs, Keys.BELT_ADDRESS, settings.beltAddress)
     settings.radars.forEach { writeRadar(prefs, it) }
 }
+
+// Every write before stamps existed stored the hand, so a hand without a stamp is an older build's calibration.
+fun missingStampFor(prefs: Preferences): Long = if (Keys.HANDEDNESS in prefs) MIGRATED_STAMP_MS else AppSettings().sharedUpdatedMs
 
 fun parseSpeedSign(stored: Int?): Int = if (stored == -1) -1 else 1
 

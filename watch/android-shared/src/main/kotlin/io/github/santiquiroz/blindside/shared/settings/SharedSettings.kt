@@ -1,6 +1,10 @@
 package io.github.santiquiroz.blindside.shared.settings
 
 import io.github.santiquiroz.blindside.core.config.Handedness
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
 
 data class SharedSettings(
     val handedness: Handedness,
@@ -27,7 +31,14 @@ fun stampSharedEdit(before: AppSettings, after: AppSettings, nowMs: Long): AppSe
     else -> after
 }
 
+// Settings saved before stamps existed hold a calibration: 1 beats a fresh peer's 0, and any real edit, stamped now, still beats it.
+const val MIGRATED_STAMP_MS = 1L
+
 fun isStamped(shared: SharedSettings): Boolean = shared.updatedMs > 0L
+
+// A fresh device (stamp 0) publishes nothing, so its defaults never reach a peer that already holds a calibration.
+fun publishableSharedSettings(settings: Flow<AppSettings>): Flow<SharedSettings> =
+    settings.map(::sharedSettingsOf).distinctUntilChanged().filter(::isStamped)
 
 // An adopted stamp may come from a clock running ahead; our own later edit must still be the newest write on both devices.
 private fun nextStamp(previousMs: Long, nowMs: Long): Long = maxOf(nowMs, previousMs + 1)
