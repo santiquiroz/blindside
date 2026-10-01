@@ -45,9 +45,10 @@ fun toDrawModel(
     offset: PointPx,
     showContacts: Boolean,
     edgeMarginPx: Float = 0f,
+    fitHalfAngleDeg: Double = MAX_FIT_HALF_ANGLE_DEG,
 ): RadarDrawModel {
     val side = min(widthPx, heightPx)
-    val fit = fitFan(side, edgeMarginPx, fanHalfAngleDeg(scene?.coverage.orEmpty()))
+    val fit = fitFan(side, edgeMarginPx, fitHalfAngleDeg)
     val origin = PointPx(widthPx / 2f + offset.x, heightPx / 2f + fit.originYOffsetPx + offset.y)
     val radius = fit.radiusPx
     val blips = if (showContacts) scene?.blips.orEmpty() else emptyList()

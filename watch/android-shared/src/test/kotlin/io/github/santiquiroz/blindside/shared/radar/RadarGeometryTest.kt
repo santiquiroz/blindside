@@ -80,10 +80,16 @@ class RadarGeometryTest {
     }
 
     @Test
-    fun `a narrower fan drops the origin below the centre`() {
-        val narrow = scene(emptyList()).copy(coverage = listOf(CoverageSector(-60.0, 60.0)))
-        val model = toDrawModel(narrow, 480f, 480f, noShift, showContacts = true)
+    fun `a narrower configured belt drops the origin below the centre`() {
+        val model = toDrawModel(scene(emptyList()), 480f, 480f, noShift, showContacts = true, fitHalfAngleDeg = 60.0)
         assertTrue(model.origin.y > 240f)
+    }
+
+    @Test
+    fun `the live coverage never sizes the fan`() {
+        val narrowLive = scene(emptyList()).copy(coverage = listOf(CoverageSector(-60.0, 60.0)))
+        val model = toDrawModel(narrowLive, 480f, 480f, noShift, showContacts = true)
+        assertPoint(PointPx(240f, 240f), model.origin)
     }
 
     @Test
