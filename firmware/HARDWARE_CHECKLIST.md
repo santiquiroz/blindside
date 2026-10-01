@@ -71,7 +71,10 @@ Usan las apps de la fase 2. `firmware/tools/bench_e2e.py` (Tarea 10 del plan 04)
 
 Los agentes no la corrieron: la corre quien tenga el banco. Desde `firmware/`, con el cinturón en COM6 y el reloj (y, para la Parte B, el celular) en `adb`. Solo estas acciones: flashear la aplicación (`-t upload`, conserva NVS), leer COM6, `am start` / `am force-stop` de `io.github.santiquiroz.blindside` y `cmd bluetooth_manager disable|enable` en el celular. Nunca borrar flash ni NVS, nunca `key new`.
 
+**Estado de la compuerta (2026-10-01): sin correr.** COM6 (CP210x) estaba conectado, pero el reloj no aparecía en `adb devices` y nadie estaba en el banco, así que no se flasheó. La rama `feat/dual-connection` **no se fusiona** hasta que H21a imprima `PASS watch` y `PASS watch-steady` con 0.2.0 en el cinturón. Resultado de la corrida (llenar): N de `ble: controller acl buffers=N` = ___ (≥ 8); `hstk` más bajo = ___ (≥ 1024); `PASS`/`FAIL` = ___.
+
 - [ ] **H21a. Parte A (bloquea la fusión de la rama de doble conexión del firmware).**
+  0. `python tools/bench_e2e.py --self-test` → `OK`. Comprueba sin banco que el veredicto falla si el reloj deja de transmitir, cambia de ranura o reinicia `sent`, y que con `--reset` la falta de `blindside fw` o de `ble: controller acl buffers=` es `FAIL`.
   1. `adb -s <reloj> shell pidof io.github.santiquiroz.blindside`: anotar si la app del reloj corría.
   2. `python -m platformio run -e esp32dev -t upload --upload-port COM6` → `[SUCCESS]`. Si el puerto está ocupado por otro monitor, parar; no matar otro proceso.
   3. `python tools/bench_e2e.py --reset --start-watch-app --expect-fw 0.2.0 --check watch --seconds 45` → la última línea es `PASS watch`. Anotar N de `ble: controller acl buffers=N` (≥ 8).
