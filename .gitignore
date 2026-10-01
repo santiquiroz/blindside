@@ -42,6 +42,9 @@ google-services.json
 .pio/
 .vscode/
 
+# Python (bench and vector tools)
+__pycache__/
+
 # Session recordings (can be large; share them deliberately)
 *.bsrec
 
