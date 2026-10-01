@@ -49,6 +49,33 @@ class AlertLimiterTest {
     }
 
     @Test
+    fun `a pending contact missing only at another contact's slot still fires at its own turn`() {
+        val all = listOf(left(1), center(2), right(3))
+        val fired = run(
+            0L to listOf(left(1)),
+            250L to listOf(left(1), center(2)),
+            500L to all,
+            1_000L to listOf(left(1), center(2)),
+            1_500L to all,
+            2_000L to all,
+        )
+
+        assertEquals(listOf(0L to 1, 1_000L to 2, 2_000L to 3), fired)
+    }
+
+    @Test
+    fun `a pending contact held for a moment at its turn fires once it is confirmed again`() {
+        val first = AlertLimiter().step(AlertFrame(listOf(left(1)), t0), params).limiter
+        val queued = first.step(AlertFrame(listOf(left(1), right(2)), t0 + 500 * ms), params).limiter
+
+        val held = queued.step(AlertFrame(listOf(left(1)), t0 + 1_000 * ms, heldIds = setOf(2)), params)
+        val back = held.limiter.step(AlertFrame(listOf(left(1), right(2)), t0 + 1_100 * ms), params)
+
+        assertNull(held.fired)
+        assertEquals(ContactAlert(2, Side.RIGHT, t0 + 1_100 * ms), back.fired)
+    }
+
+    @Test
     fun `a pending contact gone before its slot only shows on screen, even if it comes back`() {
         val fired = run(
             0L to listOf(left(1)),

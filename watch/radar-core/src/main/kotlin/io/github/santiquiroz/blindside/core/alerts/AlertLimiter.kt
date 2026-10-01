@@ -10,13 +10,19 @@ data class AlertCandidate(val displayId: Int, val side: Side, val rangeM: Double
 
 data class LostContact(val displayId: Int, val position: Point2, val lostNanos: Long)
 
-data class AlertFrame(val candidates: List<AlertCandidate>, val nowNanos: Long, val yawDeg: Double = 0.0, val playerMoving: Boolean = false)
+data class AlertFrame(
+    val candidates: List<AlertCandidate>,
+    val nowNanos: Long,
+    val yawDeg: Double = 0.0,
+    val playerMoving: Boolean = false,
+    val heldIds: Set<Int> = emptySet(),
+)
 
 data class LimiterOutcome(val limiter: AlertLimiter, val fired: ContactAlert?)
 
 data class AlertLimiter(
     val handled: Set<Int> = emptySet(),
-    val pending: Set<Int> = emptySet(),
+    val pending: Map<Int, AlertCandidate> = emptyMap(),
     val visible: Map<Int, AlertCandidate> = emptyMap(),
     val lost: List<LostContact> = emptyList(),
     val lastFiredNanos: Long? = null,
@@ -27,7 +33,7 @@ data class AlertLimiter(
         val outcome = withLosses(frame.candidates, frame.nowNanos, params)
             .withReacquired(frame.candidates, frame.yawDeg, params)
             .withPending(frame.candidates)
-            .fireIfDue(frame.candidates, frame.nowNanos, params)
+            .fireIfDue(frame, params)
         return outcome.copy(limiter = outcome.limiter.withVisible(frame.candidates, frame.playerMoving))
     }
 
@@ -58,16 +64,19 @@ data class AlertLimiter(
         return copy(handled = handled + candidate.displayId, lost = lost - match)
     }
 
+    // A pending contact keeps its last confirmed candidate, so it holds its place in the queue while it is missing.
     private fun withPending(candidates: List<AlertCandidate>): AlertLimiter =
-        copy(pending = pending + candidates.filter { it.displayId !in handled }.ids())
+        copy(pending = pending + candidates.filter { it.displayId !in handled }.associateBy { it.displayId })
 
-    private fun fireIfDue(candidates: List<AlertCandidate>, nowNanos: Long, params: AlertParams): LimiterOutcome {
-        if (pending.isEmpty() || !isSlotOpen(nowNanos, params)) return LimiterOutcome(this, null)
-        val waiting = candidates.filter { it.displayId in pending }
-        val cleared = silence(pending - waiting.ids().toSet())
-        if (cleared.isSaturated(nowNanos, params)) return LimiterOutcome(cleared.silence(cleared.pending), null)
-        val chosen = waiting.minWithOrNull(PRIORITY) ?: return LimiterOutcome(cleared, null)
-        return LimiterOutcome(cleared.fire(chosen, nowNanos, params), ContactAlert(chosen.displayId, chosen.side, nowNanos))
+    // Spec §5.5 (b): only the pending contacts whose turn came and that are gone turn screen-only; held ones keep waiting.
+    private fun fireIfDue(frame: AlertFrame, params: AlertParams): LimiterOutcome {
+        if (pending.isEmpty() || !isSlotOpen(frame.nowNanos, params)) return LimiterOutcome(this, null)
+        if (isSaturated(frame.nowNanos, params)) return LimiterOutcome(silence(pending.keys), null)
+        val present = frame.candidates.ids().toSet()
+        val queue = pending.values.sortedWith(PRIORITY)
+        val cleared = silence(goneBeforeFirstPresent(queue, present, frame.heldIds))
+        val chosen = queue.firstOrNull { it.displayId in present } ?: return LimiterOutcome(cleared, null)
+        return LimiterOutcome(cleared.fire(chosen, frame.nowNanos, params), ContactAlert(chosen.displayId, chosen.side, frame.nowNanos))
     }
 
     private fun isSlotOpen(nowNanos: Long, params: AlertParams): Boolean {
@@ -93,6 +102,9 @@ data class AlertLimiter(
     private fun isNew(candidate: AlertCandidate): Boolean = candidate.displayId !in handled && candidate.displayId !in pending
 
     private fun List<AlertCandidate>.ids() = map { it.displayId }
+
+    private fun goneBeforeFirstPresent(queue: List<AlertCandidate>, present: Set<Int>, held: Set<Int>): List<Int> =
+        queue.takeWhile { it.displayId !in present }.ids().filter { it !in held }
 
     private companion object {
         const val NANOS_PER_MS = 1_000_000L

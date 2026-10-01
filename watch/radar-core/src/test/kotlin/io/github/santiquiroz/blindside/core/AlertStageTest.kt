@@ -62,6 +62,19 @@ class AlertStageTest {
         assertTrue(gapMs in 1_000..1_100, "gap was $gapMs ms")
     }
 
+    @Test
+    fun `a pending contact missing two windows right before its slot still vibrates`() {
+        val scenario = Scenarios.twoPeopleSameRange()
+        val firstPacketMs = scenarioMsOf(runScenario(scenario).alerts.first().tNanos) - scenario.bleDelayMs
+        val blanked = simEspMs(firstPacketMs + 800) until simEspMs(firstPacketMs + 1_000)
+
+        val run = runScenario(scenario) { bundle ->
+            bundle.copy(radarFrames = bundle.radarFrames.map { if (it.tMs in blanked) it.copy(targets = emptyList()) else it })
+        }
+
+        assertEquals(2, run.alerts.map { it.displayId }.toSet().size)
+    }
+
     private fun rebased(bundle: Bundle, deltaMs: Long): Bundle = bundle.copy(
         tMs = bundle.tMs + deltaMs,
         radarFrames = bundle.radarFrames.map { it.copy(tMs = it.tMs + deltaMs) },
