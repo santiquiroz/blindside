@@ -18,9 +18,9 @@ import androidx.wear.compose.material.CompactChip
 import androidx.wear.compose.material.ListHeader
 import androidx.wear.compose.material.Text
 import io.github.santiquiroz.blindside.core.scene.Side
-import io.github.santiquiroz.blindside.wear.haptics.HapticPlayer
-import io.github.santiquiroz.blindside.wear.haptics.dndMaySilenceNow
-import io.github.santiquiroz.blindside.wear.haptics.patternFor
+import io.github.santiquiroz.blindside.shared.haptics.HapticPlayer
+import io.github.santiquiroz.blindside.shared.haptics.dndMaySilenceNow
+import io.github.santiquiroz.blindside.shared.haptics.patternFor
 import io.github.santiquiroz.blindside.wear.practice.QuizState
 import io.github.santiquiroz.blindside.wear.practice.answer
 import io.github.santiquiroz.blindside.wear.practice.currentSide

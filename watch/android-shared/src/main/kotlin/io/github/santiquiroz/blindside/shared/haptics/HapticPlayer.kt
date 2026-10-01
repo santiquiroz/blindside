@@ -1,4 +1,4 @@
-package io.github.santiquiroz.blindside.wear.haptics
+package io.github.santiquiroz.blindside.shared.haptics
 
 import android.content.Context
 import android.os.VibrationAttributes

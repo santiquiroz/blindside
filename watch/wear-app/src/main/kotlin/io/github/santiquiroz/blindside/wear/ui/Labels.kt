@@ -1,11 +1,11 @@
 package io.github.santiquiroz.blindside.wear.ui
 
 import io.github.santiquiroz.blindside.core.scene.Side
-import io.github.santiquiroz.blindside.wear.haptics.CENTER_PATTERN
-import io.github.santiquiroz.blindside.wear.haptics.HapticPattern
-import io.github.santiquiroz.blindside.wear.haptics.LEFT_PATTERN
-import io.github.santiquiroz.blindside.wear.haptics.RIGHT_PATTERN
-import io.github.santiquiroz.blindside.wear.haptics.SYSTEM_PATTERN
+import io.github.santiquiroz.blindside.shared.haptics.CENTER_PATTERN
+import io.github.santiquiroz.blindside.shared.haptics.HapticPattern
+import io.github.santiquiroz.blindside.shared.haptics.LEFT_PATTERN
+import io.github.santiquiroz.blindside.shared.haptics.RIGHT_PATTERN
+import io.github.santiquiroz.blindside.shared.haptics.SYSTEM_PATTERN
 import io.github.santiquiroz.blindside.wear.practice.QuizAnswer
 import io.github.santiquiroz.blindside.wear.practice.QuizState
 import io.github.santiquiroz.blindside.wear.practice.passed

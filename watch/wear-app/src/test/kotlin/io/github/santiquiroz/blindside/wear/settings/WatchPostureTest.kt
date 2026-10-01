@@ -8,8 +8,8 @@ import io.github.santiquiroz.blindside.core.config.RADAR_A
 import io.github.santiquiroz.blindside.core.scene.RadarScene
 import io.github.santiquiroz.blindside.core.scene.Side
 import io.github.santiquiroz.blindside.wear.demo.demoPackets
-import io.github.santiquiroz.blindside.wear.haptics.HapticPattern
-import io.github.santiquiroz.blindside.wear.haptics.hapticFor
+import io.github.santiquiroz.blindside.shared.haptics.HapticPattern
+import io.github.santiquiroz.blindside.shared.haptics.hapticFor
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test

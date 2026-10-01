@@ -1,4 +1,4 @@
-package io.github.santiquiroz.blindside.wear.haptics
+package io.github.santiquiroz.blindside.shared.haptics
 
 import io.github.santiquiroz.blindside.core.alerts.ContactAlert
 import io.github.santiquiroz.blindside.core.alerts.PipelineEvent

@@ -13,9 +13,9 @@ import io.github.santiquiroz.blindside.wear.BuildConfig
 import io.github.santiquiroz.blindside.wear.ble.BeltLink
 import io.github.santiquiroz.blindside.wear.demo.DemoSource
 import io.github.santiquiroz.blindside.wear.demo.demoPackets
-import io.github.santiquiroz.blindside.wear.haptics.HapticPlayer
-import io.github.santiquiroz.blindside.wear.haptics.dndMaySilenceNow
-import io.github.santiquiroz.blindside.wear.haptics.millisUntil
+import io.github.santiquiroz.blindside.shared.haptics.HapticPlayer
+import io.github.santiquiroz.blindside.shared.haptics.dndMaySilenceNow
+import io.github.santiquiroz.blindside.shared.haptics.millisUntil
 import io.github.santiquiroz.blindside.shared.permissions.PERMISSION_ACTIVITY_RECOGNITION
 import io.github.santiquiroz.blindside.wear.recording.InfoHeaderSink
 import io.github.santiquiroz.blindside.wear.recording.RecordSink

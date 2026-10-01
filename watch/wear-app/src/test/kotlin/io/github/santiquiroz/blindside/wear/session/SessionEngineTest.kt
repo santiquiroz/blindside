@@ -12,10 +12,10 @@ import io.github.santiquiroz.blindside.core.scene.MotionState
 import io.github.santiquiroz.blindside.core.scene.RadarScene
 import io.github.santiquiroz.blindside.core.scene.Side
 import io.github.santiquiroz.blindside.core.scene.Warning
-import io.github.santiquiroz.blindside.wear.haptics.HapticPattern
-import io.github.santiquiroz.blindside.wear.haptics.LEFT_PATTERN
-import io.github.santiquiroz.blindside.wear.haptics.SYSTEM_BUZZ_MS
-import io.github.santiquiroz.blindside.wear.haptics.SYSTEM_PATTERN
+import io.github.santiquiroz.blindside.shared.haptics.HapticPattern
+import io.github.santiquiroz.blindside.shared.haptics.LEFT_PATTERN
+import io.github.santiquiroz.blindside.shared.haptics.SYSTEM_BUZZ_MS
+import io.github.santiquiroz.blindside.shared.haptics.SYSTEM_PATTERN
 import io.github.santiquiroz.blindside.wear.recording.RecordSink
 import io.github.santiquiroz.blindside.shared.settings.ScreenMode
 import org.junit.jupiter.api.Assertions.assertEquals
