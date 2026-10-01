@@ -1,0 +1,203 @@
+# Blindside MVP — Plan 00: Shared Contracts
+
+> **For agentic workers:** this document is not a task list. It fixes the names, types, files and versions that plans 01 (radar-core), 02 (firmware) and 03 (wear-app) must all agree on. Every task in those plans implicitly includes this document. If a plan contradicts this file, this file wins; flag the conflict instead of improvising.
+
+**Goal:** a playable MVP for the 5-hour game on **2026-10-11** (spec §12), built so that the three subsystems can be implemented in parallel.
+
+**Spec:** [`docs/superpowers/specs/2026-09-30-blindside-v1-design.md`](../specs/2026-09-30-blindside-v1-design.md), approved on 2026-09-30.
+
+## Global Constraints
+
+- **Repo:** `C:/personal/blindside`, branch `main`, AGPL-3.0.
+- **Commits:**
+  - Conventional prefixes (`feat:`, `fix:`, `test:`, `docs:`, `chore:`), written in Spanish.
+  - Author `Santiago Quiroz upegui <santiqupgui@gmail.com>`, already set in the repo config.
+  - **Never** add a `Co-Authored-By` line.
+- **Code style** (owner rules, mandatory):
+  - Atomic functions whose name says what they do. Low cyclomatic complexity; extract branches into named functions.
+  - **No doc comments.** Only a one-line comment when the *why* is not obvious.
+  - Pure functions with explicit dependencies. Immutable data (`data class` + `val`, new copies instead of mutation).
+  - Files of 200-400 lines typical, 800 max.
+- **Watch toolchain:** these versions build on the owner's machine (taken from RevScope). Do not upgrade.
+  - Gradle **8.11.1** (wrapper).
+  - AGP **8.10.1**.
+  - Kotlin **2.2.21**.
+  - JDK **17**.
+  - `compileSdk 36`, `targetSdk 36`, `minSdk 34`.
+  - Wear Compose **1.4.0** (`androidx.wear.compose:compose-material` + `compose-foundation`).
+  - Compose BOM `2025.05.00`, activity-compose `1.10.1`, coroutines `1.9.0`, datastore-preferences `1.1.4`.
+  - JUnit **5** (jupiter) for `radar-core`.
+- **Firmware toolchain:**
+  - PlatformIO, `platform = espressif32`, `framework = arduino`, `board = esp32dev`.
+  - `lib_deps = h2zero/NimBLE-Arduino@^2`.
+  - Unit tests run in the `native` env with Unity, **in CI only**: there is no local C/C++ compiler.
+- **Shared test vectors:**
+  - `python protocol/tools/make_vectors.py` regenerates `protocol/vectors/vectors.json` (Kotlin) and `firmware/test/vectors.h` (C++).
+  - **Never edit those two outputs by hand.**
+- **MVP scope** is exactly spec §12 "Entra". Items listed under "Queda para la v1 completa" must **not** be implemented now.
+
+## Repository layout
+
+```
+protocol/
+  PROTOCOL.md                  normative copy of spec §4.2 (byte layout, UUIDs, control commands)
+  tools/make_vectors.py        vector generator (exists)
+  vectors/vectors.json         generated
+firmware/
+  platformio.ini               envs: esp32dev, native
+  include/blindside_config.h   pins, rates, UUIDs, timing constants
+  lib/ld2450/                  ld2450_frame.{h,cpp} (pure frame sync) · ld2450_commands.{h,cpp} (pure byte builders)
+  lib/bundler/                 bundler.{h,cpp} (pure TLV packer with splitting)
+  lib/imu_math/                imu_accumulator.{h,cpp} (pure 200→50 Hz averaging + cumulative gyro sums)
+  src/main.cpp                 scheduler loop only
+  src/radar_port.{h,cpp}       UART glue, baud detection, boot configuration, watchdog
+  src/imu_mpu6050.{h,cpp}      I2C driver (two instances)
+  src/ble_link.{h,cpp}         NimBLE GATT server, notify gating, info JSON, control writes
+  src/pairing.{h,cpp}          pairing window, per-device passkey in NVS, bond whitelist, BOOT button
+  src/status_led.{h,cpp}
+  test/vectors.h               generated
+  test/test_ld2450_frame/ · test/test_ld2450_commands/ · test/test_bundler/ · test/test_imu_math/
+watch/
+  settings.gradle.kts · build.gradle.kts · gradle.properties · gradle/libs.versions.toml · gradlew(.bat) + gradle/wrapper/
+  radar-core/                  Kotlin/JVM library (no Android)
+  wear-app/                    Android application (Wear OS)
+.github/workflows/ci.yml       jobs: radar-core tests · firmware native tests + esp32dev build · wear-app assembleDebug
+```
+
+## Identifiers
+
+| Name | Value |
+|---|---|
+| Kotlin package (core) | `io.github.santiquiroz.blindside.core` |
+| Kotlin package (app) | `io.github.santiquiroz.blindside.wear` |
+| applicationId | `io.github.santiquiroz.blindside` |
+| GATT service UUID | `569f3867-024f-4498-a979-90a762ad3593` |
+| `stream` characteristic | `37869398-ecc2-4915-90a1-13d39d708ad5` (notify; CCCD write requires encryption) |
+| `info` characteristic | `278b9369-d8ac-4eda-868b-7bfd0dea5dc6` (READ_ENC; UTF-8 JSON, ≤ 400 B) |
+| `control` characteristic | `725c9a6e-0c7b-45d2-bef6-48c03be7c092` (WRITE_AUTHEN) |
+| BLE device name | `Blindside-XXXX` (last 2 bytes of the MAC in hex) |
+| Radar / IMU ids | `0` = A (left box), `1` = B (right box) |
+
+## BLE packet (normative; spec §4.2)
+
+All integers are little-endian.
+
+```
+Header (8 B): u8 version=1 | u8 flags | u16 seq | u32 t_ms
+  flags: bit0 radar A alive · bit1 radar B alive · bit2 IMU A ok · bit3 IMU B ok · bit4 data dropped
+TLV sections: u8 type | u8 len | payload[len]
+  0x01 RADAR  (len 29): u8 radar_id | u32 t_ms | 24 B raw LD2450 targets (3 × [u16 x | u16 y | u16 speed | u16 res], sign-magnitude for x/y/speed)
+  0x02 IMU    (len 18+12n): u8 imu_id | u32 t_first_ms | u8 n | n × i16[ax, ay, az, gx, gy, gz] | u32 sum_gx | u32 sum_gy | u32 sum_gz
+  0x03 STATUS (len 10): 2 × [u8 radar_id | u16 bad_frames | u8 restarts | u8 baud_index]
+  unknown types: skipped using len. If len > remaining bytes: drop the rest, mark the packet truncated.
+```
+
+- Samples within an IMU batch are 20 ms apart.
+- Each sample is the average of 4 raw readings taken at 200 Hz.
+- Gyro full scale is ±500 °/s (65.5 LSB per °/s). Accel full scale is ±8 g (4096 LSB per g).
+- `sum_g*` are running sums of the **raw 200 Hz** gyro readings since boot. They wrap as u32; the watch takes the difference and reads it as int32.
+- Every packet is ≤ 244 B. The bundler splits a cut into several packets and never splits a section.
+
+### `control` writes
+
+| Bytes | Meaning |
+|---|---|
+| `01 <id>` | Restart radar `<id>`: enable config, then restart (`A3`) |
+| `03` | IDENTIFY: blink the LED 3×. Ignored while a session is active |
+| `04 <0/1>` | SESSION_ACTIVE: the watch sets 1 on start and 0 on stop |
+
+### `info` JSON (example)
+
+```json
+{"proto":1,"fw":"0.1.0","boot_id":"9f3a12c4","reset":"POWERON","mtu":255,
+ "radars":[{"id":0,"fw":"V2.04.23101915","baud":256000},{"id":1,"fw":"V2.04.23101915","baud":256000}],
+ "imus":[{"id":0,"who":104,"gyro_lsb_dps":65.5,"accel_lsb_g":4096},{"id":1,"who":112,"gyro_lsb_dps":65.5,"accel_lsb_g":4096}],
+ "uptime_s":42}
+```
+
+## `radar-core` public API (consumed by `wear-app`)
+
+These are exact names. Internal helpers are free. Everything lives in `io.github.santiquiroz.blindside.core` and its sub-packages: `.protocol`, `.geometry`, `.imu`, `.clock`, `.tracking`, `.scene`, `.alerts`, `.replay`, `.sim`, `.config`.
+
+```kotlin
+// .config
+data class TuningParams(/* every threshold of spec §6, with spec/notes defaults */)
+enum class Handedness { RIGHT, LEFT, SWITCHER }
+data class RadarMount(val radarId: Int, val xM: Double, val yM: Double, val yawDeg: Double,
+                      val flipX: Boolean = false, val speedSign: Int = 1)
+fun defaultMounts(handedness: Handedness): List<RadarMount>   // ±0.15 m; yaw −40/+20 (RIGHT), −20/+40 (LEFT), −30/+30 (SWITCHER)
+data class PipelineConfig(val tuning: TuningParams = TuningParams(),
+                          val mounts: List<RadarMount> = defaultMounts(Handedness.RIGHT))
+
+// .scene
+enum class Confidence { BOTH, SINGLE, COASTING }
+enum class Side { LEFT, CENTER, RIGHT }
+data class Blip(val displayId: Int, val bearingDeg: Double, val rangeM: Double,
+                val confidence: Confidence, val ageMs: Long, val outOfView: Boolean)
+data class SensorStatus(val id: Int, val alive: Boolean)
+enum class MotionState { STILL, TURNING, WALKING, PRONE }
+enum class Warning { LINK_LOST, RADAR_DOWN, IMU_DOWN, NO_IMU_COMPENSATION, PRONE, CORRUPT_FRAMES, ALERT_OVERFLOW, YAW_UNCALIBRATED }
+data class CoverageSector(val fromDeg: Double, val toDeg: Double)
+data class RadarScene(val blips: List<Blip>, val coverage: List<CoverageSector>, val linkUp: Boolean,
+                      val radars: List<SensorStatus>, val imus: List<SensorStatus>,
+                      val motion: MotionState, val warnings: Set<Warning>, val eliminated: Boolean)
+// bearingDeg: logical display frame, 0 = up (hip front), positive = clockwise/right, range [−180, 180)
+
+// .alerts
+sealed interface PipelineEvent { val tNanos: Long }
+data class ContactAlert(val displayId: Int, val side: Side, override val tNanos: Long) : PipelineEvent
+data class TrackConfirmed(val displayId: Int, override val tNanos: Long) : PipelineEvent
+data class SystemAlert(val kind: Warning, override val tNanos: Long) : PipelineEvent
+
+// root package
+class RadarPipeline(config: PipelineConfig) {
+    fun onBlePacket(bytes: ByteArray, arrivalNanos: Long): List<PipelineEvent>
+    fun onWatchGravity(x: Float, y: Float, z: Float, eventNanos: Long)
+    fun onWatchStep(eventNanos: Long)
+    fun onLinkState(connected: Boolean, nowNanos: Long): List<PipelineEvent>
+    fun setEliminated(on: Boolean)
+    fun scene(nowNanos: Long): RadarScene
+}
+
+// .replay
+enum class RecordType(val code: Int) { BLE_PACKET(1), WATCH_GRAVITY(2), WATCH_STEP(3), MANUAL_MARKER(4), TRACK_CONFIRMED(5), VIBRATION_STARTED(6), MODE_CHANGE(7) }
+data class BsrecRecord(val type: RecordType, val tMsSinceStart: Long, val payload: ByteArray)
+class BsrecWriter(out: java.io.OutputStream, headerJson: String) { fun write(record: BsrecRecord); fun close() }
+class BsrecReader(input: java.io.InputStream) { val headerJson: String; fun records(): Sequence<BsrecRecord> }
+
+// .sim
+data class SimPacket(val bytes: ByteArray, val arrivalNanos: Long)
+fun simulate(scenario: Scenario): List<SimPacket>   // Scenario is defined by plan 01 (DSL)
+```
+
+- **Time:** every timestamp the app passes in comes from `SystemClock.elapsedRealtimeNanos()` (or `SensorEvent.timestamp`).
+- **Threads:** `radar-core` is single-threaded. The service calls it from one dispatcher (`Dispatchers.Default.limitedParallelism(1)`).
+
+## `.bsrec` file format
+
+```
+"BSREC" (5 B) | u8 format_version=1 | u32 header_len | header_json (UTF-8)
+records: u8 type | u32 t_ms_since_start | u16 payload_len | payload
+```
+
+- Gravity payload: 3 × f32 + i64 event nanos.
+- Step payload: i64 event nanos.
+- Marker: empty.
+- Track confirmed: i32 displayId.
+- Vibration started: i32 displayId + u8 side.
+- Mode change: UTF-8 mode name.
+
+## Plan ownership and parallelism
+
+| Plan | Directory owned | Can start | Depends on |
+|---|---|---|---|
+| 01 radar-core | `watch/radar-core/` + watch Gradle root files | immediately | vectors (exist) |
+| 02 firmware | `firmware/` + `protocol/PROTOCOL.md` | immediately | vectors (exist) |
+| 03 wear-app | `watch/wear-app/` | after plan 01 Task 1 (Gradle root) | the radar-core API above. Use the real implementation once available; until then code against the signatures |
+| CI | `.github/workflows/ci.yml` | owned by plan 02, Task 1 | — |
+
+**Done for the MVP** means all of the following:
+- `./gradlew :radar-core:test` passes.
+- `./gradlew :wear-app:assembleDebug` builds.
+- CI is green: firmware native tests pass and the `esp32dev` build succeeds.
+- The hardware steps of spec §12 (spikes, bench and field tests) are left for Santiago, with a checklist.
