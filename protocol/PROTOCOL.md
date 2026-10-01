@@ -147,7 +147,7 @@ Types 0x10-0x1F are reserved (0x10 = thermal camera). Unknown types are skipped 
 - Skip unknown section types using `len`.
 - If `len` exceeds the bytes left in the packet, drop the rest of the packet and count it as truncated.
 
-## 5. `info` (UTF-8 JSON, ≤ 512 B, refreshed every second)
+## 5. `info` (UTF-8 JSON, ≤ 512 B, generated at each read)
 
 ```json
 {"proto":1,"fw":"0.1.0","boot_id":"9f3a12c4","reset":"POWERON","mtu":255,"radars":[{"id":0,"fw":"V2.04.23101915","baud":256000},{"id":1,"fw":"V2.04.23101915","baud":256000}],"imus":[{"id":0,"who":104,"gyro_lsb_dps":65.5,"accel_lsb_g":4096,"repeats":0},{"id":1,"who":112,"gyro_lsb_dps":65.5,"accel_lsb_g":4096,"repeats":3}],"tx_power_dbm":9,"conn":{"interval_ms":45.0,"latency":0,"timeout_ms":5000},"uptime_s":42}
@@ -166,6 +166,8 @@ Types 0x10-0x1F are reserved (0x10 = thermal camera). Unknown types are skipped 
 - Size: at most 512 B (the ATT maximum attribute length); with every field at its longest it is 444 B.
   It is longer than one ATT read, so the watch reads it long (Read, then Read Blob); readers must
   accept it in one piece of up to 512 B.
+- The belt builds the document when the Read at offset 0 arrives, and the Read Blob requests of the same
+  long read are served from that copy, so one long read never mixes two versions.
 
 ## 6. `control` writes
 

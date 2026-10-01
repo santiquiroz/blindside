@@ -4,6 +4,8 @@
 #include <esp_random.h>
 #include <esp_system.h>
 
+#include <atomic>
+
 #include "ble_link.h"
 #include "ble_rules.h"
 #include "blindside_config.h"
@@ -22,8 +24,7 @@ namespace {
 
 PairingState g_pairing;
 DiagnosticsMemory g_diagnostics;
-uint32_t g_boot_id = 0;
-uint32_t g_next_info_ms = 0;
+std::atomic<uint32_t> g_boot_id{0};
 uint32_t g_next_diagnostics_ms = 0;
 bool g_session_active = false;
 bool g_identify_active = false;
@@ -31,13 +32,47 @@ uint32_t g_identify_started_ms = 0;
 
 void print_banner() {
     Serial.printf("blindside fw %s boot_id=%08lx reset=%s\n", config::kFirmwareVersion,
-                  static_cast<unsigned long>(g_boot_id), reset_reason_name(esp_reset_reason()));
+                  static_cast<unsigned long>(g_boot_id.load()), reset_reason_name(esp_reset_reason()));
+}
+
+RadarInfo radar_info(uint8_t radar_id) {
+    RadarSnapshot radar = radar_port_snapshot(radar_id);
+    return RadarInfo{radar_id, radar.firmware, radar.baud};
+}
+
+ImuInfo imu_info(uint8_t imu_id) {
+    ImuSnapshot imu = imu_task_snapshot(imu_id);
+    return ImuInfo{imu_id, imu.who_am_i, imu.repeats};
+}
+
+BeltInfo current_info(uint32_t now_ms) {
+    LinkSnapshot link = ble_link_snapshot();
+    BeltInfo info{};
+    info.firmware_version = config::kFirmwareVersion;
+    info.boot_id = g_boot_id.load();
+    info.reset_reason = reset_reason_name(esp_reset_reason());
+    info.mtu = link.mtu;
+    for (uint8_t i = 0; i < kRadarCount; ++i) {
+        info.radars[i] = radar_info(i);
+    }
+    for (uint8_t i = 0; i < kImuCount; ++i) {
+        info.imus[i] = imu_info(i);
+    }
+    info.tx_power_dbm = ble_link_tx_power();
+    info.conn = link.params;
+    info.uptime_s = now_ms / 1000;
+    return info;
+}
+
+// Runs on the NimBLE host task at each read of `info`; current_info only reads atomics and locked snapshots.
+size_t write_info_json(char* out, size_t out_size) {
+    return format_info_json(current_info(millis()), out, out_size);
 }
 
 void start_ble() {
     uint8_t mac[6] = {0};
     esp_read_mac(mac, ESP_MAC_BT);
-    ble_link_begin(device_name_from_mac(mac).text);
+    ble_link_begin(device_name_from_mac(mac).text, write_info_json);
 }
 
 void start_radar_tasks(QueueHandle_t frames) {
@@ -96,47 +131,6 @@ void handle_control(uint32_t now_ms) {
     }
 }
 
-RadarInfo radar_info(uint8_t radar_id) {
-    RadarSnapshot radar = radar_port_snapshot(radar_id);
-    return RadarInfo{radar_id, radar.firmware, radar.baud};
-}
-
-ImuInfo imu_info(uint8_t imu_id) {
-    ImuSnapshot imu = imu_task_snapshot(imu_id);
-    return ImuInfo{imu_id, imu.who_am_i, imu.repeats};
-}
-
-BeltInfo current_info(uint32_t now_ms) {
-    LinkSnapshot link = ble_link_snapshot();
-    BeltInfo info{};
-    info.firmware_version = config::kFirmwareVersion;
-    info.boot_id = g_boot_id;
-    info.reset_reason = reset_reason_name(esp_reset_reason());
-    info.mtu = link.mtu;
-    for (uint8_t i = 0; i < kRadarCount; ++i) {
-        info.radars[i] = radar_info(i);
-    }
-    for (uint8_t i = 0; i < kImuCount; ++i) {
-        info.imus[i] = imu_info(i);
-    }
-    info.tx_power_dbm = ble_link_tx_power();
-    info.conn = link.params;
-    info.uptime_s = now_ms / 1000;
-    return info;
-}
-
-void refresh_info_if_due(uint32_t now_ms) {
-    if (!deadline_reached(now_ms, g_next_info_ms)) {
-        return;
-    }
-    char json[kInfoJsonBufferSize];
-    size_t length = format_info_json(current_info(now_ms), json, sizeof(json));
-    if (length > 0) {
-        ble_link_update_info(json, length);
-    }
-    g_next_info_ms = now_ms + config::kInfoRefreshMs;
-}
-
 void show_led(uint32_t now_ms) {
     if (g_identify_active && identify_finished(g_identify_started_ms, now_ms)) {
         g_identify_active = false;
@@ -168,7 +162,6 @@ void setup() {
     g_pairing = pairing_begin(millis());
     ble_link_start_advertising(pairing_whitelist_only(g_pairing), millis());
     start_tasks();
-    g_next_info_ms = millis();
     g_next_diagnostics_ms = millis() + config::kDiagnosticsPeriodMs;
 }
 
@@ -177,7 +170,6 @@ void loop() {
     pairing_poll(g_pairing, now_ms);
     ble_link_poll_advertising(pairing_whitelist_only(g_pairing), now_ms);
     handle_control(now_ms);
-    refresh_info_if_due(now_ms);
     show_led(now_ms);
     print_diagnostics_if_due(now_ms);
     delay(config::kLoopPeriodMs);

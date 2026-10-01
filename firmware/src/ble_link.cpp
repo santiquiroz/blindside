@@ -6,6 +6,7 @@
 
 #include "ble_rules.h"
 #include "blindside_config.h"
+#include "info_json.h"
 #include "pairing_rules.h"
 
 // Internal NimBLE host function (ble_gatts.c, declared only in the private ble_gatt_priv.h).
@@ -35,6 +36,8 @@ NimBLECharacteristic* g_stream = nullptr;
 NimBLECharacteristic* g_info = nullptr;
 NimBLECharacteristic* g_control = nullptr;
 AdvertisingState g_advertising{};
+InfoWriter g_info_writer = nullptr;
+char g_info_json[kInfoJsonBufferSize];
 
 std::atomic<bool> g_connected{false};
 std::atomic<bool> g_subscribed{false};
@@ -136,9 +139,21 @@ class ControlCallbacks : public NimBLECharacteristicCallbacks {
     }
 };
 
+class InfoCallbacks : public NimBLECharacteristicCallbacks {
+  public:
+    // NimBLE calls onRead only for the offset-0 Read, so every Read Blob of one long read gets the same bytes.
+    void onRead(NimBLECharacteristic* characteristic, NimBLEConnInfo&) override {
+        size_t length = g_info_writer(g_info_json, sizeof(g_info_json));
+        if (length > 0) {
+            characteristic->setValue(reinterpret_cast<const uint8_t*>(g_info_json), length);
+        }
+    }
+};
+
 ServerCallbacks g_server_callbacks;
 StreamCallbacks g_stream_callbacks;
 ControlCallbacks g_control_callbacks;
+InfoCallbacks g_info_callbacks;
 
 void configure_security() {
     NimBLEDevice::setSecurityAuth(true, config::kRequireMitm, true);
@@ -155,6 +170,7 @@ void create_gatt() {
     g_stream = service->createCharacteristic(config::kStreamUuid, NIMBLE_PROPERTY::NOTIFY);
     g_stream->setCallbacks(&g_stream_callbacks);
     g_info = service->createCharacteristic(config::kInfoUuid, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::READ_ENC);
+    g_info->setCallbacks(&g_info_callbacks);
     g_control = service->createCharacteristic(config::kControlUuid, kControlProperties, kMaxControlSize);
     g_control->setCallbacks(&g_control_callbacks);
     g_server->start();
@@ -194,7 +210,8 @@ LinkParams current_params() {
 
 }  // namespace
 
-void ble_link_begin(const char* device_name) {
+void ble_link_begin(const char* device_name, InfoWriter info_writer) {
+    g_info_writer = info_writer;
     NimBLEDevice::init(device_name);
     NimBLEDevice::setPower(config::kBleTxPowerDbm);
     NimBLEDevice::setMTU(config::kPreferredMtu);
@@ -284,10 +301,6 @@ bool ble_link_notify(const uint8_t* bytes, size_t length) {
         return false;
     }
     return g_stream->notify(bytes, length, handle);
-}
-
-void ble_link_update_info(const char* json, size_t length) {
-    g_info->setValue(reinterpret_cast<const uint8_t*>(json), length);
 }
 
 void ble_link_disconnect() {
