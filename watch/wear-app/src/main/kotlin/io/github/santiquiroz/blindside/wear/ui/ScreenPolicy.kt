@@ -1,6 +1,6 @@
 package io.github.santiquiroz.blindside.wear.ui
 
-import io.github.santiquiroz.blindside.wear.settings.ScreenMode
+import io.github.santiquiroz.blindside.shared.settings.ScreenMode
 import io.github.santiquiroz.blindside.wear.ui.radar.PointPx
 
 const val BURN_IN_STEP_MS = 3 * 60 * 1_000L

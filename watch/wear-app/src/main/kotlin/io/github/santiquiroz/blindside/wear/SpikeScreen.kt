@@ -29,9 +29,9 @@ import io.github.santiquiroz.blindside.wear.session.SessionCommands
 import io.github.santiquiroz.blindside.wear.session.SessionSource
 import io.github.santiquiroz.blindside.wear.session.SessionStore
 import io.github.santiquiroz.blindside.wear.session.SessionUiState
-import io.github.santiquiroz.blindside.wear.settings.AppSettings
-import io.github.santiquiroz.blindside.wear.settings.SettingsRepository
-import io.github.santiquiroz.blindside.wear.settings.toggledUsage
+import io.github.santiquiroz.blindside.shared.settings.AppSettings
+import io.github.santiquiroz.blindside.shared.settings.SettingsRepository
+import io.github.santiquiroz.blindside.shared.settings.toggledUsage
 import kotlinx.coroutines.launch
 
 @Composable

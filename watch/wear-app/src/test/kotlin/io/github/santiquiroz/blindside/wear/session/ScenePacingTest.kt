@@ -1,6 +1,6 @@
 package io.github.santiquiroz.blindside.wear.session
 
-import io.github.santiquiroz.blindside.wear.settings.ScreenMode
+import io.github.santiquiroz.blindside.shared.settings.ScreenMode
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test

@@ -10,7 +10,7 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import io.github.santiquiroz.blindside.shared.permissions.PERMISSION_BLUETOOTH_CONNECT
 import io.github.santiquiroz.blindside.shared.permissions.PERMISSION_BLUETOOTH_SCAN
-import io.github.santiquiroz.blindside.wear.settings.settingsRepository
+import io.github.santiquiroz.blindside.shared.settings.settingsRepository
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

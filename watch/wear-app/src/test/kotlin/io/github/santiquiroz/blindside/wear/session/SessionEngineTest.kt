@@ -17,7 +17,7 @@ import io.github.santiquiroz.blindside.wear.haptics.LEFT_PATTERN
 import io.github.santiquiroz.blindside.wear.haptics.SYSTEM_BUZZ_MS
 import io.github.santiquiroz.blindside.wear.haptics.SYSTEM_PATTERN
 import io.github.santiquiroz.blindside.wear.recording.RecordSink
-import io.github.santiquiroz.blindside.wear.settings.ScreenMode
+import io.github.santiquiroz.blindside.shared.settings.ScreenMode
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test

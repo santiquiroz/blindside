@@ -5,7 +5,7 @@ import android.os.VibrationAttributes
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
-import io.github.santiquiroz.blindside.wear.settings.VibrationUsage
+import io.github.santiquiroz.blindside.shared.settings.VibrationUsage
 
 class HapticPlayer(private val vibrator: Vibrator, usage: VibrationUsage) : HapticSink {
     private val renderer = chooseRenderer(vibrator.hasAmplitudeControl())

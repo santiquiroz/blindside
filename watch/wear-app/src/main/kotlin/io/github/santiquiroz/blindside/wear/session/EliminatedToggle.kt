@@ -1,6 +1,6 @@
 package io.github.santiquiroz.blindside.wear.session
 
-import io.github.santiquiroz.blindside.wear.settings.SettingsRepository
+import io.github.santiquiroz.blindside.shared.settings.SettingsRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 

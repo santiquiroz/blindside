@@ -1,7 +1,7 @@
 package io.github.santiquiroz.blindside.wear.ui
 
 import io.github.santiquiroz.blindside.shared.permissions.shouldRequestPermissions
-import io.github.santiquiroz.blindside.wear.settings.AppSettings
+import io.github.santiquiroz.blindside.shared.settings.AppSettings
 
 enum class LaunchAction { SHOW_HOME, SHOW_RADAR, START_RADAR }
 

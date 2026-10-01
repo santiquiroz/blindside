@@ -7,7 +7,7 @@ import io.github.santiquiroz.blindside.core.replay.BsrecRecord
 import io.github.santiquiroz.blindside.core.replay.RecordType
 import io.github.santiquiroz.blindside.core.replay.SessionMode
 import io.github.santiquiroz.blindside.wear.session.SessionInput
-import io.github.santiquiroz.blindside.wear.settings.ScreenMode
+import io.github.santiquiroz.blindside.shared.settings.ScreenMode
 
 private const val NANOS_PER_MS = 1_000_000L
 

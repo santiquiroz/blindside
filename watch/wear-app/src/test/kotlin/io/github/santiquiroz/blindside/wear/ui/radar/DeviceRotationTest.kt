@@ -6,7 +6,7 @@ import io.github.santiquiroz.blindside.core.scene.CoverageSector
 import io.github.santiquiroz.blindside.core.scene.MotionState
 import io.github.santiquiroz.blindside.core.scene.RadarScene
 import io.github.santiquiroz.blindside.core.scene.SensorStatus
-import io.github.santiquiroz.blindside.wear.settings.WatchPosture
+import io.github.santiquiroz.blindside.shared.settings.WatchPosture
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Test

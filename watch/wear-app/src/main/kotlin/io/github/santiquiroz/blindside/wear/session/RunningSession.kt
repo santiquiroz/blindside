@@ -27,11 +27,11 @@ import io.github.santiquiroz.blindside.wear.recording.recordingFileName
 import io.github.santiquiroz.blindside.wear.recording.recordingMeta
 import io.github.santiquiroz.blindside.wear.recording.recordingsDir
 import io.github.santiquiroz.blindside.shared.sensors.DeviceSensors
-import io.github.santiquiroz.blindside.wear.settings.AppSettings
-import io.github.santiquiroz.blindside.wear.settings.ScreenMode
-import io.github.santiquiroz.blindside.wear.settings.SettingsRepository
-import io.github.santiquiroz.blindside.wear.settings.forNewSession
-import io.github.santiquiroz.blindside.wear.settings.toPipelineConfig
+import io.github.santiquiroz.blindside.shared.settings.AppSettings
+import io.github.santiquiroz.blindside.shared.settings.ScreenMode
+import io.github.santiquiroz.blindside.shared.settings.SettingsRepository
+import io.github.santiquiroz.blindside.shared.settings.forNewSession
+import io.github.santiquiroz.blindside.shared.settings.toPipelineConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

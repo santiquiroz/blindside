@@ -26,7 +26,7 @@ import io.github.santiquiroz.blindside.wear.practice.answer
 import io.github.santiquiroz.blindside.wear.practice.currentSide
 import io.github.santiquiroz.blindside.wear.practice.isFinished
 import io.github.santiquiroz.blindside.wear.practice.newQuiz
-import io.github.santiquiroz.blindside.wear.settings.AppSettings
+import io.github.santiquiroz.blindside.shared.settings.AppSettings
 import kotlin.random.Random
 
 @Composable

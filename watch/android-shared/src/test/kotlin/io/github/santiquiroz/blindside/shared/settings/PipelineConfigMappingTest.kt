@@ -1,4 +1,4 @@
-package io.github.santiquiroz.blindside.wear.settings
+package io.github.santiquiroz.blindside.shared.settings
 
 import io.github.santiquiroz.blindside.core.config.Handedness
 import io.github.santiquiroz.blindside.core.config.PipelineConfig

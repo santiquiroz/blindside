@@ -10,7 +10,7 @@ import io.github.santiquiroz.blindside.core.replay.RecordType
 import io.github.santiquiroz.blindside.core.replay.SessionMode
 import io.github.santiquiroz.blindside.core.scene.Side
 import io.github.santiquiroz.blindside.wear.session.SessionInput
-import io.github.santiquiroz.blindside.wear.settings.ScreenMode
+import io.github.santiquiroz.blindside.shared.settings.ScreenMode
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test

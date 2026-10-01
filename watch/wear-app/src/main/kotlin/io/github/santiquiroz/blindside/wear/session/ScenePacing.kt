@@ -1,6 +1,6 @@
 package io.github.santiquiroz.blindside.wear.session
 
-import io.github.santiquiroz.blindside.wear.settings.ScreenMode
+import io.github.santiquiroz.blindside.shared.settings.ScreenMode
 
 const val VISTA_FRAME_MS = 33L
 const val SIGILO_FRAME_MS = 100L

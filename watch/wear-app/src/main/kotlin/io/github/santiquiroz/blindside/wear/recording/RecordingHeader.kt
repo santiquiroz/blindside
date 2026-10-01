@@ -1,8 +1,8 @@
 package io.github.santiquiroz.blindside.wear.recording
 
 import io.github.santiquiroz.blindside.core.config.toJson
-import io.github.santiquiroz.blindside.wear.settings.AppSettings
-import io.github.santiquiroz.blindside.wear.settings.toPipelineConfig
+import io.github.santiquiroz.blindside.shared.settings.AppSettings
+import io.github.santiquiroz.blindside.shared.settings.toPipelineConfig
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter

@@ -16,9 +16,9 @@ import io.github.santiquiroz.blindside.wear.session.SessionSource
 import io.github.santiquiroz.blindside.wear.session.SessionUiState
 import io.github.santiquiroz.blindside.wear.session.StartError
 import io.github.santiquiroz.blindside.core.config.RADAR_A
-import io.github.santiquiroz.blindside.wear.settings.ScreenMode
-import io.github.santiquiroz.blindside.wear.settings.VibrationUsage
-import io.github.santiquiroz.blindside.wear.settings.WatchPosture
+import io.github.santiquiroz.blindside.shared.settings.ScreenMode
+import io.github.santiquiroz.blindside.shared.settings.VibrationUsage
+import io.github.santiquiroz.blindside.shared.settings.WatchPosture
 import kotlin.math.roundToInt
 
 data class PracticeRhythm(val label: String, val pattern: HapticPattern)

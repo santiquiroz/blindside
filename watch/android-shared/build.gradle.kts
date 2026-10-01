@@ -30,6 +30,8 @@ kotlin {
 
 dependencies {
     api(project(":radar-core"))
+    api(libs.coroutines.android)
+    api(libs.datastore.preferences)
 
     testImplementation(platform(libs.junit5.bom))
     testImplementation(libs.junit5.jupiter)

@@ -1,6 +1,6 @@
 package io.github.santiquiroz.blindside.wear.haptics
 
-import io.github.santiquiroz.blindside.wear.settings.VibrationUsage
+import io.github.santiquiroz.blindside.shared.settings.VibrationUsage
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue

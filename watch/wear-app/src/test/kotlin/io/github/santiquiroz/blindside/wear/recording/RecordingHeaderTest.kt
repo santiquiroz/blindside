@@ -2,9 +2,9 @@ package io.github.santiquiroz.blindside.wear.recording
 
 import io.github.santiquiroz.blindside.core.config.pipelineConfigFromValue
 import io.github.santiquiroz.blindside.core.protocol.MiniJson
-import io.github.santiquiroz.blindside.wear.settings.AppSettings
-import io.github.santiquiroz.blindside.wear.settings.ScreenMode
-import io.github.santiquiroz.blindside.wear.settings.toPipelineConfig
+import io.github.santiquiroz.blindside.shared.settings.AppSettings
+import io.github.santiquiroz.blindside.shared.settings.ScreenMode
+import io.github.santiquiroz.blindside.shared.settings.toPipelineConfig
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test

@@ -13,20 +13,20 @@ import androidx.wear.compose.foundation.lazy.ScalingLazyListScope
 import androidx.wear.compose.material.CompactChip
 import androidx.wear.compose.material.ListHeader
 import androidx.wear.compose.material.Text
-import io.github.santiquiroz.blindside.wear.settings.AppSettings
-import io.github.santiquiroz.blindside.wear.settings.DEFAULT_RADARS
-import io.github.santiquiroz.blindside.wear.settings.SettingsTransform
-import io.github.santiquiroz.blindside.wear.settings.YAW_STEP_DEG
-import io.github.santiquiroz.blindside.wear.settings.effectiveYawDeg
-import io.github.santiquiroz.blindside.wear.settings.nextHandedness
-import io.github.santiquiroz.blindside.wear.settings.nextPosture
-import io.github.santiquiroz.blindside.wear.settings.radar
-import io.github.santiquiroz.blindside.wear.settings.toggledScreenMode
-import io.github.santiquiroz.blindside.wear.settings.toggledUsage
-import io.github.santiquiroz.blindside.wear.settings.withFlipXToggled
-import io.github.santiquiroz.blindside.wear.settings.withHandedness
-import io.github.santiquiroz.blindside.wear.settings.withSpeedSignFlipped
-import io.github.santiquiroz.blindside.wear.settings.withYawNudged
+import io.github.santiquiroz.blindside.shared.settings.AppSettings
+import io.github.santiquiroz.blindside.shared.settings.DEFAULT_RADARS
+import io.github.santiquiroz.blindside.shared.settings.SettingsTransform
+import io.github.santiquiroz.blindside.shared.settings.YAW_STEP_DEG
+import io.github.santiquiroz.blindside.shared.settings.effectiveYawDeg
+import io.github.santiquiroz.blindside.shared.settings.nextHandedness
+import io.github.santiquiroz.blindside.shared.settings.nextPosture
+import io.github.santiquiroz.blindside.shared.settings.radar
+import io.github.santiquiroz.blindside.shared.settings.toggledScreenMode
+import io.github.santiquiroz.blindside.shared.settings.toggledUsage
+import io.github.santiquiroz.blindside.shared.settings.withFlipXToggled
+import io.github.santiquiroz.blindside.shared.settings.withHandedness
+import io.github.santiquiroz.blindside.shared.settings.withSpeedSignFlipped
+import io.github.santiquiroz.blindside.shared.settings.withYawNudged
 
 @Composable
 fun SettingsScreen(

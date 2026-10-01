@@ -1,6 +1,6 @@
 package io.github.santiquiroz.blindside.wear.haptics
 
-import io.github.santiquiroz.blindside.wear.settings.VibrationUsage
+import io.github.santiquiroz.blindside.shared.settings.VibrationUsage
 
 enum class HapticRenderer { AMPLITUDE_WAVEFORM, ON_OFF_WAVEFORM }
 

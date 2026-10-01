@@ -3,7 +3,7 @@ package io.github.santiquiroz.blindside.wear.ui
 import io.github.santiquiroz.blindside.core.scene.Side
 import io.github.santiquiroz.blindside.wear.practice.QuizAnswer
 import io.github.santiquiroz.blindside.wear.practice.QuizState
-import io.github.santiquiroz.blindside.wear.settings.WatchPosture
+import io.github.santiquiroz.blindside.shared.settings.WatchPosture
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test

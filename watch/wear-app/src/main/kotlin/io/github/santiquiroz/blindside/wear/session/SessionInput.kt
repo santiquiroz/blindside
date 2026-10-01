@@ -1,7 +1,7 @@
 package io.github.santiquiroz.blindside.wear.session
 
 import io.github.santiquiroz.blindside.core.alerts.ContactAlert
-import io.github.santiquiroz.blindside.wear.settings.ScreenMode
+import io.github.santiquiroz.blindside.shared.settings.ScreenMode
 
 sealed interface SessionInput {
     class Packet(val bytes: ByteArray, val arrivalNanos: Long) : SessionInput

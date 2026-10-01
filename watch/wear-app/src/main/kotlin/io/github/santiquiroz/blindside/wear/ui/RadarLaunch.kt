@@ -15,7 +15,7 @@ import io.github.santiquiroz.blindside.shared.permissions.bluetoothGranted
 import io.github.santiquiroz.blindside.wear.session.SessionCommands
 import io.github.santiquiroz.blindside.wear.session.SessionSource
 import io.github.santiquiroz.blindside.wear.session.SessionStore
-import io.github.santiquiroz.blindside.wear.settings.SettingsRepository
+import io.github.santiquiroz.blindside.shared.settings.SettingsRepository
 
 // Runs once per opening: a stopped game must not restart itself when the wrist comes back up.
 @Composable

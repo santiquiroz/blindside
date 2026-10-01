@@ -1,4 +1,4 @@
-package io.github.santiquiroz.blindside.wear.settings
+package io.github.santiquiroz.blindside.shared.settings
 
 import android.content.Context
 import android.util.Log

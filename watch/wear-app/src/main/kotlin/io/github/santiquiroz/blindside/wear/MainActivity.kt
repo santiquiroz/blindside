@@ -4,7 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import io.github.santiquiroz.blindside.wear.session.SessionStore
-import io.github.santiquiroz.blindside.wear.settings.settingsRepository
+import io.github.santiquiroz.blindside.shared.settings.settingsRepository
 import io.github.santiquiroz.blindside.wear.ui.BlindsideApp
 import io.github.santiquiroz.blindside.wear.ui.createAmbientObserver
 

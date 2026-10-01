@@ -1,4 +1,4 @@
-package io.github.santiquiroz.blindside.wear.settings
+package io.github.santiquiroz.blindside.shared.settings
 
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.mutablePreferencesOf

@@ -27,7 +27,7 @@ import androidx.wear.compose.material.Chip
 import androidx.wear.compose.material.ChipDefaults
 import androidx.wear.compose.material.Text
 import io.github.santiquiroz.blindside.wear.session.SessionUiState
-import io.github.santiquiroz.blindside.wear.settings.AppSettings
+import io.github.santiquiroz.blindside.shared.settings.AppSettings
 import io.github.santiquiroz.blindside.wear.ui.KeepScreenOn
 import io.github.santiquiroz.blindside.wear.ui.LABEL_GRAY
 import io.github.santiquiroz.blindside.wear.ui.ReportRadarVisibility

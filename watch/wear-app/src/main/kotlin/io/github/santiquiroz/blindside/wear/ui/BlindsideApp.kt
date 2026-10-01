@@ -14,9 +14,9 @@ import io.github.santiquiroz.blindside.wear.SpikeScreen
 import io.github.santiquiroz.blindside.wear.session.SessionSource
 import io.github.santiquiroz.blindside.wear.session.SessionStore
 import io.github.santiquiroz.blindside.wear.session.toggleEliminated
-import io.github.santiquiroz.blindside.wear.settings.AppSettings
-import io.github.santiquiroz.blindside.wear.settings.SettingsRepository
-import io.github.santiquiroz.blindside.wear.settings.SettingsTransform
+import io.github.santiquiroz.blindside.shared.settings.AppSettings
+import io.github.santiquiroz.blindside.shared.settings.SettingsRepository
+import io.github.santiquiroz.blindside.shared.settings.SettingsTransform
 import io.github.santiquiroz.blindside.wear.ui.radar.RadarScreen
 import kotlinx.coroutines.launch
 
