@@ -38,6 +38,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -70,13 +71,18 @@ class RunningSession(
     private val sensors = DeviceSensors(context.getSystemService(SensorManager::class.java), SensorInputs(inputs))
     private val loops = mutableListOf<Job>()
     private var consumer: Job? = null
+    private var startJob: Job? = null
     private var belt: BeltLink? = null
     private var traits = SessionTraits(host.beltProfile)
 
     @Volatile
     private var screenMode = ScreenMode.SIGILO
 
-    suspend fun start() {
+    fun begin() {
+        startJob = scope.launch { start() }
+    }
+
+    private suspend fun start() {
         settings.update { it.forNewSession() }
         val initial = settings.current()
         traits = host.traitsFor(context, purpose)
@@ -102,7 +108,9 @@ class RunningSession(
 
     fun refreshInfo(): Boolean = belt?.refreshInfo() ?: false
 
+    // A stop that lands while start() still awaits the settings store cancels it there, before any link or loop exists.
     suspend fun stop() {
+        startJob?.cancelAndJoin()
         belt?.stop()
         sensors.stop()
         loops.forEach { it.cancel() }

@@ -26,6 +26,12 @@ private const val TAG = "BlindsideService"
 // RunningSession launches in this scope too, so one failed task is logged instead of killing the whole game.
 private val logFailedTask = CoroutineExceptionHandler { _, error -> Log.e(TAG, "session task failed", error) }
 
+private data class ServiceCommand(val intent: Intent?, val startId: Int)
+
+private fun logFailedCommand(command: ServiceCommand, error: Exception) {
+    Log.e(TAG, "command ${command.intent?.action} failed", error)
+}
+
 abstract class SessionService : Service() {
     protected abstract val host: SessionHost
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate + logFailedTask)
@@ -34,44 +40,53 @@ abstract class SessionService : Service() {
     private var currentPurpose = SessionPurpose.GAME
     private var notificationSync: Job? = null
     private var companions: List<Job> = emptyList()
+    private val commands = SerialCommands(scope, ::logFailedCommand, ::handle)
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        when (intent?.action) {
-            SessionActions.ACTION_START -> onStart(sourceOf(intent), intent.getBooleanExtra(SessionActions.EXTRA_WAKE_LOCK, true), purposeOf(intent))
-            SessionActions.ACTION_STOP -> onStop()
-            SessionActions.ACTION_MARKER -> session?.mark() ?: stopSelf()
-            SessionActions.ACTION_RETRY_LINK -> session?.retryLink() ?: stopSelf()
-            SessionActions.ACTION_TOGGLE_ELIMINATED -> if (session != null) toggleEliminated(scope, settingsRepository()) else stopSelf()
-            SessionActions.ACTION_OPEN_PAIRING -> requestPairingWindow()
-            SessionActions.ACTION_SEND_COMMAND -> sendCommand(intent)
-            SessionActions.ACTION_REFRESH_INFO -> refreshInfo()
-            else -> stopIfIdle()
-        }
+        commands.submit(ServiceCommand(intent, startId))
         return START_NOT_STICKY
     }
 
     override fun onDestroy() {
+        commands.close()
         scope.cancel()
         super.onDestroy()
+    }
+
+    // stopSelf(startId) keeps the service when a newer command is already queued: that command decides instead.
+    private suspend fun handle(command: ServiceCommand) {
+        val intent = command.intent
+        val startId = command.startId
+        when (intent?.action) {
+            SessionActions.ACTION_START -> onStart(sourceOf(intent), intent.getBooleanExtra(SessionActions.EXTRA_WAKE_LOCK, true), purposeOf(intent), startId)
+            SessionActions.ACTION_STOP -> onStop(startId)
+            SessionActions.ACTION_MARKER -> session?.mark() ?: stopSelf(startId)
+            SessionActions.ACTION_RETRY_LINK -> session?.retryLink() ?: stopSelf(startId)
+            SessionActions.ACTION_TOGGLE_ELIMINATED -> if (session != null) toggleEliminated(scope, settingsRepository()) else stopSelf(startId)
+            SessionActions.ACTION_OPEN_PAIRING -> requestPairingWindow(startId)
+            SessionActions.ACTION_SEND_COMMAND -> sendCommand(intent, startId)
+            SessionActions.ACTION_REFRESH_INFO -> refreshInfo(startId)
+            else -> stopIfIdle(startId)
+        }
     }
 
     private fun sourceOf(intent: Intent): SessionSource = sourceFrom(intent.getStringExtra(SessionActions.EXTRA_SOURCE))
 
     private fun purposeOf(intent: Intent): SessionPurpose = purposeFrom(intent.getStringExtra(SessionActions.EXTRA_PURPOSE))
 
-    private fun onStart(source: SessionSource, wakeLock: Boolean, purpose: SessionPurpose) {
+    private suspend fun onStart(source: SessionSource, wakeLock: Boolean, purpose: SessionPurpose, startId: Int) {
         when (startTransition(session?.let { currentPurpose }, purpose)) {
             StartTransition.KEEP -> goForeground(currentSource)
-            StartTransition.START -> startIfAllowed(source, wakeLock, purpose)
-            StartTransition.RESTART -> restartAs(source, wakeLock, purpose)
+            StartTransition.START -> startIfAllowed(source, wakeLock, purpose, startId)
+            StartTransition.RESTART -> restartAs(source, wakeLock, purpose, startId)
         }
     }
 
-    private fun startIfAllowed(source: SessionSource, wakeLock: Boolean, purpose: SessionPurpose) {
+    private fun startIfAllowed(source: SessionSource, wakeLock: Boolean, purpose: SessionPurpose, startId: Int) {
         val blocker = startBlocker(source, hasBluetoothPermissions(), hasBluetoothAdapter())
-        if (blocker == null) beginSession(source, wakeLock, purpose) else rejectStart(blocker)
+        if (blocker == null) beginSession(source, wakeLock, purpose) else rejectStart(blocker, startId)
     }
 
     private fun beginSession(source: SessionSource, wakeLock: Boolean, purpose: SessionPurpose) {
@@ -81,28 +96,23 @@ abstract class SessionService : Service() {
         SessionStore.update { startedState(it, source, purpose) }
         val created = RunningSession(this, source, settingsRepository(), scope, wakeLock, host, purpose)
         session = created
-        scope.launch { created.start() }
+        created.begin()
         notificationSync = scope.launch { syncNotification(source, purpose) }
         companions = host.launchCompanions(this, scope)
     }
 
     // A purpose change (diagnostic and game) keeps the foreground service: the old link closes before the new one opens.
-    private fun restartAs(source: SessionSource, wakeLock: Boolean, purpose: SessionPurpose) {
-        val previous = detachSession() ?: return startIfAllowed(source, wakeLock, purpose)
-        scope.launch {
-            previous.stop()
-            startIfAllowed(source, wakeLock, purpose)
-        }
+    private suspend fun restartAs(source: SessionSource, wakeLock: Boolean, purpose: SessionPurpose, startId: Int) {
+        detachSession()?.stop()
+        startIfAllowed(source, wakeLock, purpose, startId)
     }
 
-    private fun onStop() {
-        val current = detachSession() ?: return stopSelf()
-        scope.launch {
-            current.stop()
-            SessionStore.update(::stoppedState)
-            stopForeground(STOP_FOREGROUND_REMOVE)
-            stopSelf()
-        }
+    private suspend fun onStop(startId: Int) {
+        val current = detachSession() ?: return stopSelf(startId)
+        current.stop()
+        SessionStore.update(::stoppedState)
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf(startId)
     }
 
     private fun detachSession(): RunningSession? {
@@ -114,20 +124,20 @@ abstract class SessionService : Service() {
         return current
     }
 
-    private fun requestPairingWindow() {
+    private fun requestPairingWindow(startId: Int) {
         val queued = session?.openPairingWindow() ?: false
         SessionStore.update { it.copy(phonePairing = pairingAfterRequest(queued)) }
-        stopIfIdle()
+        stopIfIdle(startId)
     }
 
-    private fun sendCommand(intent: Intent) {
-        val current = session ?: return stopSelf()
+    private fun sendCommand(intent: Intent, startId: Int) {
+        val current = session ?: return stopSelf(startId)
         val command = commandFrom(commandExtrasOf(intent))
         if (command == null || !current.send(command)) Log.w(TAG, "command not sent: ${intent.getStringExtra(SessionActions.EXTRA_COMMAND)}")
     }
 
-    private fun refreshInfo() {
-        val current = session ?: return stopSelf()
+    private fun refreshInfo(startId: Int) {
+        val current = session ?: return stopSelf(startId)
         if (!current.refreshInfo()) Log.w(TAG, "info refresh skipped: link not streaming")
     }
 
@@ -136,10 +146,10 @@ abstract class SessionService : Service() {
         intent.getIntExtra(SessionActions.EXTRA_RADAR_ID, NO_RADAR_ID),
     )
 
-    private fun rejectStart(error: StartError) {
+    private fun rejectStart(error: StartError, startId: Int) {
         SessionStore.update { blockedState(it, error) }
         answerForegroundStart()
-        stopSelf()
+        stopSelf(startId)
     }
 
     // startForegroundService() must be answered with startForeground(); a host whose only type needs Bluetooth may fail here, which is logged.
@@ -148,8 +158,8 @@ abstract class SessionService : Service() {
         stopForeground(STOP_FOREGROUND_REMOVE)
     }
 
-    private fun stopIfIdle() {
-        if (session == null) stopSelf()
+    private fun stopIfIdle(startId: Int) {
+        if (session == null) stopSelf(startId)
     }
 
     private fun goForeground(source: SessionSource) {
