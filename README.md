@@ -1,0 +1,173 @@
+<div align="center">
+
+# Blindside
+
+**An open-source wrist radar for airsoft.**
+
+Two 24 GHz radars on your belt. Contacts on your Galaxy Watch.<br>
+A distinct buzz on your wrist when someone new moves into view.
+
+**English** | [Español](README.es.md)
+
+</div>
+
+> [!NOTE]
+> **Status: design phase.** This repository currently contains the v1 design and the research behind it. There is no firmware or watch app yet; those are the next milestones. First field target: a 5-hour game on 11 October 2026. Star or watch the repo to follow along.
+
+---
+
+## What it does
+
+- **Two HLK-LD2450 mmWave radars** ride on the front of your belt, one over each front pocket, angled outward. Together they cover **about 180° in front of you, out to about 6 m**.
+- **An ESP32 in a belt pouch** adds a timestamp to the raw radar frames and to the readings of two MPU6050 motion sensors (IMUs), one inside each radar box, then streams everything over Bluetooth LE.
+- **A native Wear OS app on a Samsung Galaxy Watch 7** handles all the processing:
+  - combines what the two radars see;
+  - follows each contact over time;
+  - compensates for your own turns and steps;
+  - draws the contacts on a round radar display.
+- **Newly confirmed contacts buzz your wrist** with a different rhythm for left, center or right. You don't have to look. Alerts are rate-limited: ones that arrive together are grouped, and there's a per-sector pause and a per-minute cap, so a crowd doesn't turn into one long buzz.
+- No phone, no Wi-Fi and no cloud: the belt talks only to the watch you paired it with.
+
+```
+[box L: LD2450 + MPU6050] ─7 wires─┐
+                                   ├─ ESP32 (belt pouch, "dumb" relay) ──BLE──▶ Galaxy Watch 7
+[box R: LD2450 + MPU6050] ─7 wires─┘        USB power bank                     radar-core: fusion · tracking ·
+                                                                                ego-motion · wrist pose → display + haptics
+```
+
+## What's different
+
+DIY "heartbeat sensors" built on the same radar already exist; see [Prior art](#prior-art--credits). They mount a radar and a small screen on the rifle. Blindside takes a different approach:
+
+- **Belt sensors, wrist display.** The radars follow your hips, the most stable part of your body when you move. The display is where you already glance.
+- **Two radars, fused.** Wider coverage, and a center zone where a contact seen by both radars earns higher confidence.
+- **Motion compensation.** A radar you wear sees "ghosts" whenever you move. The IMUs in the radar boxes track your turns and step counting estimates your walking speed, so walls and trees can be told apart from people.
+- **Built around how you hold an M4:**
+  - The radar angles are biased toward your support side, where the muzzle usually points.
+  - The app detects when you read the watch on the inside of your support wrist ("tactical" wear, palm-up grip) and rotates the display so up means where you're aiming. Setup is a 10-second zeroing against a teammate.
+  - With a vertical foregrip the watch can't be read while aiming, so vibration does the talking.
+- **Stealth first.**
+  - The screen stays off by default and vibration is the main channel.
+  - The belt emits no light during play: the status LED stays off, and the always-on power LEDs are removed or taped over during assembly.
+  - The radar module's own Bluetooth is switched off, and only your paired watch can connect to the belt.
+- **Record and replay.** A match can be recorded raw and replayed on a PC to tune the filters against real data.
+
+## Honest limits
+
+- **It does not detect heartbeats.** It detects **moving** people with a 24 GHz Doppler radar (FMCW, the same kind used in presence sensors).
+- **Range is about 6 m,** with 120° per radar.
+- **No reliable through-wall detection.** Don't count on it to see through walls or cover. The signal does pass through a thin, dry plastic cover with no metal in it; that is how the enclosure works. We have not yet tested foliage, fabric (wet or dry) or rain. Wet or metal-coated materials in front of the radar are expected to degrade it.
+- **People standing perfectly still fade out.** The app holds their last position for a few seconds.
+- **Teammates show up too.** v1 can't tell friend from foe; that's on the roadmap.
+- **Ghosts are still possible.** Worn on a moving body the radar sees clutter, and v1 fights it rather than eliminating it. It works best when you're still or advancing slowly.
+
+## Hardware (v1)
+
+| Part | Rough price (USD, varies by store) | Notes |
+|---|---|---|
+| ESP32-WROOM-32 DevKit (30-pin) | ~US$5–10 | NimBLE peripheral, 2 UARTs + 2 I2C buses |
+| 2× HLK-LD2450 | ~US$6–15 each | 24 GHz, up to 3 targets, ±60°, ~6 m. The Ai-Thinker RD-03D uses the same frame format (untested). |
+| 2× MPU6050 (GY-521) | ~US$1–3 each | One inside each radar box, rigid with its radar; no magnetometer needed |
+| JST ZH 1.5 mm 4-pin cables | ~US$5–10 per kit | The LD2450 connector is not 2.54 mm |
+| ESP32 screw-terminal board | ~US$5–10 | No soldering, and no Dupont connectors to wiggle loose |
+| Two 7-wire cables, 50–80 cm | — | Pouch to radar boxes; old USB or Ethernet cables work |
+| USB power bank | — | The belt draws about 300 mA at 5 V, so 10,000 mAh lasts well over 15 h |
+| Samsung Galaxy Watch 7 | — | Wear OS 6 (API 36); other Wear OS watches untested |
+| 3D-printed radar boxes | — | Hold the angles, stop BBs, and pass the 24 GHz signal through a solid-infill window (no metal in front of the radar) |
+
+## How it works (short version)
+
+1. **The belt stays simple.** The ESP32 never interprets targets. Every 100 ms it bundles the raw LD2450 frames and the 50 Hz IMU readings, each with its own timestamp, into one BLE notification.
+2. **The watch does the thinking.** The processing lives in `radar-core`, a pure Kotlin module you can unit-test on a PC. For each bundle it:
+   - decodes the radar frames (their unusual sign-bit format is handled explicitly);
+   - drops readings from your own arms and rifle;
+   - converts everything to hip coordinates, then compensates for your turns (IMU) and your steps;
+   - keeps each contact as a track with a Kalman filter;
+   - confirms a new track only after it shows up in 3 of 5 windows;
+   - applies the ghost rules;
+   - picks the frame the display uses from your wrist pose;
+   - in Vista mode (screen always on), redraws the radar at 30 fps, predicting each track forward between bundles.
+3. **Everything is replayable.** A recording file (`.bsrec`) stores the raw BLE data plus the watch's own sensors, so any field session can be replayed exactly to test changes.
+
+The full design (in Spanish) is in [docs/superpowers/specs/2026-09-30-blindside-v1-design.md](docs/superpowers/specs/2026-09-30-blindside-v1-design.md).
+
+## Roadmap
+
+- **v1:**
+  - belt node and watch app;
+  - fused 180° radar with motion compensation;
+  - haptic direction cues;
+  - stealth mode and an "eliminated" mode;
+  - calibration wizards;
+  - match recording.
+- **v1.5:**
+  - a 3-motor haptic belt that tells direction by location;
+  - auto-silence when you're aiming;
+  - tap a contact to mark it as a friend;
+  - a replay viewer and heatmap;
+  - a sentry node that guards a doorway and alerts your wrist;
+  - a classic "COD" mode with a snapshot every 4 seconds;
+  - a tournament mode;
+  - vibration motors in the radar boxes;
+  - maybe a thermal sensor, if the recordings show it's needed.
+- **v2:**
+  - UWB friend-or-foe;
+  - squad link over ESP-NOW;
+  - 360° coverage;
+  - a rifle-rail node;
+  - a phone app and ATAK/CoT export.
+
+## Repository layout
+
+```
+docs/
+  superpowers/specs/     v1 design specification (Spanish)
+  research/reports/      research report (Spanish)
+  research/research_notes/  sourced notes: LD2450, biomechanics, Wear OS/BLE,
+                            tracking algorithms, prior art & rules, UX ideas
+firmware/                (coming) PlatformIO + NimBLE-Arduino
+watch/                   (coming) radar-core (pure Kotlin) + wear-app (Wear OS)
+```
+
+## Fair play, legal and safety
+
+- **Airsoft fields:** none of the rulebooks we found mention radar, but many fields ban thermal optics as a "wallhack", and the same argument applies here.
+  - Ask your field before playing, declare the device at check-in, and make sure the other players know. Never use it to detect or follow people outside a game.
+  - Blindside will ship an **"eliminated" mode** that turns off the radar alerts and the display until you respawn. A tournament mode is planned for v1.5.
+- **Radio:** check your local rules before using a 24 GHz radar.
+  - US: FCC §15.249.
+  - EU: CEPT ERC 70-03 lists 24.05–24.25 GHz for radiodetermination and 24.00–24.25 GHz for non-specific short-range devices (100 mW e.i.r.p.; primary text not verified).
+  - Colombia: ANE Resolution 105/2020 covers 24.05–24.25 GHz.
+  - The LD2450 datasheet states a 24.00–24.25 GHz sweep, so in Colombia the lowest 50 MHz (24.00–24.05 GHz) sits in a grey zone (a 2024 addition, Res. ANE 153/2024, may cover it; unverified).
+  - Don't modify the LD2450's firmware, antenna or power.
+  - Publishing the code is fine; selling assembled kits may require homologation, CE marking or FCC certification.
+- **Security:** the LD2450 ships with its own Bluetooth on, so anyone nearby could reconfigure it; Blindside's firmware turns it off. The belt accepts a single connection, only from your paired watch.
+- **Not a safety device.** Don't rely on it to protect anyone.
+- **Not affiliated** with Activision (Call of Duty), 20th Century Studios (Aliens) or Hi-Link.
+
+## Prior art & credits
+
+Blindside stands on the shoulders of these projects. None has an open-source license yet, so ideas are credited here and no code is copied:
+
+- **ScienceShack: [Heartbeat Sensor from Modern Warfare 2](https://hackaday.io/project/205879-heartbeat-sensor-from-modern-warfare-2)** ([code](https://github.com/jrtage/MW2-Heartbeat-Sensor)). LD2450, XIAO RP2350 and an OLED on an M-LOK rail mount. Their note on the module's X-axis orientation saved us a headache.
+- **[Bronsonalan/mw2-heartbeat-sensor](https://github.com/Bronsonalan/mw2-heartbeat-sensor).** Raspberry Pi and LD2450, with a phosphor-style display and a tracking layer.
+- **Rob Smith: [a real working Aliens M314 motion tracker](https://hackaday.io/project/203817-a-real-working-alien-motion-tracker)** ([code](https://github.com/RobSmithDev/alienmotiontracker)). 60 GHz radar on a Raspberry Pi.
+
+Technical references:
+- Hi-Link's [Serial Communication Protocol V1.03](https://make.net.za/wp-content/datasheets/HLK%20LD2450%20Serial%20Communication%20Protocol%20v1.03.pdf), [Instruction Manual V1.00](https://www.tinytronics.nl/product_files/006000_HLK-LD2450-Instruction-Manual.pdf) and [User Guide](https://d.hlktech.net/download/HLK-LD2450/1/HLK-LD2450%20operation%20manual.doc..pdf). The User Guide mislabels its sign and Bluetooth on/off examples; the decoder follows the protocol document.
+- The [ESPHome LD2450 component](https://esphome.io/components/sensor/ld2450/), used as a cross-check. It is GPLv3, and Blindside's decoder is written from the Hi-Link protocol document.
+- x-io Technologies' [Fusion](https://github.com/xioTechnologies/Fusion), for its IMU rest-detection defaults.
+- TI's [mmWave group tracker tuning guide](https://e2e.ti.com/cfs-file/__key/communityserver-discussions-components-files/1023/3D_5F00_people_5F00_counting_5F00_tracker_5F00_layer_5F00_tuning_5F00_guide-_2800_1_2900_.pdf), for tracking ideas.
+
+The full sourced bibliography is in [docs/research/](docs/research/).
+
+## Contributing
+
+Ideas and issues are welcome, especially:
+- enclosure and mounting designs;
+- tests with other Wear OS watches or the RD-03D;
+- field reports and raw `.bsrec` recordings, once the app exists.
+
+## License
+
+[GNU AGPL-3.0](LICENSE). If you ship a modified version, share the source.
