@@ -44,6 +44,19 @@ class SettingsRepositoryTest {
         assertEquals(listOf("disk full"), failures.map { it.message })
     }
 
+    @Test
+    fun `shared edits are stamped with the repository clock`(@TempDir dir: File) {
+        val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+        val store = PreferenceDataStoreFactory.create(scope = scope) { File(dir, "settings.preferences_pb") }
+        val repository = SettingsRepository(store, onWriteFailed = {}, clock = { 1_234L })
+        val read = runBlocking {
+            repository.update { it.copy(posture = WatchPosture.TACTICAL_LEFT) }
+            repository.current()
+        }
+        scope.cancel()
+        assertEquals(1_234L, read.sharedUpdatedMs)
+    }
+
     private class DiskFullStore : DataStore<Preferences> {
         override val data: Flow<Preferences> = flowOf(emptyPreferences())
 

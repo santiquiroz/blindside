@@ -32,6 +32,7 @@ class SettingsPreferencesTest {
             beltAddress = "AA:BB:CC:DD:EE:FF",
             posture = WatchPosture.TACTICAL_RIGHT,
             autoStartRadar = false,
+            sharedUpdatedMs = 1_727_790_153_123L,
         )
         val prefs = mutablePreferencesOf()
         writeSettings(prefs, original)

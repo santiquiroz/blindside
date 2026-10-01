@@ -27,6 +27,7 @@ private fun logWriteFailure(error: IOException) {
 class SettingsRepository(
     private val store: DataStore<Preferences>,
     private val onWriteFailed: (IOException) -> Unit,
+    private val clock: () -> Long = System::currentTimeMillis,
 ) {
     val settings: Flow<AppSettings> = store.data
         .catch { error -> if (error is IOException) emit(emptyPreferences()) else throw error }
@@ -36,10 +37,13 @@ class SettingsRepository(
 
     // DataStore throws IOException (CorruptionException included) on a full or broken disk; callers run without a handler.
     suspend fun update(transform: SettingsTransform): Boolean = try {
-        store.edit { prefs -> writeSettings(prefs, transform(settingsFrom(prefs))) }
+        store.edit { prefs -> writeSettings(prefs, edited(settingsFrom(prefs), transform)) }
         true
     } catch (error: IOException) {
         onWriteFailed(error)
         false
     }
+
+    private fun edited(before: AppSettings, transform: SettingsTransform): AppSettings =
+        stampSharedEdit(before, transform(before), clock())
 }

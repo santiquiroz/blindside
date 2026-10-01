@@ -31,6 +31,7 @@ data class AppSettings(
     val beltAddress: String? = null,
     val posture: WatchPosture = WatchPosture.NORMAL,
     val autoStartRadar: Boolean = true,
+    val sharedUpdatedMs: Long = 0L,
 )
 
 typealias SettingsTransform = (AppSettings) -> AppSettings

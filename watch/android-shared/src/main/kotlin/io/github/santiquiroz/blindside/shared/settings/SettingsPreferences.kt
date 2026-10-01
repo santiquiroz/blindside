@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 
 internal object Keys {
@@ -15,6 +16,7 @@ internal object Keys {
     val BELT_ADDRESS = stringPreferencesKey("belt_address")
     val POSTURE = stringPreferencesKey("watch_posture")
     val AUTO_START_RADAR = booleanPreferencesKey("auto_start_radar")
+    val SHARED_UPDATED_MS = longPreferencesKey("shared_updated_ms")
 
     fun yaw(radarId: Int) = doublePreferencesKey("radar${radarId}_yaw_deg")
     fun flipX(radarId: Int) = booleanPreferencesKey("radar${radarId}_flip_x")
@@ -32,6 +34,7 @@ fun settingsFrom(prefs: Preferences): AppSettings {
         beltAddress = prefs[Keys.BELT_ADDRESS],
         posture = enumOrDefault(prefs[Keys.POSTURE], defaults.posture),
         autoStartRadar = prefs[Keys.AUTO_START_RADAR] ?: defaults.autoStartRadar,
+        sharedUpdatedMs = prefs[Keys.SHARED_UPDATED_MS] ?: defaults.sharedUpdatedMs,
     )
 }
 
@@ -42,6 +45,7 @@ fun writeSettings(prefs: MutablePreferences, settings: AppSettings) {
     prefs[Keys.ELIMINATED] = settings.eliminated
     prefs[Keys.POSTURE] = settings.posture.name
     prefs[Keys.AUTO_START_RADAR] = settings.autoStartRadar
+    prefs[Keys.SHARED_UPDATED_MS] = settings.sharedUpdatedMs
     writeOptional(prefs, Keys.BELT_ADDRESS, settings.beltAddress)
     settings.radars.forEach { writeRadar(prefs, it) }
 }
