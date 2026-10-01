@@ -6,6 +6,7 @@ import io.github.santiquiroz.blindside.core.geometry.StaleMemory
 import io.github.santiquiroz.blindside.core.geometry.filterFrame
 import io.github.santiquiroz.blindside.core.imu.ChannelUpdate
 import io.github.santiquiroz.blindside.core.imu.ImuChannel
+import io.github.santiquiroz.blindside.core.imu.ImuReading
 import io.github.santiquiroz.blindside.core.imu.MotionDetector
 import io.github.santiquiroz.blindside.core.imu.RestEvidence
 import io.github.santiquiroz.blindside.core.imu.ingestBatch
@@ -82,18 +83,17 @@ private fun withImus(state: PipelineState, bundle: Bundle, config: PipelineConfi
     val increments = mergeIncrements(updates.values.map { it.increments })
     val prone = imus.values.any { it.isReady && it.isProne(imuParams) }
     val motion = increments.fold(state.motion) { m, inc -> m.withYawIncrement(inc, config.tuning.motion) }
-        .let { withAccelNorms(it, updates.values, config) }
+        .let { withAccelNorms(it, updates, config) }
         .withProne(prone)
     val next = state.copy(imus = imus, yaw = state.yaw.apply(increments, imuParams))
     return next.copy(motion = motion.withTurnSource(fromWatch = usableImus(next).isEmpty()))
 }
 
-private fun withAccelNorms(motion: MotionDetector, updates: Collection<ChannelUpdate>, config: PipelineConfig): MotionDetector =
-    updates.flatMap { it.readings }
-        .groupBy { it.tMs }
-        .toSortedMap()
-        .entries
-        .fold(motion) { m, (tMs, readings) -> m.withAccelNorm(tMs, readings.map { it.accelG.norm }.average(), config.tuning.motion) }
+private fun withAccelNorms(motion: MotionDetector, updates: Map<Int, ChannelUpdate>, config: PipelineConfig): MotionDetector =
+    updates.entries.fold(motion) { m, (imuId, update) -> withImuAccel(m, imuId, update.readings, config) }
+
+private fun withImuAccel(motion: MotionDetector, imuId: Int, readings: List<ImuReading>, config: PipelineConfig): MotionDetector =
+    readings.fold(motion) { m, reading -> m.withAccelNorm(imuId, reading.tMs, reading.accelG.norm, config.tuning.motion) }
 
 private fun withMovingMark(state: PipelineState, tMs: Long, config: PipelineConfig): PipelineState =
     if (state.motion.isMoving(tMs, config.tuning.motion)) state.copy(lastMovingMs = tMs) else state

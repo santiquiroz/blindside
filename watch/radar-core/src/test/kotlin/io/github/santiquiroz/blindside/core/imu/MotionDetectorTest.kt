@@ -48,6 +48,24 @@ class MotionDetectorTest {
     }
 
     @Test
+    fun `two still box imus whose |a| differs by 0_15 g are not walking`() {
+        val pair = (0 until 100).fold(MotionDetector()) { m, i ->
+            m.withAccelNorm(0, i * 20L, 1.0, params).withAccelNorm(1, i * 20L + 7, 1.15, params)
+        }
+
+        assertEquals(MotionState.STILL, pair.state(1_990, params))
+        assertEquals(null, pair.lastStepMs)
+    }
+
+    @Test
+    fun `a constant zero-g offset above the step rise is not a step`() {
+        val offset = walk(MotionDetector(), 0 until 100, amplitudeG = 0.0, offsetG = 0.3)
+
+        assertEquals(null, offset.lastStepMs)
+        assertEquals(MotionState.STILL, offset.state(1_980, params))
+    }
+
+    @Test
     fun `a watch step alone keeps walking for 1_2 s`() {
         val stepped = MotionDetector().withStep(5_000)
 
@@ -86,9 +104,9 @@ class MotionDetectorTest {
         assertEquals(MotionState.PRONE, prone.state(980, params))
     }
 
-    private fun walk(start: MotionDetector, samples: IntRange, amplitudeG: Double): MotionDetector =
+    private fun walk(start: MotionDetector, samples: IntRange, amplitudeG: Double, offsetG: Double = 0.0): MotionDetector =
         samples.fold(start) { m, i ->
             val tMs = i * 20L
-            m.withAccelNorm(tMs, 1.0 + amplitudeG * sin(2 * PI * 2.0 * tMs / 1000.0), params)
+            m.withAccelNorm(0, tMs, 1.0 + offsetG + amplitudeG * sin(2 * PI * 2.0 * tMs / 1000.0), params)
         }
 }

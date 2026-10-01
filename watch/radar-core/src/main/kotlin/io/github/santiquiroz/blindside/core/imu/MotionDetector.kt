@@ -9,8 +9,7 @@ data class MotionDetector(
     val watchTurnEmaDps: Double = 0.0,
     val lastWatchMs: Long? = null,
     val turnFromWatch: Boolean = false,
-    val accelNorms: List<TimedValue> = emptyList(),
-    val stepArmed: Boolean = true,
+    val beltAccel: Map<Int, BeltAccel> = emptyMap(),
     val lastStepMs: Long? = null,
     val prone: Boolean = false,
 ) {
@@ -25,9 +24,10 @@ data class MotionDetector(
     // Spec §6.6: with both box IMUs down, "girando" comes from the watch gyroscope.
     fun withTurnSource(fromWatch: Boolean): MotionDetector = copy(turnFromWatch = fromWatch)
 
-    fun withAccelNorm(tMs: Long, normG: Double, params: MotionParams): MotionDetector {
-        val window = (accelNorms + TimedValue(tMs, normG)).filter { it.tMs > tMs - params.walkingWindowMs }
-        return copy(accelNorms = window).withBeltStep(tMs, normG, params)
+    fun withAccelNorm(imuId: Int, tMs: Long, normG: Double, params: MotionParams): MotionDetector {
+        val updated = (beltAccel[imuId] ?: BeltAccel()).withNorm(tMs, normG, params)
+        val stored = copy(beltAccel = beltAccel + (imuId to updated))
+        return updated.lastStepMs?.let { stored.withStep(it) } ?: stored
     }
 
     fun withStep(tMs: Long): MotionDetector = copy(lastStepMs = maxOf(tMs, lastStepMs ?: tMs))
@@ -38,7 +38,7 @@ data class MotionDetector(
         (if (turnFromWatch) watchTurnEmaDps else turnRateEmaDps) > params.turningRateDps
 
     fun isWalking(tMs: Long, params: MotionParams): Boolean =
-        accelSpreadG() > params.walkingAccelStdG || steppedRecently(tMs, params)
+        beltAccel.values.any { it.spreadG() > params.walkingAccelStdG } || steppedRecently(tMs, params)
 
     fun isMoving(tMs: Long, params: MotionParams): Boolean = isWalking(tMs, params) || isTurning(params)
 
@@ -49,18 +49,9 @@ data class MotionDetector(
         else -> MotionState.STILL
     }
 
-    private fun accelSpreadG(): Double = accelNorms.map { it.value }.standardDeviation()
-
     private fun steppedRecently(tMs: Long, params: MotionParams): Boolean {
         val last = lastStepMs ?: return false
         return tMs - last <= params.stepHoldMs
-    }
-
-    private fun withBeltStep(tMs: Long, normG: Double, params: MotionParams): MotionDetector {
-        val excess = normG - 1.0
-        if (!stepArmed) return if (excess < params.stepResetG) copy(stepArmed = true) else this
-        val farEnough = lastStepMs == null || tMs - lastStepMs >= params.stepMinIntervalMs
-        return if (excess > params.stepRiseG && farEnough) copy(stepArmed = false, lastStepMs = tMs) else this
     }
 }
 

@@ -1,6 +1,8 @@
 package io.github.santiquiroz.blindside.core
 
 import io.github.santiquiroz.blindside.core.geometry.Point2
+import io.github.santiquiroz.blindside.core.protocol.Bundle
+import io.github.santiquiroz.blindside.core.scene.MotionState
 import io.github.santiquiroz.blindside.core.scene.Warning
 import io.github.santiquiroz.blindside.core.sim.Scenario
 import io.github.santiquiroz.blindside.core.sim.Scenarios
@@ -62,4 +64,18 @@ class RobustnessTest {
         assertTrue(run.confirmations.isEmpty())
         assertTrue(run.alerts.isEmpty())
     }
+
+    @Test
+    fun `a 0_12 g zero-g offset on one box imu does not keep a still player walking`() {
+        val run = runScenario(Scenarios.crossing()) { withAccelOffset(it, imuId = 1, azLsb = 500) }
+
+        assertEquals(1, run.alerts.size)
+        assertEquals(MotionState.STILL, run.sceneAt(7_000).motion)
+    }
+
+    private fun withAccelOffset(bundle: Bundle, imuId: Int, azLsb: Int): Bundle = bundle.copy(
+        imuBatches = bundle.imuBatches.map { batch ->
+            if (batch.imuId != imuId) batch else batch.copy(samples = batch.samples.map { it.copy(az = it.az + azLsb) })
+        },
+    )
 }
