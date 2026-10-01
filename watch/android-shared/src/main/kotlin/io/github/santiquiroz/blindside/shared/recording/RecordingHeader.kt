@@ -4,6 +4,7 @@ import io.github.santiquiroz.blindside.core.config.toJson
 import io.github.santiquiroz.blindside.shared.settings.AppSettings
 import io.github.santiquiroz.blindside.shared.settings.toPipelineConfig
 import java.time.Instant
+import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
@@ -64,6 +65,15 @@ fun headerJson(meta: RecordingMeta): String = jsonObject(
 
 fun recordingFileName(epochMs: Long, zone: ZoneId, source: String): String =
     "blindside-${source.lowercase()}-${FILE_STAMP.format(Instant.ofEpochMilli(epochMs).atZone(zone))}.bsrec"
+
+private val RECORDING_NAME = Regex("blindside-[a-z]+-(\\d{8}-\\d{6})\\.bsrec")
+
+fun isRecordingFileName(name: String): Boolean = RECORDING_NAME.matches(name)
+
+fun recordingStartFromName(name: String, zone: ZoneId): Long? {
+    val stamp = RECORDING_NAME.matchEntire(name)?.groupValues?.get(1) ?: return null
+    return runCatching { LocalDateTime.parse(stamp, FILE_STAMP).atZone(zone).toInstant().toEpochMilli() }.getOrNull()
+}
 
 fun jsonString(value: String): String = value.map(::escapeJsonChar).joinToString("", "\"", "\"")
 

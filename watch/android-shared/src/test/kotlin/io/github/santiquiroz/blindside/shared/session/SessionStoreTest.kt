@@ -55,4 +55,10 @@ class SessionStoreTest {
         assertFalse(blocked.running)
         assertEquals(StartError.BLUETOOTH_PERMISSION_MISSING, blocked.startError)
     }
+
+    @Test
+    fun `only a running session has an active recording`() {
+        assertEquals("a.bsrec", activeRecordingName(SessionUiState(running = true, recordingName = "a.bsrec")))
+        assertNull(activeRecordingName(SessionUiState(running = false, recordingName = "a.bsrec")))
+    }
 }

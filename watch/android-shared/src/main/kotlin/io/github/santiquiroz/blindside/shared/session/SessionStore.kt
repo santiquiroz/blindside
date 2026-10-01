@@ -56,3 +56,5 @@ fun blockedState(previous: SessionUiState, error: StartError): SessionUiState =
     stoppedState(previous).copy(startError = error)
 
 fun eliminatedToggled(previous: SessionUiState): SessionUiState = previous.copy(eliminated = !previous.eliminated)
+
+fun activeRecordingName(session: SessionUiState): String? = session.recordingName.takeIf { session.running }
