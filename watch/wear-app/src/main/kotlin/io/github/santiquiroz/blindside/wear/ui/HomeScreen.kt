@@ -31,7 +31,7 @@ import androidx.wear.compose.material.Icon
 import androidx.wear.compose.material.ListHeader
 import androidx.wear.compose.material.Text
 import io.github.santiquiroz.blindside.wear.R
-import io.github.santiquiroz.blindside.wear.ble.needsRetry
+import io.github.santiquiroz.blindside.shared.ble.needsRetry
 import io.github.santiquiroz.blindside.shared.permissions.SESSION_PERMISSIONS
 import io.github.santiquiroz.blindside.shared.permissions.StartDecision
 import io.github.santiquiroz.blindside.shared.permissions.startDecision

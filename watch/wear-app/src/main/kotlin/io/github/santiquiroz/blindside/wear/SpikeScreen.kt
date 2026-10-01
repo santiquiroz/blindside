@@ -21,7 +21,7 @@ import androidx.wear.compose.material.Chip
 import androidx.wear.compose.material.ChipDefaults
 import androidx.wear.compose.material.ListHeader
 import androidx.wear.compose.material.Text
-import io.github.santiquiroz.blindside.wear.ble.needsRetry
+import io.github.santiquiroz.blindside.shared.ble.needsRetry
 import io.github.santiquiroz.blindside.shared.permissions.SESSION_PERMISSIONS
 import io.github.santiquiroz.blindside.shared.permissions.StartDecision
 import io.github.santiquiroz.blindside.shared.permissions.startDecision

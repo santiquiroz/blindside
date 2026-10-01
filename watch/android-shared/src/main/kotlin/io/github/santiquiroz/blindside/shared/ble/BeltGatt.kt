@@ -1,4 +1,4 @@
-package io.github.santiquiroz.blindside.wear.ble
+package io.github.santiquiroz.blindside.shared.ble
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice

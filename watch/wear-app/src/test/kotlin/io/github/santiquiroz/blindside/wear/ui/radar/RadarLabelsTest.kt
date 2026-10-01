@@ -4,7 +4,7 @@ import io.github.santiquiroz.blindside.core.scene.MotionState
 import io.github.santiquiroz.blindside.core.scene.RadarScene
 import io.github.santiquiroz.blindside.core.scene.SensorStatus
 import io.github.santiquiroz.blindside.core.scene.Warning
-import io.github.santiquiroz.blindside.wear.ble.BleStatus
+import io.github.santiquiroz.blindside.shared.ble.BleStatus
 import io.github.santiquiroz.blindside.wear.session.SessionSource
 import io.github.santiquiroz.blindside.wear.session.SessionUiState
 import io.github.santiquiroz.blindside.wear.session.StartError

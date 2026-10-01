@@ -10,7 +10,7 @@ import androidx.core.content.ContextCompat
 import io.github.santiquiroz.blindside.core.RadarPipeline
 import io.github.santiquiroz.blindside.core.alerts.ContactAlert
 import io.github.santiquiroz.blindside.wear.BuildConfig
-import io.github.santiquiroz.blindside.wear.ble.BeltLink
+import io.github.santiquiroz.blindside.shared.ble.BeltLink
 import io.github.santiquiroz.blindside.wear.demo.DemoSource
 import io.github.santiquiroz.blindside.wear.demo.demoPackets
 import io.github.santiquiroz.blindside.shared.haptics.HapticPlayer

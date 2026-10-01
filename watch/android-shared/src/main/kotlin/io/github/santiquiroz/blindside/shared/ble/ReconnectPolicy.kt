@@ -1,4 +1,4 @@
-package io.github.santiquiroz.blindside.wear.ble
+package io.github.santiquiroz.blindside.shared.ble
 
 data class ReconnectState(val lostAtMs: Long, val lastDirectAtMs: Long? = null, val lastScanAtMs: Long? = null)
 

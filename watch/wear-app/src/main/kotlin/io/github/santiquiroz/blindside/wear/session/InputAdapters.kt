@@ -1,7 +1,7 @@
 package io.github.santiquiroz.blindside.wear.session
 
-import io.github.santiquiroz.blindside.wear.ble.BeltListener
-import io.github.santiquiroz.blindside.wear.ble.BleStatus
+import io.github.santiquiroz.blindside.shared.ble.BeltListener
+import io.github.santiquiroz.blindside.shared.ble.BleStatus
 import io.github.santiquiroz.blindside.shared.sensors.DeviceSensorListener
 import kotlinx.coroutines.channels.SendChannel
 

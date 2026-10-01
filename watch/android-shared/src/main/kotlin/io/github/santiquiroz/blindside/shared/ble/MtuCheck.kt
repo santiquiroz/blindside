@@ -1,4 +1,4 @@
-package io.github.santiquiroz.blindside.wear.ble
+package io.github.santiquiroz.blindside.shared.ble
 
 const val MIN_STREAM_MTU = 247
 

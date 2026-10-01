@@ -1,6 +1,6 @@
 package io.github.santiquiroz.blindside.wear.session
 
-import io.github.santiquiroz.blindside.wear.ble.BleStatus
+import io.github.santiquiroz.blindside.shared.ble.BleStatus
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull

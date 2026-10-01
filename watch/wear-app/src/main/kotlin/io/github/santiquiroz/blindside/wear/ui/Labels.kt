@@ -10,8 +10,8 @@ import io.github.santiquiroz.blindside.wear.practice.QuizAnswer
 import io.github.santiquiroz.blindside.wear.practice.QuizState
 import io.github.santiquiroz.blindside.wear.practice.passed
 import io.github.santiquiroz.blindside.core.config.Handedness
-import io.github.santiquiroz.blindside.wear.ble.BleStatus
-import io.github.santiquiroz.blindside.wear.ble.needsRetry
+import io.github.santiquiroz.blindside.shared.ble.BleStatus
+import io.github.santiquiroz.blindside.shared.ble.needsRetry
 import io.github.santiquiroz.blindside.wear.session.SessionSource
 import io.github.santiquiroz.blindside.wear.session.SessionUiState
 import io.github.santiquiroz.blindside.wear.session.StartError

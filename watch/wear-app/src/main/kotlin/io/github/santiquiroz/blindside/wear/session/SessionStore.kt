@@ -1,7 +1,7 @@
 package io.github.santiquiroz.blindside.wear.session
 
 import io.github.santiquiroz.blindside.core.scene.RadarScene
-import io.github.santiquiroz.blindside.wear.ble.BleStatus
+import io.github.santiquiroz.blindside.shared.ble.BleStatus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

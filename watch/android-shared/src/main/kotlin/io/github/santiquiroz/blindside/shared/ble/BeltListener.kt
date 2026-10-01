@@ -1,4 +1,4 @@
-package io.github.santiquiroz.blindside.wear.ble
+package io.github.santiquiroz.blindside.shared.ble
 
 interface BeltListener {
     fun onPacket(bytes: ByteArray, arrivalNanos: Long)
