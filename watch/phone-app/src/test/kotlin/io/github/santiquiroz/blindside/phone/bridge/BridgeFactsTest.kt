@@ -40,13 +40,6 @@ class BridgeFactsTest {
     }
 
     @Test
-    fun `item bytes are read as utf-8 json and an empty item is nothing`() {
-        assertEquals("""{"a":"ñ"}""", jsonFromItemBytes("""{"a":"ñ"}""".toByteArray(Charsets.UTF_8)))
-        assertNull(jsonFromItemBytes(ByteArray(0)))
-        assertNull(jsonFromItemBytes(null))
-    }
-
-    @Test
     fun `the newest valid settings win and garbage is skipped`() {
         val older = encodeSharedSettings(SharedSettings(Handedness.LEFT, DEFAULT_RADARS, WatchPosture.NORMAL, 100L))
         val newer = encodeSharedSettings(SharedSettings(Handedness.SWITCHER, DEFAULT_RADARS, WatchPosture.NORMAL, 200L))

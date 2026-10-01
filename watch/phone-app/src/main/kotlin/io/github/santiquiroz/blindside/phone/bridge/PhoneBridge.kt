@@ -4,7 +4,6 @@ import android.content.Context
 import android.os.SystemClock
 import android.util.Log
 import com.google.android.gms.wearable.ChannelClient
-import com.google.android.gms.wearable.PutDataRequest
 import com.google.android.gms.wearable.Wearable
 import io.github.santiquiroz.blindside.phone.recordings.finishDownload
 import io.github.santiquiroz.blindside.phone.recordings.partFileName
@@ -17,6 +16,8 @@ import io.github.santiquiroz.blindside.shared.bridge.WatchStatus
 import io.github.santiquiroz.blindside.shared.bridge.decodeOpenPairingReply
 import io.github.santiquiroz.blindside.shared.bridge.decodeRecordingList
 import io.github.santiquiroz.blindside.shared.bridge.encodeSharedSettings
+import io.github.santiquiroz.blindside.shared.bridge.jsonDataRequest
+import io.github.santiquiroz.blindside.shared.bridge.jsonIn
 import io.github.santiquiroz.blindside.shared.bridge.recordingChannelPath
 import io.github.santiquiroz.blindside.shared.recording.RecordingEntry
 import io.github.santiquiroz.blindside.shared.recording.isRecordingFileName
@@ -162,7 +163,7 @@ class PhoneBridge(context: Context) {
 
     private suspend fun publish(path: String, json: String) {
         try {
-            data.putDataItem(PutDataRequest.create(path).setData(json.toByteArray(Charsets.UTF_8)).setUrgent()).await()
+            data.putDataItem(jsonDataRequest(path, json)).await()
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
@@ -173,7 +174,7 @@ class PhoneBridge(context: Context) {
     private suspend fun itemJsons(path: String): List<String> = try {
         val buffer = data.dataItems.await()
         try {
-            buffer.filter { it.uri.path == path }.mapNotNull { jsonFromItemBytes(it.data) }
+            buffer.filter { it.uri.path == path }.mapNotNull(::jsonIn)
         } finally {
             buffer.release()
         }

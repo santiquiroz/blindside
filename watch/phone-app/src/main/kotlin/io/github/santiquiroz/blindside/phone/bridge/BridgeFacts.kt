@@ -22,9 +22,6 @@ const val BRIDGE_REQUEST_TIMEOUT_MS = 10_000L
 // The watch is the node close by; a cloud-relayed node is only a fallback.
 fun pickWatchNode(nodes: List<NodeFacts>): String? = (nodes.firstOrNull { it.nearby } ?: nodes.firstOrNull())?.id
 
-// Plan 05 Task 13 publishes /settings and /status as raw UTF-8 JSON (PutDataRequest.setData), never as a key-value map item.
-fun jsonFromItemBytes(bytes: ByteArray?): String? = bytes?.takeIf { it.isNotEmpty() }?.toString(Charsets.UTF_8)
-
 // The phone and the watch each own an item at the same path; the newest valid one wins and garbage is skipped.
 fun newestSettings(jsons: List<String>): SharedSettings? = jsons.mapNotNull(::decodeSharedSettings).maxByOrNull { it.updatedMs }
 

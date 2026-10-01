@@ -8,6 +8,7 @@ import io.github.santiquiroz.blindside.shared.bridge.SETTINGS_PATH
 import io.github.santiquiroz.blindside.shared.bridge.STATUS_PATH
 import io.github.santiquiroz.blindside.shared.bridge.decodeSharedSettings
 import io.github.santiquiroz.blindside.shared.bridge.decodeWatchStatus
+import io.github.santiquiroz.blindside.shared.bridge.jsonIn
 import io.github.santiquiroz.blindside.shared.settings.adoptingNewer
 import io.github.santiquiroz.blindside.shared.settings.settingsRepository
 import kotlinx.coroutines.CancellationException
@@ -46,5 +47,5 @@ private fun changeOf(event: DataEvent): BridgeChange? =
 private fun readChange(event: DataEvent): BridgeChange? {
     if (event.type != DataEvent.TYPE_CHANGED) return null
     val path = event.dataItem.uri.path ?: return null
-    return jsonFromItemBytes(event.dataItem.data)?.let { BridgeChange(path, it) }
+    return jsonIn(event.dataItem)?.let { BridgeChange(path, it) }
 }

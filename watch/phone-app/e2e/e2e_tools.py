@@ -10,6 +10,13 @@ PHONE_ITVL_UNITS = range(48, 81)
 EDIT_TEXT_CLASS = "android.widget.EditText"
 LINK = re.compile(r"link(\d)\[([^\]]*)\]")
 BOUNDS = re.compile(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]")
+HANDEDNESS_ORDER = ("RIGHT", "LEFT", "SWITCHER")
+DEFAULT_HANDEDNESS = "RIGHT"
+PHONE_HANDEDNESS_LABELS = {"RIGHT": "Diestro", "LEFT": "Zurdo", "SWITCHER": "Cambia de hombro"}
+# DataStore keeps a preference as a protobuf map entry: the key, then a Value whose string field (tag 0x2a) holds the enum name.
+STORED_HANDEDNESS = re.compile(rb"handedness\x12[\x00-\x7f]\x2a[\x00-\x7f](RIGHT|LEFT|SWITCHER)")
+STORED_YAW = re.compile(rb"radar\d_yaw_deg")
+SWIPE_FROM, SWIPE_TO = 0.75, 0.30
 
 
 def open_without_reset(port):
@@ -129,6 +136,31 @@ def edit_field_center(xml_text):
     return center_of(match) if match is not None else None
 
 
+def stored_handedness(data):
+    match = STORED_HANDEDNESS.search(data)
+    return match.group(1).decode("ascii") if match else DEFAULT_HANDEDNESS
+
+
+def has_yaw_override(data):
+    return STORED_YAW.search(data) is not None
+
+
+def next_handedness(name):
+    return HANDEDNESS_ORDER[(HANDEDNESS_ORDER.index(name) + 1) % len(HANDEDNESS_ORDER)]
+
+
+def swipe_up_coords(xml_text):
+    left, top, right, bottom = map(int, BOUNDS.match(next(ui_nodes(xml_text)).get("bounds")).groups())
+    x = (left + right) // 2
+    height = bottom - top
+    return x, top + int(height * SWIPE_FROM), x, top + int(height * SWIPE_TO)
+
+
+def read_bytes(path):
+    with open(path, "rb") as handle:
+        return handle.read()
+
+
 def read_text(path):
     with open(path, encoding="utf-8") as handle:
         return handle.read()
@@ -163,6 +195,30 @@ def cmd_edit_field(args):
     return print_center(edit_field_center(read_text(args[0])))
 
 
+def cmd_handedness(args):
+    print(stored_handedness(read_bytes(args[0])))
+    return 0
+
+
+def cmd_has_yaw(args):
+    return 0 if has_yaw_override(read_bytes(args[0])) else 1
+
+
+def cmd_next_handedness(args):
+    print(next_handedness(args[0]))
+    return 0
+
+
+def cmd_phone_label(args):
+    print(PHONE_HANDEDNESS_LABELS[args[0]])
+    return 0
+
+
+def cmd_swipe_up(args):
+    print(" ".join(map(str, swipe_up_coords(read_text(args[0])))))
+    return 0
+
+
 SAMPLE_WATCH = ("diag up=10 link0[role=watch trusted=1 sub=1 mtu=255 itvl=36 lat=0 sup=400 sent=100 dropped=0] "
                 "link1[-] bonds=1 disc=0 tx[fail=0 dropped=0 skipped=0]")
 SAMPLE_BOTH_A = ("diag up=15 link0[role=watch trusted=1 sub=1 mtu=255 itvl=36 lat=0 sup=400 sent=160 dropped=0] "
@@ -172,6 +228,8 @@ SAMPLE_BOTH_B = ("diag up=20 link0[role=watch trusted=1 sub=1 mtu=255 itvl=36 la
 SAMPLE_GONE = ("diag up=25 link0[role=watch trusted=1 sub=1 mtu=255 itvl=36 lat=0 sup=400 sent=280 dropped=0] "
                "link1[-] bonds=2 disc=0")
 SAMPLE_MVP = "diag up=10 link[trusted=1 sub=1 mtu=255] tx[sent=100]"
+SAMPLE_SETTINGS = (b"\x0a\x14\x0a\x0ahandedness\x12\x06\x2a\x04LEFT"
+                   b"\x0a\x1b\x0a\x0eradar0_yaw_deg\x12\x09\x39\x00\x00\x00\x00\x00\x00\x4e\x40")
 SAMPLE_UI = ('<hierarchy><node text="Radar" content-desc="" class="android.widget.TextView" bounds="[0,2000][270,2100]" />'
              '<node text="" content-desc="Compartir" class="android.view.View" bounds="[900,500][1000,600]" />'
              '<node text="" class="android.widget.EditText" bounds="[100,800][900,900]" /></hierarchy>')
@@ -189,6 +247,10 @@ def cmd_selftest(_args):
     assert find_center(SAMPLE_UI, "Compartir") == (950, 550)
     assert find_center(SAMPLE_UI, "Rad") is None
     assert edit_field_center(SAMPLE_UI) == (500, 850)
+    assert stored_handedness(SAMPLE_SETTINGS) == "LEFT" and stored_handedness(b"") == DEFAULT_HANDEDNESS
+    assert has_yaw_override(SAMPLE_SETTINGS) and not has_yaw_override(SAMPLE_SETTINGS[:22])
+    assert [next_handedness(name) for name in HANDEDNESS_ORDER] == ["LEFT", "SWITCHER", "RIGHT"]
+    assert swipe_up_coords(SAMPLE_UI) == (135, 2075, 135, 2030)
     print("selftest ok")
     return 0
 
@@ -198,13 +260,18 @@ COMMANDS = {
     "tap-target": cmd_tap_target,
     "has-text": cmd_has_text,
     "edit-field": cmd_edit_field,
+    "handedness": cmd_handedness,
+    "has-yaw": cmd_has_yaw,
+    "next-handedness": cmd_next_handedness,
+    "phone-label": cmd_phone_label,
+    "swipe-up": cmd_swipe_up,
     "selftest": cmd_selftest,
 }
 
 
 def main(argv):
     if not argv or argv[0] not in COMMANDS:
-        print("usage: e2e_tools.py check|tap-target|has-text|edit-field|selftest ...", file=sys.stderr)
+        print("usage: e2e_tools.py " + "|".join(COMMANDS) + " ...", file=sys.stderr)
         return 2
     try:
         return COMMANDS[argv[0]](argv[1:])

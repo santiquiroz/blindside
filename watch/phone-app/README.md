@@ -127,6 +127,9 @@ JetBrains Mono NL 2.304 e IBM Plex Sans 1.1.0, ambas bajo SIL Open Font License 
 - [ ] "Identificar":
   - Está deshabilitado con el radar del celular en marcha o con el reloj en partida.
   - En diagnóstico, con el reloj sin partida, el LED parpadea 3 veces. Si no parpadea, el reloj pudo quedar con una partida abierta: detenla en el reloj.
+- [ ] (paso 5b, E2E) Puente con el reloj en partida:
+  - Cinturón → Enlace muestra "Reloj: partida activa…" (`/status`).
+  - La mano elegida en el celular llega al reloj, la del reloj llega al celular y vuelve a la original (`/settings`). Si hay ángulos personalizados el E2E no cambia la mano, porque cambiarla los borra.
 - [ ] Ajustes compartidos:
   - Cambiar la mano o un ángulo en el celular se ve en Ajustes del reloj, y al revés, con el ángulo exacto.
   - Un celular con el reloj del sistema atrasado no pierde su cambio.
