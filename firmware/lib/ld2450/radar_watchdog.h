@@ -21,6 +21,7 @@ struct WatchdogStep {
 };
 
 RadarWatchdog watchdog_after_boot_config(uint32_t now_ms);
+RadarWatchdog watchdog_after_config(const RadarWatchdog& watchdog, uint32_t now_ms);
 RadarWatchdog watchdog_saw_frame(const RadarWatchdog& watchdog, uint32_t now_ms);
 RadarWatchdog watchdog_restarted(const RadarWatchdog& watchdog, uint32_t now_ms);
 WatchdogStep watchdog_check(const RadarWatchdog& watchdog, uint32_t now_ms);

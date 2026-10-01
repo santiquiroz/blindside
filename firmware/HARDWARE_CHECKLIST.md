@@ -16,6 +16,7 @@ Además, cada cambio de estado de un IMU sale en su propia línea: `imu N: DOWN 
 ## Radares
 
 - [ ] **H4. Arranque.** Para cada radar: `read-firmware ok`, `multi-target ok`, `bluetooth-off ok`, `restart ok` y `radar N: baud=256000 fw=V2.…`. Con HLKRadarTool, después de este arranque el LD2450 ya no aparece por Bluetooth (§10.3).
+- [ ] **H4b. Radar tardío.** Arrancar con el conector del radar B suelto: `radar 1: baud=0 fw=`. Conectarlo: si sus tramas llegan a 256000, de inmediato `radar 1: enable-config ok`, `read-firmware ok`, …, `radar 1: baud=256000 fw=V2.…`; si no, lo mismo en el siguiente reintento (≤ 30 s). En los dos casos el LD2450 deja de aparecer por Bluetooth sin reiniciar el ESP32.
 - [ ] **H5. Tramas.** `radar0[ok=…]` y `radar1[ok=…]` suben ~50 entre dos líneas `diag` (10 tramas/s, haya o no personas al frente) y `gap` queda cerca de `100..100`. Con el cinturón quieto 5 min, `bad` no sube.
 - [ ] **H6. Watchdog.** Desconectar 5 s el hilo TX del radar B con todo encendido: `radar1[alive=0]` y, ~2 s después de la última trama, `radar 1: restart sent (total 1)`. Reconectar: `alive=1` (inmediato si el módulo no se colgó; si no, en el siguiente reintento, ≤ 30 s).
 - [ ] **H16. Reinicio por control.** Desde la app (o nRF Connect ya emparejado, escribiendo `01 00` en `control`): `radar 0: restart sent` y las tramas vuelven.

@@ -173,7 +173,7 @@ Types 0x10-0x1F are reserved (0x10 = thermal camera). Unknown types are skipped 
 
 | Bytes | Meaning |
 |---|---|
-| `01 <id>` | Restart radar `<id>` (0 or 1): enable configuration, then restart (0x00A3) 100 ms later |
+| `01 <id>` | Restart radar `<id>` (0 or 1): enable configuration, then restart (0x00A3) 100 ms later. A radar not configured yet (`baud` 0) is probed and configured instead |
 | `03` | IDENTIFY: blink the LED 3 times (1.2 s). Ignored while a session is active |
 | `04 <0/1>` | SESSION_ACTIVE: the watch writes 1 when a session starts and 0 when it stops. The value persists across disconnections until written again or until the ESP32 reboots |
 

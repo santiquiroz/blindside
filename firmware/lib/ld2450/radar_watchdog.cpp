@@ -26,11 +26,16 @@ bool restart_due(const RadarWatchdog& watchdog, uint32_t now_ms) {
 }  // namespace
 
 RadarWatchdog watchdog_after_boot_config(uint32_t now_ms) {
-    RadarWatchdog watchdog{};
-    watchdog.last_frame_ms = now_ms;
-    watchdog.last_restart_ms = now_ms;
-    watchdog.restarted_while_silent = true;
-    return watchdog;
+    return watchdog_after_config(RadarWatchdog{}, now_ms);
+}
+
+RadarWatchdog watchdog_after_config(const RadarWatchdog& watchdog, uint32_t now_ms) {
+    RadarWatchdog next{};
+    next.last_frame_ms = now_ms;
+    next.last_restart_ms = now_ms;
+    next.restarted_while_silent = true;
+    next.restarts = watchdog.restarts;
+    return next;
 }
 
 RadarWatchdog watchdog_saw_frame(const RadarWatchdog& watchdog, uint32_t now_ms) {

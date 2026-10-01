@@ -4,12 +4,14 @@
 #include <string.h>
 
 #include "blindside_config.h"
+#include "radar_setup.h"
 
 namespace {
 
 constexpr size_t kAckWindowSize = 96;
 constexpr size_t kAckWindowKeep = 32;
 constexpr size_t kReadChunkSize = 64;
+constexpr uint32_t kIdleBaud = kBaudProbeOrder[0];
 const char* const kTaskNames[kRadarCount] = {"radar_rx_a", "radar_rx_b"};
 
 struct RadarTask {
@@ -80,7 +82,7 @@ uint32_t detect_baud(RadarPort& port) {
             return kBaudProbeOrder[i];
         }
     }
-    port.serial->updateBaudRate(kBaudProbeOrder[0]);
+    port.serial->updateBaudRate(kIdleBaud);
     return 0;
 }
 
@@ -99,22 +101,43 @@ void run_boot_sequence(RadarPort& port) {
 
 void open_uart(RadarPort& port) {
     port.serial->setRxBufferSize(config::kRadarRxBufferBytes);
-    port.serial->begin(kBaudProbeOrder[0], SERIAL_8N1, port.rx_pin, port.tx_pin);
+    port.serial->begin(kIdleBaud, SERIAL_8N1, port.rx_pin, port.tx_pin);
 }
 
-void configure_radar(RadarPort& port) {
-    open_uart(port);
+void log_configuration(const RadarPort& port) {
+    Serial.printf("radar %u: baud=%lu fw=%s\n", static_cast<unsigned>(port.radar_id),
+                  static_cast<unsigned long>(port.baud), port.firmware.text);
+}
+
+void finish_configuration(RadarPort& port) {
+    log_configuration(port);
+    port.parser = frame_parser_start();
+    port.restart_pending = false;
+    port.watchdog = watchdog_after_config(port.watchdog, millis());
+}
+
+void probe_and_configure(RadarPort& port) {
     port.baud = detect_baud(port);
     if (port.baud != 0) {
         run_boot_sequence(port);
     }
-    Serial.printf("radar %u: baud=%lu fw=%s\n", static_cast<unsigned>(port.radar_id),
-                  static_cast<unsigned long>(port.baud), port.firmware.text);
-    uint32_t now_ms = millis();
-    port.parser = frame_parser_start();
-    port.watchdog = watchdog_after_boot_config(now_ms);
+    finish_configuration(port);
+}
+
+// Frames already parse at the idle UART rate, so that is the radar's baud even though it missed the boot probes.
+void configure_at_current_baud(RadarPort& port) {
+    port.baud = kIdleBaud;
+    discard_input(*port.serial);
+    log_step(port, "enable-config", exchange(port, enable_config_command(), kCmdEnableConfig));
+    run_boot_sequence(port);
+    finish_configuration(port);
+}
+
+void configure_radar(RadarPort& port) {
+    open_uart(port);
+    probe_and_configure(port);
     port.gaps = frame_gaps_start();
-    port.gaps_started_ms = now_ms;
+    port.gaps_started_ms = millis();
 }
 
 RadarSnapshot snapshot_of(const RadarPort& port) {
@@ -202,22 +225,41 @@ void finish_restart_if_due(RadarPort& port, uint32_t now_ms) {
                   static_cast<unsigned>(port.watchdog.restarts));
 }
 
-void take_restart_request(RadarPort& port, uint32_t now_ms) {
+bool take_restart_request(RadarPort& port, uint32_t now_ms) {
     if (!g_restart_requested[port.radar_id].exchange(false)) {
-        return;
+        return false;
     }
     port.watchdog = watchdog_restarted(port.watchdog, now_ms);
-    begin_restart(port, now_ms);
+    return true;
+}
+
+RadarSetupInput setup_input(const RadarPort& port, bool restart_wanted) {
+    return RadarSetupInput{port.baud != 0, port.watchdog.has_frame, restart_wanted};
+}
+
+void apply_setup_action(RadarPort& port, RadarSetupAction action, uint32_t now_ms) {
+    switch (action) {
+        case RadarSetupAction::Restart:
+            begin_restart(port, now_ms);
+            break;
+        case RadarSetupAction::ConfigureAtCurrentBaud:
+            configure_at_current_baud(port);
+            break;
+        case RadarSetupAction::ProbeBaud:
+            probe_and_configure(port);
+            break;
+        case RadarSetupAction::None:
+            break;
+    }
 }
 
 void supervise(RadarPort& port, uint32_t now_ms) {
-    take_restart_request(port, now_ms);
+    bool requested = take_restart_request(port, now_ms);
     finish_restart_if_due(port, now_ms);
     WatchdogStep step = watchdog_check(port.watchdog, now_ms);
     port.watchdog = step.watchdog;
-    if (step.action == WatchdogAction::Restart) {
-        begin_restart(port, now_ms);
-    }
+    bool restart_wanted = requested || step.action == WatchdogAction::Restart;
+    apply_setup_action(port, radar_setup_action(setup_input(port, restart_wanted)), now_ms);
 }
 
 void roll_gap_window(RadarPort& port, uint32_t now_ms) {
