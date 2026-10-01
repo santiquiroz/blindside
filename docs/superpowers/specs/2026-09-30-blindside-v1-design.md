@@ -984,6 +984,26 @@ Con resultados de referencia ("golden"). Métricas:
   - **Audio espacial por auricular** (verificar la latencia BT).
   - IFF "lite" por Channel Sounding (solo distancia; el reloj no lo soporta).
 - **Descartado:** IFF por RSSI, balizas infrarrojas, interferir el radar rival, ultrasonido HC-SR04.
+- **Largo plazo, más allá del airsoft** (ideas aprobadas por Santiago como futuro lejano, 1-oct-2026):
+  - Usan el mismo hardware:
+    - modo centinela o trampa;
+    - estadísticas de partida;
+    - entrenamiento de reacción y CQB;
+    - "alguien detrás de mí" al caminar;
+    - análisis de marcha con los dos IMUs de la cadera;
+    - presencia en casa con Home Assistant;
+    - juegos y eventos;
+    - apoyo a personas ciegas (solo como complemento del bastón).
+  - Necesitan compra:
+    - radar trasero para la moto integrado en RevScope (HLK-LD2451);
+    - signos vitales con el Seeed MR60BHA2 a 60 GHz (1,5 m para signos vitales y 6 m para presencia).
+- **Modo Halo** (rastreador de movimiento de 360° con compañeros en otro color; largo plazo). Detalle y fuentes en [Radares de largo alcance y salud](../../research/reports/Radares%20de%20largo%20alcance%20y%20salud.md):
+  - **15 m:** 2× RFbeam K-LD7 (USD 70,95 c/u, 80°×34°). Sirve el mismo ESP32, pero cada uno sigue un solo objetivo.
+  - **15-20 m con varios objetivos:** RFbeam V-LD3 (chip TI IWRL6432: 110°×50°, tracking en el chip, 6 g). Se prototipa primero con el IWRL6432BOOST.
+  - **25-50 m al frente:** RFbeam K-MD7 (8 tracks, ±30°, USD 212,68).
+  - **360° recomendado:** 4-6 V-LD3, o 4 IWRL6432WMOD, más 1 K-MD7 al frente. Necesita un ESP32-S3 o un RP2040 (más UART), sincronización TDM entre radares y compensación del movimiento propio.
+  - **Salud:** todos emiten ≤ 20 dBm PIRE con la antena hacia afuera. A 1 m quedan ~1250 veces por debajo del límite ICNIRP.
+  - **No sirven los de 77 GHz:** esa banda es solo para vehículos.
 
 ---
 

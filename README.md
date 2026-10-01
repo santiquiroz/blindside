@@ -118,6 +118,19 @@ The full design (in Spanish) is in [docs/superpowers/specs/2026-09-30-blindside-
   - a rifle-rail node;
   - a phone app and ATAK/CoT export;
   - spatial audio through an earpiece.
+- **Long term, beyond airsoft:**
+  - with the same hardware:
+    - sentry/tripwire mode;
+    - match statistics;
+    - reaction drills;
+    - "someone behind me" while walking;
+    - gait analysis with the two hip IMUs;
+    - Home Assistant presence;
+    - accessibility aid (complements a cane);
+  - with new parts:
+    - a rear radar for motorcycles in RevScope;
+    - a 60 GHz vital-signs sensor.
+- **"Halo mode" (long term):** a 360° motion tracker with friendlies in another colour, at 15-25 m. It needs RFbeam K-LD7, V-LD3 or K-MD7, or TI IWRL6432 radars. All of them are ≤ 20 dBm and safe when pointed away from the body. See [the long-range radar report](docs/research/reports/Radares%20de%20largo%20alcance%20y%20salud.md) (Spanish).
 
 ## Repository layout
 

@@ -118,6 +118,19 @@ El diseño completo (en español) está en [docs/superpowers/specs/2026-09-30-bl
   - un nodo para riel de rifle;
   - una aplicación para teléfono y exportación a ATAK/CoT;
   - audio espacial por auricular.
+- **Largo plazo, más allá del airsoft:**
+  - con el mismo hardware:
+    - modo centinela o trampa;
+    - estadísticas de partida;
+    - entrenamiento de reacción;
+    - "alguien detrás de mí" al caminar;
+    - análisis de marcha con los dos IMU de la cadera;
+    - presencia con Home Assistant;
+    - apoyo de accesibilidad (complementa al bastón);
+  - con piezas nuevas:
+    - radar trasero para moto en RevScope;
+    - sensor de signos vitales de 60 GHz.
+- **"Modo Halo" (largo plazo):** rastreador de movimiento de 360° con los compañeros en otro color, a 15-25 m. Necesita radares RFbeam K-LD7, V-LD3 o K-MD7, o TI IWRL6432. Todos emiten ≤ 20 dBm y son seguros apuntando lejos del cuerpo. Ver [el informe de radares de largo alcance](docs/research/reports/Radares%20de%20largo%20alcance%20y%20salud.md).
 
 ## Estructura del repositorio
 
