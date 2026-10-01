@@ -47,6 +47,7 @@ fun SettingsScreen(
         item { SettingChip("Postura del reloj", postureLabel(settings.posture)) { onUpdate { it.copy(posture = nextPosture(it.posture)) } } }
         item { SettingChip("Pantalla", screenModeLabel(settings.screenMode)) { onUpdate { it.copy(screenMode = toggledScreenMode(it.screenMode)) } } }
         item { SettingChip("Color de contactos", contactColorLabel(settings.contactColor)) { onUpdate { it.copy(contactColor = toggledContactColor(it.contactColor)) } } }
+        item { SettingChip("Brújula", yesNo(settings.compass)) { onUpdate { it.copy(compass = !it.compass) } } }
         item { SettingChip("Vibración", usageLabel(settings.vibrationUsage)) { onUpdate { it.copy(vibrationUsage = toggledUsage(it.vibrationUsage)) } } }
         item { NavChip(VIBRATION_TEST_LABEL) { onNavigate(ROUTE_PRACTICE) } }
         DEFAULT_RADARS.forEach { radarItems(settings, it.radarId, onUpdate) }

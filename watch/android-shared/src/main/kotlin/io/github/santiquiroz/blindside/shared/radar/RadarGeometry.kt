@@ -30,8 +30,6 @@ data class RadarDrawModel(
 )
 
 const val MAX_RANGE_M = 6.0
-const val ORIGIN_Y_FRACTION = 0.58f
-const val RADIUS_FRACTION = 0.42f
 const val BLIP_RADIUS_FRACTION = 0.035f
 const val MIN_BLIP_ALPHA = 0.3f
 
@@ -40,10 +38,18 @@ private const val EDGE_MARKER_INNER_M = 5.4
 private const val CANVAS_ZERO_OFFSET_DEG = 90.0
 private val RING_RANGES_M = listOf(2.0, 4.0)
 
-fun toDrawModel(scene: RadarScene?, widthPx: Float, heightPx: Float, offset: PointPx, showContacts: Boolean): RadarDrawModel {
+fun toDrawModel(
+    scene: RadarScene?,
+    widthPx: Float,
+    heightPx: Float,
+    offset: PointPx,
+    showContacts: Boolean,
+    edgeMarginPx: Float = 0f,
+): RadarDrawModel {
     val side = min(widthPx, heightPx)
-    val origin = PointPx(widthPx / 2f + offset.x, heightPx * ORIGIN_Y_FRACTION + offset.y)
-    val radius = side * RADIUS_FRACTION
+    val fit = fitFan(side, edgeMarginPx, fanHalfAngleDeg(scene?.coverage.orEmpty()))
+    val origin = PointPx(widthPx / 2f + offset.x, heightPx / 2f + fit.originYOffsetPx + offset.y)
+    val radius = fit.radiusPx
     val blips = if (showContacts) scene?.blips.orEmpty() else emptyList()
     return RadarDrawModel(
         origin = origin,

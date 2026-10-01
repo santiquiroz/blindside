@@ -63,4 +63,9 @@ class AppSettingsTest {
         assertEquals(ContactColor.RED, toggledContactColor(ContactColor.GREEN))
         assertEquals(ContactColor.GREEN, toggledContactColor(ContactColor.RED))
     }
+
+    @Test
+    fun `the compass ring is on by default`() {
+        assertEquals(true, AppSettings().compass)
+    }
 }

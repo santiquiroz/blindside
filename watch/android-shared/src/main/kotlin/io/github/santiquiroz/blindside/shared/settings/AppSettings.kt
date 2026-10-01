@@ -35,6 +35,7 @@ data class AppSettings(
     val autoStartRadar: Boolean = true,
     val sharedUpdatedMs: Long = 0L,
     val contactColor: ContactColor = ContactColor.GREEN,
+    val compass: Boolean = true,
 )
 
 typealias SettingsTransform = (AppSettings) -> AppSettings

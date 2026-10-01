@@ -70,12 +70,20 @@ class RadarGeometryTest {
     }
 
     @Test
-    fun `the origin sits below the centre and rings mark two and four metres`() {
-        val model = toDrawModel(scene(emptyList()), 480f, 480f, noShift, showContacts = true)
-        assertTrue(model.origin.y > 240f)
+    fun `the right handed half disc fan is centred and rings mark two and four metres`() {
+        val model = toDrawModel(scene(emptyList()), 480f, 480f, noShift, showContacts = true, edgeMarginPx = 32f)
+        assertPoint(PointPx(240f, 240f), model.origin)
+        assertEquals(208f, model.radiusPx, 1e-3f)
         assertEquals(2, model.ringRadiiPx.size)
         assertEquals(model.radiusPx / 3f, model.ringRadiiPx[0], 1e-3f)
         assertEquals(model.radiusPx * 2f / 3f, model.ringRadiiPx[1], 1e-3f)
+    }
+
+    @Test
+    fun `a narrower fan drops the origin below the centre`() {
+        val narrow = scene(emptyList()).copy(coverage = listOf(CoverageSector(-60.0, 60.0)))
+        val model = toDrawModel(narrow, 480f, 480f, noShift, showContacts = true)
+        assertTrue(model.origin.y > 240f)
     }
 
     @Test

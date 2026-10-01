@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
@@ -22,6 +23,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -29,6 +32,11 @@ import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material.Chip
 import androidx.wear.compose.material.ChipDefaults
 import androidx.wear.compose.material.Text
+import io.github.santiquiroz.blindside.shared.compass.CompassReading
+import io.github.santiquiroz.blindside.shared.compass.compassColors
+import io.github.santiquiroz.blindside.shared.compass.compassWarningLabel
+import io.github.santiquiroz.blindside.shared.compass.frontHeadingDeg
+import io.github.santiquiroz.blindside.shared.compass.headingText
 import io.github.santiquiroz.blindside.shared.radar.DND_RADAR_WARNING
 import io.github.santiquiroz.blindside.shared.radar.PointPx
 import io.github.santiquiroz.blindside.shared.radar.StatusItem
@@ -62,6 +70,8 @@ private val LINK_MESSAGE_SIZE = 14.sp
 private val LINK_MESSAGE_SIDE_PADDING = 28.dp
 private val STATUS_DOT_SIZE = 4.dp
 private val STATUS_DOT_STROKE = 1.dp
+private val COMPASS_BAND = 16.dp
+private val PANEL_BOTTOM_PADDING = 22.dp
 
 @Composable
 fun RadarScreen(
@@ -76,12 +86,23 @@ fun RadarScreen(
     val shift = burnInOffset(settings.screenMode, elapsedMs)
     val contacts = showContacts(session.scene, ambient)
     val rotationDeg = settings.posture.rotationDeg
+    val compassOn = settings.compass && !ambient
+    val compass by rememberCompassReading(compassOn)
+    val reading = compass.takeIf { compassOn }
+    val bandPx = with(LocalDensity.current) { COMPASS_BAND.toPx() }
+    val measurer = rememberTextMeasurer()
     Box(Modifier.fillMaxSize().background(BlindsideColors.Bg)) {
         Canvas(Modifier.fillMaxSize()) {
-            val logical = toDrawModel(session.scene, size.width, size.height, shift, contacts)
-            drawRadar(logical.rotatedAbout(screenCenter(size.width, size.height, shift), rotationDeg), radarColorsFor(settings.contactColor))
+            val margin = if (compassOn) bandPx else 0f
+            val pivot = screenCenter(size.width, size.height, shift)
+            val logical = toDrawModel(session.scene, size.width, size.height, shift, contacts, margin)
+            drawRadar(logical.rotatedAbout(pivot, rotationDeg), radarColorsFor(settings.contactColor))
+            reading?.let {
+                val ring = RingGeometry(pivot, size.minDimension / 2f, bandPx)
+                drawCompassRing(it.azimuthDeg, ring, rotationDeg, compassColors(settings.screenMode, it.trust), measurer)
+            }
         }
-        RadarOverlay(session, ambient, shift, rotationDeg, onToggleEliminated)
+        RadarOverlay(session, ambient, shift, rotationDeg, reading, onToggleEliminated)
     }
 }
 
@@ -91,6 +112,7 @@ private fun RadarOverlay(
     ambient: Boolean,
     shift: PointPx,
     rotationDeg: Float,
+    reading: CompassReading?,
     onToggleEliminated: () -> Unit,
 ) {
     val link = radarMessage(session)
@@ -103,7 +125,8 @@ private fun RadarOverlay(
             CenterLabel(label, isLinkMessage = label == link, Modifier.align(Alignment.Center))
         }
         // Spec §5.4: the dimmed screen keeps ≤ 15 % lit pixels, so ambient shows only the fan and "--".
-        if (!ambient) BottomPanel(session, onToggleEliminated, Modifier.align(Alignment.BottomCenter))
+        if (!ambient) BottomPanel(session, compassWarningLabel(reading), onToggleEliminated, Modifier.align(Alignment.BottomCenter))
+        reading?.let { HeadingWindow(headingText(frontHeadingDeg(it.azimuthDeg, rotationDeg)), Modifier.align(Alignment.BottomCenter)) }
     }
 }
 
@@ -119,13 +142,27 @@ private fun CenterLabel(label: String, isLinkMessage: Boolean, modifier: Modifie
 }
 
 @Composable
-private fun BottomPanel(session: SessionUiState, onToggleEliminated: () -> Unit, modifier: Modifier) {
-    Column(modifier = modifier.padding(bottom = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+private fun BottomPanel(session: SessionUiState, compassWarning: String?, onToggleEliminated: () -> Unit, modifier: Modifier) {
+    Column(modifier = modifier.padding(bottom = PANEL_BOTTOM_PADDING), horizontalAlignment = Alignment.CenterHorizontally) {
+        compassWarning?.let { Text(it, color = BlindsideColors.Warn, fontSize = 11.sp, maxLines = 1) }
         if (session.dndMaySilenceAlerts) Text(DND_RADAR_WARNING, color = BlindsideColors.Warn, fontSize = 11.sp, maxLines = 1)
         warningLabel(session.scene?.warnings.orEmpty())?.let { Text(it, color = BlindsideColors.Warn, fontSize = 11.sp) }
         statusRows(statusItems(session.scene, session.watchSteps)).forEach { StatusRow(it) }
         EliminatedChip(session.eliminated, onToggleEliminated)
     }
+}
+
+@Composable
+private fun HeadingWindow(text: String, modifier: Modifier) {
+    // A window in the bezel at the rear, like a dive watch date: the letters pass under it and the fan keeps the front.
+    Text(
+        text,
+        modifier.padding(bottom = 4.dp).background(BlindsideColors.Bg, RoundedCornerShape(6.dp)).padding(horizontal = 4.dp),
+        color = BlindsideColors.Text,
+        fontFamily = BlindsideFonts.Mono,
+        fontSize = 11.sp,
+        maxLines = 1,
+    )
 }
 
 @Composable

@@ -109,3 +109,12 @@ Marca cada punto en el reloj real. Si un punto falla, anota qué viste y la hora
     - Los chips de estado llevan un punto lleno (bien) o hueco (falla), y "SIN PASOS" va en su propia fila.
     - Los ángulos de Ajustes y los chips usan letra monoespaciada.
     - El botón "Iniciar radar" y el resto de controles se pueden tocar sin errar con el guante.
+25. [ ] **Pantalla completa y brújula:**
+    - Con el cinturón diestro, el abanico nace en el centro de la pantalla y llega hasta el anillo de la brújula. La mitad de atrás muestra el estado y "Eliminado".
+    - El anillo gira al girar el cuerpo: la N señala el norte real y la raya verde de arriba marca el frente. La ventanita de abajo muestra el rumbo (por ejemplo `318° NO`).
+    - Comparar el rumbo con la brújula del celular: ±15° lejos de metales.
+    - Con la brújula sin calibrar, el anillo se ve tenue y sale "Brújula: calibra (mueve en 8)". Después de mover el reloj en ocho, desaparece.
+    - En postura táctica, las letras se leen derechas para quien mira y la raya de frente sigue al abanico.
+    - En ambiente o con la pantalla apagada (Sigilo) no hay anillo ni rumbo.
+    - Ajustes → "Brújula: no" quita el anillo y el abanico crece hasta el borde.
+    - Si el reloj reporta siempre precisión baja con el sensor de rotación, anotarlo como desviación: el anillo quedaría tenue todo el tiempo.

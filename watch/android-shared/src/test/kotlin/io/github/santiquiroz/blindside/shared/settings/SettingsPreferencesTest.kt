@@ -34,6 +34,7 @@ class SettingsPreferencesTest {
             autoStartRadar = false,
             sharedUpdatedMs = 1_727_790_153_123L,
             contactColor = ContactColor.RED,
+            compass = false,
         )
         val prefs = mutablePreferencesOf()
         writeSettings(prefs, original)
