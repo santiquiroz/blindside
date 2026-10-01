@@ -64,13 +64,13 @@ internal data class PipelineState(
     fun corruptCount(nowNanos: Long, windowMs: Long): Int =
         corruption.filter { nowNanos - it.nanos < windowMs * NANOS_PER_MS }.sumOf { it.count }
 
-    // Spec §6.3 and §4.2: after an ESP32 reboot every time reference restarts; display ids and handled alerts carry on.
+    // Spec §6.3 and §4.2: after an ESP32 reboot every time reference restarts; display ids, handled alerts and the heading carry on.
     fun withRestartedTimeReferences(): PipelineState = copy(
         clock = ClockMapper(clock.params),
         seq = SeqTracker(),
         lastHeaderMs = null,
         imus = imus.mapValues { (_, channel) -> channel.copy(lastSums = null, lastSampleMs = null) },
-        yaw = YawTracker(),
+        yaw = yaw.restarted(),
         motion = MotionDetector(),
         lastMovingMs = null,
         watchGyro = WatchWitness(),

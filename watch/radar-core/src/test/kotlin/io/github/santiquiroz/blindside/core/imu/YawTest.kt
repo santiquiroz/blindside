@@ -119,6 +119,18 @@ class YawTest {
     }
 
     @Test
+    fun `a restarted tracker keeps the heading and integrates from it on a new clock`() {
+        val turned = YawTracker().apply((1..5).map { YawIncrement(9_000L + it * 20, 20, 9.0) }, params)
+
+        val restarted = turned.restarted()
+        val resumed = restarted.apply(listOf(YawIncrement(1_020, 20, 1.0)), params)
+
+        assertEquals(45.0, restarted.yawAt(1_000, params), 1e-9)
+        assertTrue(restarted.history.isEmpty())
+        assertEquals(46.0, resumed.yawAt(1_020, params), 1e-9)
+    }
+
+    @Test
     fun `display yaw blends a correction away with a 50 ms time constant`() {
         val steady = YawTracker().apply((1..5).map { YawIncrement(it * 20L, 20, 0.0) }, params)
         val jumped = steady.apply(listOf(YawIncrement(300, 200, 10.0)), params)

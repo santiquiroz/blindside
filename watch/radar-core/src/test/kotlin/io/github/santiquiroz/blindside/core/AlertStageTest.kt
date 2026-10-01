@@ -3,10 +3,9 @@ package io.github.santiquiroz.blindside.core
 import io.github.santiquiroz.blindside.core.alerts.ContactAlert
 import io.github.santiquiroz.blindside.core.config.PipelineConfig
 import io.github.santiquiroz.blindside.core.protocol.Bundle
-import io.github.santiquiroz.blindside.core.protocol.BundleDecoder
-import io.github.santiquiroz.blindside.core.protocol.BundleEncoder
 import io.github.santiquiroz.blindside.core.scene.Side
 import io.github.santiquiroz.blindside.core.sim.Scenarios
+import io.github.santiquiroz.blindside.core.sim.simEspMs
 import io.github.santiquiroz.blindside.core.sim.simulate
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -47,15 +46,11 @@ class AlertStageTest {
     }
 
     @Test
-    fun `an esp32 reboot does not make a known contact vibrate again`() {
-        val run = runScenario(Scenarios.crossing())
-        val restarted = simulate(Scenarios.crossing()).take(10).map { packet ->
-            BundleEncoder.encode(rebased(BundleDecoder.decode(packet.bytes)!!, -9_000)) to packet.arrivalNanos + 9_000_000_000L
-        }
+    fun `an esp32 reboot after a turn does not make a contact still in view vibrate again`() {
+        val run = runScenario(Scenarios.turningWithMarcher()) { if (it.tMs >= simEspMs(6_000)) rebased(it, -5_000) else it }
 
-        val events = restarted.flatMap { (bytes, nanos) -> run.pipeline.onBlePacket(bytes, nanos) }
-
-        assertTrue(events.none { it is ContactAlert })
+        assertEquals(1, run.pipeline.counters().espResets)
+        assertEquals(1, run.alerts.size)
     }
 
     @Test
