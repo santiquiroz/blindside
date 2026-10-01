@@ -1,4 +1,4 @@
-package io.github.santiquiroz.blindside.wear.sensors
+package io.github.santiquiroz.blindside.shared.sensors
 
 data class Vec3(val x: Float, val y: Float, val z: Float)
 

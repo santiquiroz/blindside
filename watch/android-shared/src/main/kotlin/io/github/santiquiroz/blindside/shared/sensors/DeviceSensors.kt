@@ -1,11 +1,11 @@
-package io.github.santiquiroz.blindside.wear.sensors
+package io.github.santiquiroz.blindside.shared.sensors
 
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 
-interface WatchSensorListener {
+interface DeviceSensorListener {
     fun onGravity(x: Float, y: Float, z: Float, eventNanos: Long)
     fun onGyro(x: Float, y: Float, z: Float, eventNanos: Long)
     fun onStep(eventNanos: Long)
@@ -13,9 +13,9 @@ interface WatchSensorListener {
 
 data class SensorAvailability(val gravity: GravitySource, val gyro: Boolean, val steps: Boolean)
 
-class WatchSensors(
+class DeviceSensors(
     private val sensorManager: SensorManager,
-    private val listener: WatchSensorListener,
+    private val listener: DeviceSensorListener,
 ) : SensorEventListener {
     private var lastGravityNanos: Long? = null
     private var lastGyroNanos: Long? = null

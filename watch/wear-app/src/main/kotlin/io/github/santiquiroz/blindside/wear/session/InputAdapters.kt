@@ -2,10 +2,10 @@ package io.github.santiquiroz.blindside.wear.session
 
 import io.github.santiquiroz.blindside.wear.ble.BeltListener
 import io.github.santiquiroz.blindside.wear.ble.BleStatus
-import io.github.santiquiroz.blindside.wear.sensors.WatchSensorListener
+import io.github.santiquiroz.blindside.shared.sensors.DeviceSensorListener
 import kotlinx.coroutines.channels.SendChannel
 
-class SensorInputs(private val inputs: SendChannel<SessionInput>) : WatchSensorListener {
+class SensorInputs(private val inputs: SendChannel<SessionInput>) : DeviceSensorListener {
     override fun onGravity(x: Float, y: Float, z: Float, eventNanos: Long) {
         inputs.trySend(SessionInput.Gravity(x, y, z, eventNanos))
     }

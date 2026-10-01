@@ -1,4 +1,4 @@
-package io.github.santiquiroz.blindside.wear.sensors
+package io.github.santiquiroz.blindside.shared.sensors
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse

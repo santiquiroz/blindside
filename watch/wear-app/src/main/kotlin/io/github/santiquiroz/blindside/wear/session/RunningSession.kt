@@ -26,7 +26,7 @@ import io.github.santiquiroz.blindside.wear.recording.openRecordingSink
 import io.github.santiquiroz.blindside.wear.recording.recordingFileName
 import io.github.santiquiroz.blindside.wear.recording.recordingMeta
 import io.github.santiquiroz.blindside.wear.recording.recordingsDir
-import io.github.santiquiroz.blindside.wear.sensors.WatchSensors
+import io.github.santiquiroz.blindside.shared.sensors.DeviceSensors
 import io.github.santiquiroz.blindside.wear.settings.AppSettings
 import io.github.santiquiroz.blindside.wear.settings.ScreenMode
 import io.github.santiquiroz.blindside.wear.settings.SettingsRepository
@@ -63,7 +63,7 @@ class RunningSession(
     private val pipelineDispatcher = Dispatchers.Default.limitedParallelism(1)
     private val inputs = Channel<SessionInput>(Channel.UNLIMITED)
     private val wakeLock = SessionWakeLock(context)
-    private val sensors = WatchSensors(context.getSystemService(SensorManager::class.java), SensorInputs(inputs))
+    private val sensors = DeviceSensors(context.getSystemService(SensorManager::class.java), SensorInputs(inputs))
     private val loops = mutableListOf<Job>()
     private var consumer: Job? = null
     private var belt: BeltLink? = null
