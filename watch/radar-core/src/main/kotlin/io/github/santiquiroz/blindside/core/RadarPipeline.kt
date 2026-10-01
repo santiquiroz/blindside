@@ -14,7 +14,8 @@ class RadarPipeline(private val config: PipelineConfig) {
         val previousFlags = state.flags
         return commit(
             ingestPacket(state, bytes, arrivalNanos, config)
-                .then { withSystemAlerts(it, radarDownAlerts(previousFlags, it.flags, config, arrivalNanos), config) },
+                .then { withSystemAlerts(it, radarDownAlerts(previousFlags, it.flags, config, arrivalNanos), config) }
+                .then { alertStage(it, it.lastHeaderMs ?: 0L, arrivalNanos, config) },
         )
     }
 
