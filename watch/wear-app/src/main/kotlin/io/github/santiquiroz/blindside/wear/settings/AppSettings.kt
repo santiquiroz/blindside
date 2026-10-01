@@ -8,6 +8,13 @@ enum class ScreenMode { SIGILO, VISTA }
 
 enum class VibrationUsage { ALARM, NOTIFICATION }
 
+// Positive turns the drawing clockwise: +90° puts "arriba" at 3 o'clock, the fingers with the watch on the inside of the left wrist.
+enum class WatchPosture(val rotationDeg: Float) {
+    NORMAL(0f),
+    TACTICAL_LEFT(90f),
+    TACTICAL_RIGHT(-90f),
+}
+
 data class RadarSettings(
     val radarId: Int,
     val yawDegOverride: Double? = null,
@@ -23,6 +30,7 @@ data class AppSettings(
     val eliminated: Boolean = false,
     val beltAddress: String? = null,
     val quizPassedAtEpochMs: Long? = null,
+    val posture: WatchPosture = WatchPosture.NORMAL,
 )
 
 typealias SettingsTransform = (AppSettings) -> AppSettings
@@ -51,6 +59,9 @@ fun AppSettings.withSpeedSignFlipped(radarId: Int): AppSettings =
 
 fun nextHandedness(current: Handedness): Handedness =
     Handedness.entries[(current.ordinal + 1) % Handedness.entries.size]
+
+fun nextPosture(current: WatchPosture): WatchPosture =
+    WatchPosture.entries[(current.ordinal + 1) % WatchPosture.entries.size]
 
 fun stepYaw(currentDeg: Double, deltaDeg: Double): Double =
     (currentDeg + deltaDeg).coerceIn(-YAW_LIMIT_DEG, YAW_LIMIT_DEG)

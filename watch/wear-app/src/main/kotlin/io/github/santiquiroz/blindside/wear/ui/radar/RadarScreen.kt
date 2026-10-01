@@ -55,7 +55,8 @@ fun RadarScreen(
     val contacts = showContacts(scene, ambient)
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         Canvas(Modifier.fillMaxSize()) {
-            drawRadar(toDrawModel(scene, size.width, size.height, shift, contacts))
+            val logical = toDrawModel(scene, size.width, size.height, shift, contacts)
+            drawRadar(logical.rotatedAbout(screenCenter(size.width, size.height, shift), settings.posture.rotationDeg))
         }
         RadarOverlay(scene, ambient, session.watchSteps, session.eliminated, shift, onToggleEliminated)
     }

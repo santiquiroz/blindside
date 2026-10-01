@@ -15,6 +15,7 @@ internal object Keys {
     val ELIMINATED = booleanPreferencesKey("eliminated")
     val BELT_ADDRESS = stringPreferencesKey("belt_address")
     val QUIZ_PASSED_AT = longPreferencesKey("quiz_passed_at_epoch_ms")
+    val POSTURE = stringPreferencesKey("watch_posture")
 
     fun yaw(radarId: Int) = doublePreferencesKey("radar${radarId}_yaw_deg")
     fun flipX(radarId: Int) = booleanPreferencesKey("radar${radarId}_flip_x")
@@ -31,6 +32,7 @@ fun settingsFrom(prefs: Preferences): AppSettings {
         eliminated = prefs[Keys.ELIMINATED] ?: defaults.eliminated,
         beltAddress = prefs[Keys.BELT_ADDRESS],
         quizPassedAtEpochMs = prefs[Keys.QUIZ_PASSED_AT],
+        posture = enumOrDefault(prefs[Keys.POSTURE], defaults.posture),
     )
 }
 
@@ -39,6 +41,7 @@ fun writeSettings(prefs: MutablePreferences, settings: AppSettings) {
     prefs[Keys.SCREEN_MODE] = settings.screenMode.name
     prefs[Keys.VIBRATION_USAGE] = settings.vibrationUsage.name
     prefs[Keys.ELIMINATED] = settings.eliminated
+    prefs[Keys.POSTURE] = settings.posture.name
     writeOptional(prefs, Keys.BELT_ADDRESS, settings.beltAddress)
     writeOptional(prefs, Keys.QUIZ_PASSED_AT, settings.quizPassedAtEpochMs)
     settings.radars.forEach { writeRadar(prefs, it) }

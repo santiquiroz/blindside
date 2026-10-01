@@ -19,6 +19,7 @@ import io.github.santiquiroz.blindside.wear.settings.SettingsTransform
 import io.github.santiquiroz.blindside.wear.settings.YAW_STEP_DEG
 import io.github.santiquiroz.blindside.wear.settings.effectiveYawDeg
 import io.github.santiquiroz.blindside.wear.settings.nextHandedness
+import io.github.santiquiroz.blindside.wear.settings.nextPosture
 import io.github.santiquiroz.blindside.wear.settings.radar
 import io.github.santiquiroz.blindside.wear.settings.toggledScreenMode
 import io.github.santiquiroz.blindside.wear.settings.toggledUsage
@@ -32,6 +33,7 @@ fun SettingsScreen(settings: AppSettings, onUpdate: (SettingsTransform) -> Unit,
     ScalingLazyColumn(Modifier.fillMaxSize()) {
         item { ListHeader { Text("Ajustes") } }
         item { SettingChip("Mano", handednessLabel(settings.handedness)) { onUpdate { it.withHandedness(nextHandedness(it.handedness)) } } }
+        item { SettingChip("Postura del reloj", postureLabel(settings.posture)) { onUpdate { it.copy(posture = nextPosture(it.posture)) } } }
         item { SettingChip("Pantalla", screenModeLabel(settings.screenMode)) { onUpdate { it.copy(screenMode = toggledScreenMode(it.screenMode)) } } }
         item { SettingChip("Vibración", usageLabel(settings.vibrationUsage)) { onUpdate { it.copy(vibrationUsage = toggledUsage(it.vibrationUsage)) } } }
         DEFAULT_RADARS.forEach { radarItems(settings, it.radarId, onUpdate) }

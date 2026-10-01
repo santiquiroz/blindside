@@ -29,6 +29,7 @@ class SettingsPreferencesTest {
             eliminated = true,
             beltAddress = "AA:BB:CC:DD:EE:FF",
             quizPassedAtEpochMs = 1_760_000_000_000L,
+            posture = WatchPosture.TACTICAL_RIGHT,
         )
         val prefs = mutablePreferencesOf()
         writeSettings(prefs, original)
@@ -41,11 +42,13 @@ class SettingsPreferencesTest {
             Keys.HANDEDNESS to "AMBIDEXTROUS",
             Keys.SCREEN_MODE to "NIGHT",
             Keys.VIBRATION_USAGE to "",
+            Keys.POSTURE to "UPSIDE_DOWN",
         )
         val settings = settingsFrom(prefs)
         assertEquals(Handedness.RIGHT, settings.handedness)
         assertEquals(ScreenMode.SIGILO, settings.screenMode)
         assertEquals(VibrationUsage.ALARM, settings.vibrationUsage)
+        assertEquals(WatchPosture.NORMAL, settings.posture)
     }
 
     @Test
