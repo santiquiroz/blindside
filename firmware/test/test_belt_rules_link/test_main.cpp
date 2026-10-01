@@ -73,6 +73,16 @@ StreamGateInput ready_link(uint16_t mtu) {
     return StreamGateInput{true, true, true, mtu};
 }
 
+constexpr KeptBond kWatchHere{LinkRole::Watch, true};
+constexpr KeptBond kWatchAway{LinkRole::Watch, false};
+constexpr KeptBond kPhoneHere{LinkRole::Phone, true};
+constexpr KeptBond kPhoneAway{LinkRole::Phone, false};
+
+ControlAction identify_with(uint8_t session_flags, KeptBond watch, KeptBond phone) {
+    const KeptBond kept[kMaxBonds] = {watch, phone};
+    return control_action(ControlKind::Identify, true, session_running(session_flags, kept, kMaxBonds));
+}
+
 }  // namespace
 
 void setUp() {}
@@ -132,9 +142,20 @@ void test_a_trusted_link_gets_the_action_of_its_command() {
 
 void test_identify_is_ignored_while_any_bonded_device_has_a_session() {
     uint8_t watch_in_session = session_flags_after_write(0, 0, true);
-    TEST_ASSERT_TRUE(control_action(ControlKind::Identify, true, any_session_active(watch_in_session)) ==
-                     ControlAction::Ignore);
-    TEST_ASSERT_TRUE(control_action(ControlKind::Identify, true, any_session_active(0)) == ControlAction::Identify);
+    uint8_t phone_in_session = session_flags_after_write(0, 1, true);
+    TEST_ASSERT_TRUE(identify_with(watch_in_session, kWatchHere, kPhoneHere) == ControlAction::Ignore);
+    TEST_ASSERT_TRUE(identify_with(phone_in_session, kWatchHere, kPhoneHere) == ControlAction::Ignore);
+    TEST_ASSERT_TRUE(identify_with(0, kWatchHere, kPhoneHere) == ControlAction::Identify);
+}
+
+void test_identify_works_once_a_phone_in_session_has_disconnected() {
+    uint8_t phone_in_session = session_flags_after_write(0, 1, true);
+    TEST_ASSERT_TRUE(identify_with(phone_in_session, kWatchHere, kPhoneAway) == ControlAction::Identify);
+}
+
+void test_identify_stays_ignored_while_a_watch_in_session_is_disconnected() {
+    uint8_t watch_in_session = session_flags_after_write(0, 0, true);
+    TEST_ASSERT_TRUE(identify_with(watch_in_session, kWatchAway, kPhoneHere) == ControlAction::Ignore);
 }
 
 void test_malformed_control_writes_are_invalid() {
@@ -265,6 +286,8 @@ int run_all_tests() {
     RUN_TEST(test_an_untrusted_link_changes_nothing);
     RUN_TEST(test_a_trusted_link_gets_the_action_of_its_command);
     RUN_TEST(test_identify_is_ignored_while_any_bonded_device_has_a_session);
+    RUN_TEST(test_identify_works_once_a_phone_in_session_has_disconnected);
+    RUN_TEST(test_identify_stays_ignored_while_a_watch_in_session_is_disconnected);
     RUN_TEST(test_identify_is_refused_during_a_session);
     RUN_TEST(test_stream_gate_needs_subscribed_trusted_peer_and_mtu_247);
     RUN_TEST(test_advertising_is_fast_for_thirty_seconds);

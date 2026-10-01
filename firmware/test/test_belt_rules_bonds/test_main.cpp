@@ -85,11 +85,39 @@ void test_roles_are_recalled_by_identity_and_default_to_the_watch() {
 }
 
 void test_a_session_flag_belongs_to_one_bond() {
+    const KeptBond both_here[kMaxBonds] = {kWatchHere, kPhoneHere};
     uint8_t flags = session_flags_after_write(0, 1, true);
-    TEST_ASSERT_TRUE(any_session_active(flags));
-    TEST_ASSERT_TRUE(any_session_active(session_flags_after_write(flags, 0, false)));
-    TEST_ASSERT_FALSE(any_session_active(session_flags_after_write(flags, 1, false)));
+    TEST_ASSERT_TRUE(session_running(flags, both_here, kMaxBonds));
+    TEST_ASSERT_TRUE(session_running(session_flags_after_write(flags, 0, false), both_here, kMaxBonds));
+    TEST_ASSERT_FALSE(session_running(session_flags_after_write(flags, 1, false), both_here, kMaxBonds));
     TEST_ASSERT_EQUAL_UINT8(flags, session_flags_after_write(flags, kMaxBonds, true));
+}
+
+void test_a_connected_bond_with_its_flag_runs_a_session_whatever_its_role() {
+    const KeptBond both_here[kMaxBonds] = {kWatchHere, kPhoneHere};
+    TEST_ASSERT_TRUE(session_running(session_flags_after_write(0, 0, true), both_here, kMaxBonds));
+    TEST_ASSERT_TRUE(session_running(session_flags_after_write(0, 1, true), both_here, kMaxBonds));
+    TEST_ASSERT_FALSE(session_running(0, both_here, kMaxBonds));
+}
+
+void test_a_phone_session_ends_with_its_link() {
+    const KeptBond phone_gone[kMaxBonds] = {kWatchHere, kPhoneAway};
+    const KeptBond phone_alone_gone[kMaxBonds] = {kPhoneAway, kWatchAway};
+    TEST_ASSERT_FALSE(session_running(session_flags_after_write(0, 1, true), phone_gone, kMaxBonds));
+    TEST_ASSERT_FALSE(session_running(session_flags_after_write(0, 0, true), phone_alone_gone, kMaxBonds));
+}
+
+void test_a_watch_session_survives_the_watch_dropping() {
+    const KeptBond watch_gone[kMaxBonds] = {kWatchAway, kPhoneHere};
+    const KeptBond nobody_here[kMaxBonds] = {kWatchAway, kPhoneAway};
+    TEST_ASSERT_TRUE(session_running(session_flags_after_write(0, 0, true), watch_gone, kMaxBonds));
+    TEST_ASSERT_TRUE(session_running(session_flags_after_write(0, 0, true), nobody_here, kMaxBonds));
+}
+
+void test_a_flag_without_a_kept_bond_never_runs_a_session() {
+    const KeptBond watch_only[kMaxBonds] = {kWatchHere, kWatchHere};
+    TEST_ASSERT_FALSE(session_running(session_flags_after_write(0, 1, true), watch_only, 1));
+    TEST_ASSERT_FALSE(session_running(session_flags_after_write(0, 0, true), watch_only, 0));
 }
 
 void test_replacing_a_bond_drops_its_session_flag_and_keeps_the_other() {
@@ -112,6 +140,10 @@ int run_all_tests() {
     RUN_TEST(test_boot_keeps_at_most_the_two_oldest_bonds);
     RUN_TEST(test_roles_are_recalled_by_identity_and_default_to_the_watch);
     RUN_TEST(test_a_session_flag_belongs_to_one_bond);
+    RUN_TEST(test_a_connected_bond_with_its_flag_runs_a_session_whatever_its_role);
+    RUN_TEST(test_a_phone_session_ends_with_its_link);
+    RUN_TEST(test_a_watch_session_survives_the_watch_dropping);
+    RUN_TEST(test_a_flag_without_a_kept_bond_never_runs_a_session);
     RUN_TEST(test_replacing_a_bond_drops_its_session_flag_and_keeps_the_other);
     return UNITY_END();
 }

@@ -39,6 +39,16 @@ uint8_t bond_bit(size_t bond_index) {
     return static_cast<uint8_t>(1u << bond_index);
 }
 
+bool flag_set(uint8_t flags, size_t bond_index) {
+    return (flags & bond_bit(bond_index)) != 0;
+}
+
+// A watch keeps its session across its own drops (MVP); a phone's ends with its link, since a force-stopped
+// phone never writes 04 00.
+bool flag_counts(const KeptBond& bond) {
+    return bond.connected || bond.role == LinkRole::Watch;
+}
+
 }  // namespace
 
 BondPlan plan_new_bond(const KeptBond* kept, size_t kept_count) {
@@ -83,6 +93,12 @@ uint8_t session_flags_without_bond(uint8_t flags, size_t removed_index) {
     return static_cast<uint8_t>(below | above);
 }
 
-bool any_session_active(uint8_t session_flags) {
-    return session_flags != 0;
+bool session_running(uint8_t session_flags, const KeptBond* kept, size_t kept_count) {
+    size_t count = kept_count < kMaxBonds ? kept_count : kMaxBonds;
+    for (size_t i = 0; i < count; ++i) {
+        if (flag_set(session_flags, i) && flag_counts(kept[i])) {
+            return true;
+        }
+    }
+    return false;
 }

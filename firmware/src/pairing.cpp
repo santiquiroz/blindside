@@ -292,7 +292,7 @@ void pairing_note_session(PairingState& state, uint8_t slot, bool active) {
 }
 
 bool pairing_session_running(const PairingState& state) {
-    return any_session_active(state.session_flags);
+    return session_running(state.session_flags, kept_bonds(state.trusted).bonds, state.trusted.count);
 }
 
 bool pairing_whitelist_only(const PairingState& state) {
