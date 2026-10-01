@@ -10,7 +10,13 @@ import io.github.santiquiroz.blindside.core.scene.buildScene
 class RadarPipeline(private val config: PipelineConfig) {
     private var state: PipelineState = PipelineState.initial(config)
 
-    fun onBlePacket(bytes: ByteArray, arrivalNanos: Long): List<PipelineEvent> = commit(ingestPacket(state, bytes, arrivalNanos, config))
+    fun onBlePacket(bytes: ByteArray, arrivalNanos: Long): List<PipelineEvent> {
+        val previousFlags = state.flags
+        return commit(
+            ingestPacket(state, bytes, arrivalNanos, config)
+                .then { withSystemAlerts(it, radarDownAlerts(previousFlags, it.flags, config, arrivalNanos), config) },
+        )
+    }
 
     fun onWatchGravity(x: Float, y: Float, z: Float, eventNanos: Long) {
         state = state.copy(watchGravity = Vec3(x.toDouble(), y.toDouble(), z.toDouble()))
@@ -29,8 +35,8 @@ class RadarPipeline(private val config: PipelineConfig) {
     }
 
     fun onLinkState(connected: Boolean, nowNanos: Long): List<PipelineEvent> {
-        state = withLinkState(state, connected)
-        return emptyList()
+        val alerts = linkLostAlerts(state.connected, connected, nowNanos)
+        return commit(withSystemAlerts(withLinkState(state, connected), alerts, config))
     }
 
     fun setEliminated(on: Boolean) {
@@ -48,7 +54,7 @@ class RadarPipeline(private val config: PipelineConfig) {
             radars = radarStatuses(state, linkUp, config),
             imus = imuStatuses(state, linkUp),
             motion = state.motion.state(nowMs, config.tuning.motion),
-            warnings = emptySet(),
+            warnings = warningsAt(state, nowNanos, config),
             linkUp = linkUp,
             eliminated = state.eliminated,
         )
