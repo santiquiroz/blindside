@@ -123,6 +123,7 @@ JetBrains Mono NL 2.304 e IBM Plex Sans 1.1.0, ambas bajo SIL Open Font License 
   - Deslizar hacia atrás muestra "Buscando…" y luego la escena correcta.
   - Mapa de calor sobre el abanico, con leyenda en segundos, y resumen con las 7 filas.
 - [ ] Cinturón: "Conectar para diagnóstico" muestra el info legible (firmware, radares, IMUs, conexiones, potencia, MTU), los contadores y "Actualizar".
+- [ ] Con el radar recién iniciado (buscando, conectando o pidiendo la clave), Diagnóstico dice "Esperando la información del cinturón…" y no ofrece "Conectar para diagnóstico", que cortaría la partida.
 - [ ] "Reiniciar radar A/B": el chip del radar cae y vuelve en pocos segundos.
 - [ ] "Identificar":
   - Está deshabilitado con el radar del celular en marcha o con el reloj en partida.

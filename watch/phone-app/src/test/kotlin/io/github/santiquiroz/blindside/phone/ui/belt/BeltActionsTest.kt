@@ -21,6 +21,12 @@ import org.junit.jupiter.api.Test
 
 class BeltActionsTest {
     @Test
+    fun `with a session running the diagnostic waits for the info instead of offering a connect that would end it`() {
+        assertEquals(DiagnosticPrompt(WAITING_INFO_TEXT, offersConnect = false), diagnosticPrompt(running = true))
+        assertEquals(DiagnosticPrompt(NO_DIAGNOSTIC_TEXT, offersConnect = true), diagnosticPrompt(running = false))
+    }
+
+    @Test
     fun `the phone link is up only while a session streams`() {
         assertTrue(phoneLinkUp(SessionUiState(running = true, ble = BleStatus.STREAMING)))
         assertFalse(phoneLinkUp(SessionUiState(running = true, ble = BleStatus.CONNECTING)))

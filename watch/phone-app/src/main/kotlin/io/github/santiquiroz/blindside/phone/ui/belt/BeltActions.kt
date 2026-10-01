@@ -22,6 +22,12 @@ enum class ActionBlock { NOT_CONNECTED, SESSION_ACTIVE }
 
 data class PairingGuidance(val text: String, val canAskWatch: Boolean)
 
+data class DiagnosticPrompt(val text: String, val offersConnect: Boolean)
+
+const val NO_DIAGNOSTIC_TEXT = "Aún no hay diagnóstico: conecta el cinturón para leer su información."
+
+const val WAITING_INFO_TEXT = "Esperando la información del cinturón…"
+
 const val PAIRING_STEPS = "1. Con el radar del reloj en marcha, toca Pedir al reloj que abra la ventana " +
     "(o en el reloj, Ajustes → Emparejar celular; o BOOT 3 s en el primer minuto tras encender el cinturón).\n" +
     "2. Toca Iniciar radar.\n" +
@@ -62,6 +68,10 @@ fun pairingRequestMessage(result: BridgeResult<OpenPairingReply>): String = when
     BridgeResult.NoWatch -> "No hay un reloj conectado: mantén BOOT 3 s en el primer minuto tras encender el cinturón."
     is BridgeResult.Failed -> "El reloj no respondió (${result.reason}): usa el botón BOOT del cinturón."
 }
+
+// Connecting for diagnostics replaces whatever session runs (a game included), so it is offered only with none, as in LinkButton.
+fun diagnosticPrompt(running: Boolean): DiagnosticPrompt =
+    if (running) DiagnosticPrompt(WAITING_INFO_TEXT, offersConnect = false) else DiagnosticPrompt(NO_DIAGNOSTIC_TEXT, offersConnect = true)
 
 fun liveDiagnostics(phone: PhoneDiagnostics, running: Boolean): PhoneDiagnostics =
     if (running) phone else phone.copy(rssiDbm = null, counters = null)

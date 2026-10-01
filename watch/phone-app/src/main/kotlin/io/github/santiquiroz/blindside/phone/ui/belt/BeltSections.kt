@@ -78,7 +78,7 @@ fun DiagnosticSection(phone: PhoneDiagnostics, running: Boolean, linkUp: Boolean
     SectionCard("Diagnóstico") {
         val live = liveDiagnostics(phone, running)
         val view = live.infoJson?.let(::parseBeltInfoView)
-        if (view == null) NoDiagnostic(onConnect) else InfoDetails(infoRows(view), linkUp, onRefresh)
+        if (view == null) NoDiagnostic(diagnosticPrompt(running), onConnect) else InfoDetails(infoRows(view), linkUp, onRefresh)
         val counters = counterRows(live.counters, live.rssiDbm)
         if (counters.isNotEmpty()) {
             Text("Contadores", style = MaterialTheme.typography.titleSmall)
@@ -88,9 +88,11 @@ fun DiagnosticSection(phone: PhoneDiagnostics, running: Boolean, linkUp: Boolean
 }
 
 @Composable
-private fun NoDiagnostic(onConnect: () -> Unit) {
-    Text("Aún no hay diagnóstico: conecta el cinturón para leer su información.", color = Text2Color)
-    TextButton(onClick = onConnect, modifier = Modifier.heightIn(min = MIN_TOUCH)) { Text("Conectar para diagnóstico") }
+private fun NoDiagnostic(prompt: DiagnosticPrompt, onConnect: () -> Unit) {
+    Text(prompt.text, color = Text2Color)
+    if (prompt.offersConnect) {
+        TextButton(onClick = onConnect, modifier = Modifier.heightIn(min = MIN_TOUCH)) { Text("Conectar para diagnóstico") }
+    }
 }
 
 @Composable
