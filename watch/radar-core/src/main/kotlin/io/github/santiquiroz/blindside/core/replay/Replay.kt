@@ -29,11 +29,12 @@ private fun replayModeChange(payload: ByteArray, pipeline: RadarPipeline, nanos:
     return emptyList()
 }
 
+// The app stamps watch records from their event time, so the record clock stands in for the session's absolute eventNanos.
 private fun replayWatchInput(record: BsrecRecord, pipeline: RadarPipeline, nanos: Long) {
     when (record.type) {
-        RecordType.WATCH_GRAVITY -> BsrecPayloads.readGravity(record.payload).let { pipeline.onWatchGravity(it.x, it.y, it.z, it.eventNanos) }
-        RecordType.WATCH_GYRO -> BsrecPayloads.readWatchGyro(record.payload).let { pipeline.onWatchGyro(it.x, it.y, it.z, it.eventNanos) }
-        RecordType.WATCH_STEP -> pipeline.onWatchStep(BsrecPayloads.readStep(record.payload))
+        RecordType.WATCH_GRAVITY -> BsrecPayloads.readGravity(record.payload).let { pipeline.onWatchGravity(it.x, it.y, it.z, nanos) }
+        RecordType.WATCH_GYRO -> BsrecPayloads.readWatchGyro(record.payload).let { pipeline.onWatchGyro(it.x, it.y, it.z, nanos) }
+        RecordType.WATCH_STEP -> pipeline.onWatchStep(nanos)
         RecordType.INFO_REREAD -> pipeline.onBeltInfo(BsrecPayloads.readInfo(record.payload), nanos)
         else -> Unit
     }

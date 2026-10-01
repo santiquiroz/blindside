@@ -34,6 +34,20 @@ class ReplayTest {
     }
 
     @Test
+    fun `watch records replay on the recording clock, so the start passed in does not matter`() {
+        val scenario = Scenarios.crossing()
+        val start = startOf(scenario)
+        val step = BsrecRecord(RecordType.WATCH_STEP, 500, BsrecPayloads.step(start + 500 * ms))
+        val records = (listOf(step) + recordsOf(scenario, start)).sortedBy { it.tMsSinceStart }
+
+        val atLiveStart = replayRecording(records.asSequence(), RadarPipeline(PipelineConfig()), start)
+        val atZero = replayRecording(records.asSequence(), RadarPipeline(PipelineConfig()))
+
+        assertEquals(1, atLiveStart.filterIsInstance<ContactAlert>().size)
+        assertEquals(1, atZero.filterIsInstance<ContactAlert>().size)
+    }
+
+    @Test
     fun `an info record in the recording reaches the pipeline`() {
         val scenario = Scenarios.crossing()
         val start = startOf(scenario)
@@ -73,6 +87,8 @@ class ReplayTest {
         assertEquals(config, pipelineConfigFromHeader("""{"proto":1,"config":${config.toJson()}}"""))
         assertEquals(PipelineConfig(), pipelineConfigFromHeader("""{"proto":1}"""))
     }
+
+    private val ms = 1_000_000L
 
     private fun startOf(scenario: Scenario): Long = scenarioInputs(scenario).first().nanos
 

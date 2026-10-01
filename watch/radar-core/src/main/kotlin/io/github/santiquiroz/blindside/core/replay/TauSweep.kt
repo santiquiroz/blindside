@@ -6,7 +6,7 @@ import io.github.santiquiroz.blindside.core.config.PipelineConfig
 val DEFAULT_TAU_SWEEP_MS: List<Long> = (0L..200L step 10).toList()
 
 // Spec §6.3 / §12: τ (radar → IMU delay) is the value that minimises the mean NIS of the updates made while turning.
-fun sweepTau(records: List<BsrecRecord>, config: PipelineConfig, startNanos: Long, tausMs: List<Long> = DEFAULT_TAU_SWEEP_MS): Map<Long, Double?> =
+fun sweepTau(records: List<BsrecRecord>, config: PipelineConfig, startNanos: Long = 0, tausMs: List<Long> = DEFAULT_TAU_SWEEP_MS): Map<Long, Double?> =
     tausMs.associateWith { tau -> meanTurningNis(records, withTau(config, tau), startNanos) }
 
 fun bestTau(sweep: Map<Long, Double?>): Long? =
