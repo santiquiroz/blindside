@@ -38,5 +38,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <service
+            android:name=".session.BlindsideSessionService"
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice|health" />
     </application>
 </manifest>
