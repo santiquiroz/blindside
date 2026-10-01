@@ -31,7 +31,6 @@ constexpr uint32_t kImuGridLagMs = 2;
 constexpr int kStatusLedPin = 2;
 constexpr int kBootButtonPin = 0;
 
-constexpr uint32_t kInfoRefreshMs = 1000;
 constexpr uint32_t kDiagnosticsPeriodMs = 5000;
 constexpr uint32_t kLoopPeriodMs = 5;
 

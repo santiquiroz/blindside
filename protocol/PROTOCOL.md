@@ -98,7 +98,8 @@ IMU, type 0x02, len 18 + 12n (20 + 12n B with the TLV header):
   the slot centre, `s + 10`. Sample *i* of a section has time `t_first_ms + 20·i`.
 - A failed read, a read skipped while the IMU is down, or a slot the firmware fell behind on repeats
   the previous reading (zeros before the first good one). The sums therefore advance by exactly 4
-  readings per slot, and samples stay on the grid. Repeats are counted per IMU (serial diagnostics).
+  readings per slot, and samples stay on the grid. Repeats are counted per IMU (`imus[i].repeats` in
+  `info`, §5, and the serial diagnostics line).
 - A section only holds samples on a contiguous 20 ms grid; a gap (samples lost before reaching the
   bundler) starts a new section. A run longer than 18 samples is split into consecutive sections.
 - Each sample is the mean of 4 readings, rounded half away from zero. Gyro ±500 °/s
@@ -146,10 +147,10 @@ Types 0x10-0x1F are reserved (0x10 = thermal camera). Unknown types are skipped 
 - Skip unknown section types using `len`.
 - If `len` exceeds the bytes left in the packet, drop the rest of the packet and count it as truncated.
 
-## 5. `info` (UTF-8 JSON, ≤ 400 B, refreshed every second)
+## 5. `info` (UTF-8 JSON, ≤ 512 B, generated at each read)
 
 ```json
-{"proto":1,"fw":"0.1.0","boot_id":"9f3a12c4","reset":"POWERON","mtu":255,"radars":[{"id":0,"fw":"V2.04.23101915","baud":256000},{"id":1,"fw":"V2.04.23101915","baud":256000}],"imus":[{"id":0,"who":104,"gyro_lsb_dps":65.5,"accel_lsb_g":4096},{"id":1,"who":112,"gyro_lsb_dps":65.5,"accel_lsb_g":4096}],"tx_power_dbm":9,"conn":{"interval_ms":45.0,"latency":0,"timeout_ms":5000},"uptime_s":42}
+{"proto":1,"fw":"0.1.0","boot_id":"9f3a12c4","reset":"POWERON","mtu":255,"radars":[{"id":0,"fw":"V2.04.23101915","baud":256000},{"id":1,"fw":"V2.04.23101915","baud":256000}],"imus":[{"id":0,"who":104,"gyro_lsb_dps":65.5,"accel_lsb_g":4096,"repeats":0},{"id":1,"who":112,"gyro_lsb_dps":65.5,"accel_lsb_g":4096,"repeats":3}],"tx_power_dbm":9,"conn":{"interval_ms":45.0,"latency":0,"timeout_ms":5000},"uptime_s":42}
 ```
 
 - `boot_id`: random 32-bit value per boot, 8 lower-case hex digits.
@@ -160,14 +161,19 @@ Types 0x10-0x1F are reserved (0x10 = thermal camera). Unknown types are skipped 
 - `tx_power_dbm`: `NimBLEDevice::getPower()`, expected 9.
 - `conn`: the last parameters NimBLE reported (`interval_ms` = units × 1.25 with one decimal,
   `timeout_ms` = units × 10); all zero before the first connection.
-- The per-IMU repeat counts of spec §4.2 do not fit in 400 B next to the contract fields; they are on
-  the serial diagnostics line (`rep=`).
+- `imus[i].repeats` (u32): raw 200 Hz readings repeated since boot because a read failed or its slot
+  was skipped (§4.2).
+- Size: at most 512 B (the ATT maximum attribute length); with every field at its longest it is 444 B.
+  It is longer than one ATT read, so the watch reads it long (Read, then Read Blob); readers must
+  accept it in one piece of up to 512 B.
+- The belt builds the document when the Read at offset 0 arrives, and the Read Blob requests of the same
+  long read are served from that copy, so one long read never mixes two versions.
 
 ## 6. `control` writes
 
 | Bytes | Meaning |
 |---|---|
-| `01 <id>` | Restart radar `<id>` (0 or 1): enable configuration, then restart (0x00A3) 100 ms later |
+| `01 <id>` | Restart radar `<id>` (0 or 1): enable configuration, then restart (0x00A3) 100 ms later. A radar not configured yet (`baud` 0) is probed and configured instead |
 | `03` | IDENTIFY: blink the LED 3 times (1.2 s). Ignored while a session is active |
 | `04 <0/1>` | SESSION_ACTIVE: the watch writes 1 when a session starts and 0 when it stops. The value persists across disconnections until written again or until the ESP32 reboots |
 
