@@ -112,6 +112,7 @@ fun screenModeLabel(mode: ScreenMode): String = when (mode) {
 }
 
 fun postureLabel(posture: WatchPosture): String = when (posture) {
+    WatchPosture.AUTO -> "Automática"
     WatchPosture.NORMAL -> "Normal"
     WatchPosture.TACTICAL_LEFT -> "Táctica izquierda (+90°)"
     WatchPosture.TACTICAL_RIGHT -> "Táctica derecha (-90°)"

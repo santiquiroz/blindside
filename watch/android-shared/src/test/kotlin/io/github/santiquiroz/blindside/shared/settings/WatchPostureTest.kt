@@ -32,15 +32,16 @@ class WatchPostureTest {
     }
 
     @Test
-    fun `the default posture is normal`() {
-        assertEquals(WatchPosture.NORMAL, AppSettings().posture)
+    fun `the default posture is automatic`() {
+        assertEquals(WatchPosture.AUTO, AppSettings().posture)
     }
 
     @Test
-    fun `posture cycles through normal, tactical left and tactical right`() {
+    fun `posture cycles through automatic, normal, tactical left and tactical right`() {
+        assertEquals(WatchPosture.NORMAL, nextPosture(WatchPosture.AUTO))
         assertEquals(WatchPosture.TACTICAL_LEFT, nextPosture(WatchPosture.NORMAL))
         assertEquals(WatchPosture.TACTICAL_RIGHT, nextPosture(WatchPosture.TACTICAL_LEFT))
-        assertEquals(WatchPosture.NORMAL, nextPosture(WatchPosture.TACTICAL_RIGHT))
+        assertEquals(WatchPosture.AUTO, nextPosture(WatchPosture.TACTICAL_RIGHT))
     }
 
     @Test
