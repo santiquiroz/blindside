@@ -75,6 +75,34 @@ Ya existen "sensores de latidos" caseros construidos con el mismo radar; consult
 | Samsung Galaxy Watch 7 | — | Wear OS 6 (API 36); otros relojes Wear OS sin probar |
 | Cajas de radar impresas en 3D | — | Mantienen los ángulos, detienen balines y dejan pasar la señal de 24 GHz por una ventana maciza (sin metal frente al radar). Un trozo de papel aluminio o de lata entre cada radar y tu cuerpo, aislado de la electrónica, reduce el lóbulo trasero del radar, que si no captaría tus propios movimientos. |
 
+## Cableado
+
+Todo funciona a **3,3 V**: alimentá los radares y los acelerómetros desde el pin **3V3** del ESP32 (no 5 V) y compartí una **GND** común. En el UART, el TX del sensor va al RX del ESP32 y viceversa. Todos los pines están en [firmware/include/blindside_config.h](firmware/include/blindside_config.h).
+
+**Radares — 2× HLK-LD2450 (UART, 256000 baudios, 3,3 V):**
+
+| Pin del LD2450 | Radar A → ESP32 | Radar B → ESP32 |
+|---|---|---|
+| VCC (3,3 V) | 3V3 | 3V3 |
+| GND | GND | GND |
+| TX (OT1) → RX del ESP32 | GPIO16 | GPIO26 |
+| RX (RX1) ← TX del ESP32 | GPIO17 | GPIO27 |
+
+El radar B va por la matriz de GPIO porque los pines por defecto del UART1 (9/10) son de la flash SPI.
+
+**Acelerómetros — 2× MPU6050 / GY-521 (I2C, 100 kHz, dirección 0x68):** cada IMU tiene su propio bus I2C, así que las dos conservan la dirección por defecto — sin puente AD0, sin conflicto.
+
+| Pin del GY-521 | IMU A → ESP32 | IMU B → ESP32 |
+|---|---|---|
+| VCC | 3V3 | 3V3 |
+| GND | GND | GND |
+| SDA | GPIO32 | GPIO21 |
+| SCL | GPIO33 | GPIO22 |
+
+- **El radar A + IMU A van en la caja de la cadera izquierda; el radar B + IMU B en la derecha.** Cada IMU tiene que quedar rígida con su propio radar — el reloj la usa para cancelar tus giros y tus pasos.
+- El conector del LD2450 es JST ZH de 1,5 mm, no de 2,54 mm.
+- En el primer arranque el firmware saca cada LD2450 del Bluetooth y lo pone a 256000 baudios. Confirmá por el puerto serie USB que la línea `diag` muestre `radar 0: baud=256000` y `radar 1: baud=256000`, y que las IMUs digan `imu0[ok=1 who=0x68 …]` (un clon con 0x70/0x71/0x98 también sirve). La lista completa de banco está en [firmware/HARDWARE_CHECKLIST.md](firmware/HARDWARE_CHECKLIST.md).
+
 ## Cómo funciona (versión corta)
 
 1. **El cinturón se mantiene simple.** El ESP32 nunca interpreta objetivos. Cada 100 ms empaqueta las tramas crudas del LD2450 y las lecturas de 50 Hz de los dos IMU, cada una con su propia marca de tiempo, en una sola notificación BLE, o en varias seguidas cuando no cabe.

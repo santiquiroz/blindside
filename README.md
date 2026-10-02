@@ -75,6 +75,34 @@ DIY "heartbeat sensors" built on the same radar already exist; see [Prior art](#
 | Samsung Galaxy Watch 7 | — | Wear OS 6 (API 36); other Wear OS watches untested |
 | 3D-printed radar boxes | — | Hold the angles, stop BBs, and pass the 24 GHz signal through a solid-infill window (no metal in front of the radar). Aluminum foil or a piece of tin can between each radar and your body, insulated from the electronics, cuts down the radar's rear lobe, which would otherwise pick up your own movement. |
 
+## Wiring
+
+Everything runs at **3.3 V**: power the radars and the IMUs from the ESP32's **3V3** pin (not 5 V) and share a common **GND**. On the UART, the sensor's TX goes to the ESP32's RX and vice versa. All pins live in [firmware/include/blindside_config.h](firmware/include/blindside_config.h).
+
+**Radars — 2× HLK-LD2450 (UART, 256000 baud, 3.3 V):**
+
+| LD2450 pin | Radar A → ESP32 | Radar B → ESP32 |
+|---|---|---|
+| VCC (3.3 V) | 3V3 | 3V3 |
+| GND | GND | GND |
+| TX (OT1) → ESP32 RX | GPIO16 | GPIO26 |
+| RX (RX1) ← ESP32 TX | GPIO17 | GPIO27 |
+
+Radar B rides the GPIO matrix because UART1's default pins (9/10) belong to the SPI flash.
+
+**IMUs — 2× MPU6050 / GY-521 (I2C, 100 kHz, address 0x68):** each IMU has its own I2C bus, so both keep the default address — no AD0 jumper, no conflict.
+
+| GY-521 pin | IMU A → ESP32 | IMU B → ESP32 |
+|---|---|---|
+| VCC | 3V3 | 3V3 |
+| GND | GND | GND |
+| SDA | GPIO32 | GPIO21 |
+| SCL | GPIO33 | GPIO22 |
+
+- **Radar A + IMU A go in the left hip box, Radar B + IMU B in the right box.** Each IMU must be rigid with its own radar — the watch uses it to cancel your turns and steps.
+- The LD2450 connector is JST ZH 1.5 mm, not 2.54 mm.
+- On first boot the firmware takes each LD2450 off Bluetooth and sets it to 256000 baud. Confirm over USB serial that the `diag` line shows `radar 0: baud=256000` and `radar 1: baud=256000`, and that the IMUs read `imu0[ok=1 who=0x68 …]` (a clone reporting 0x70/0x71/0x98 is also fine). The full bench checklist is in [firmware/HARDWARE_CHECKLIST.md](firmware/HARDWARE_CHECKLIST.md).
+
 ## How it works (short version)
 
 1. **The belt stays simple.** The ESP32 never interprets targets. Every 100 ms it bundles the raw LD2450 frames and the 50 Hz readings of both IMUs, each with its own timestamp, into one BLE notification, or several consecutive ones when the bundle doesn't fit.
