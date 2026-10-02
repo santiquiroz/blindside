@@ -21,7 +21,6 @@ data class PhoneActions(
     val startRadar: () -> Unit = {},
     val startDiagnostic: () -> Unit = {},
     val stop: () -> Unit = {},
-    val toggleEliminated: () -> Unit = {},
     val retryLink: () -> Unit = {},
     val sendCommand: (BeltCommand) -> Unit = {},
     val refreshInfo: () -> Unit = {},

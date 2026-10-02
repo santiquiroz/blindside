@@ -54,8 +54,6 @@ fun statusItems(scene: RadarScene?, watchSteps: Boolean): List<StatusItem> = lis
     if (watchSteps) null else StatusItem(NO_WATCH_STEPS_LABEL, ok = false),
 )
 
-fun eliminatedActionLabel(eliminated: Boolean): String = if (eliminated) "REAPARECÍ" else "ME DIERON"
-
 private fun isAlive(sensors: List<SensorStatus>?, id: Int): Boolean = sensors?.firstOrNull { it.id == id }?.alive == true
 
 enum class StatusMark { FILLED, HOLLOW }

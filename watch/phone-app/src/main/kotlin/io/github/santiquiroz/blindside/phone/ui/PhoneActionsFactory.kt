@@ -32,7 +32,6 @@ fun rememberPhoneActions(deps: PhoneDeps, onBluetoothBlocked: (Boolean) -> Unit)
             startRadar = { startSession(SessionPurpose.GAME) },
             startDiagnostic = { startSession(SessionPurpose.DIAGNOSTIC) },
             stop = { PhoneSessionCommands.stop(context) },
-            toggleEliminated = { context.startService(PhoneSessionCommands.toggleEliminatedIntent(context)) },
             retryLink = { PhoneSessionCommands.retryLink(context) },
             sendCommand = { PhoneSessionCommands.send(context, it) },
             refreshInfo = { PhoneSessionCommands.refreshInfo(context) },

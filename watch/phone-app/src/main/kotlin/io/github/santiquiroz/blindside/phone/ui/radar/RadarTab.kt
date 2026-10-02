@@ -17,13 +17,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Radar
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -44,19 +41,15 @@ import io.github.santiquiroz.blindside.phone.ui.common.KeepScreenOn
 import io.github.santiquiroz.blindside.phone.ui.common.MIN_TOUCH
 import io.github.santiquiroz.blindside.phone.ui.common.NumberText
 import io.github.santiquiroz.blindside.phone.ui.common.StatusChip
-import io.github.santiquiroz.blindside.phone.ui.theme.AccentColor
 import io.github.santiquiroz.blindside.phone.ui.theme.AlertRedColor
-import io.github.santiquiroz.blindside.phone.ui.theme.BgColor
 import io.github.santiquiroz.blindside.phone.ui.theme.Text2Color
 import io.github.santiquiroz.blindside.phone.ui.theme.WarnColor
 import io.github.santiquiroz.blindside.shared.ble.needsRetry
 import io.github.santiquiroz.blindside.shared.session.SessionUiState
-import io.github.santiquiroz.blindside.shared.radar.eliminatedActionLabel
 import io.github.santiquiroz.blindside.shared.radar.warningLabel
 
 private val START_BUTTON_SIZE = 200.dp
 private val START_ICON_SIZE = 56.dp
-private val ELIMINATED_BUTTON_HEIGHT = 64.dp
 private val CONTACT_LIST_MAX_HEIGHT = 200.dp
 
 @Composable
@@ -113,7 +106,6 @@ private fun LiveRadar(session: SessionUiState, actions: PhoneActions) {
         warningLabel(session.scene?.warnings.orEmpty())?.let { Text(it, color = WarnColor, style = MaterialTheme.typography.labelLarge) }
         RadarView(session.scene, Modifier.weight(1f).fillMaxWidth())
         ContactList(contactRows(session.scene), Modifier.fillMaxWidth().heightIn(max = CONTACT_LIST_MAX_HEIGHT))
-        EliminatedButton(session.eliminated, actions.toggleEliminated)
     }
     if (confirmingStop) {
         StopDialog(
@@ -180,19 +172,6 @@ private fun ContactLine(row: ContactRow) {
         NumberText(row.bearing, Modifier.width(56.dp))
         Text(row.confidence, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = Text2Color)
         NumberText(row.age, style = MaterialTheme.typography.bodyMedium, color = Text2Color)
-    }
-}
-
-@Composable
-private fun EliminatedButton(eliminated: Boolean, onToggle: () -> Unit) {
-    Button(
-        onClick = onToggle,
-        colors = ButtonDefaults.buttonColors(containerColor = if (eliminated) AccentColor else AlertRedColor, contentColor = BgColor),
-        modifier = Modifier.fillMaxWidth().height(ELIMINATED_BUTTON_HEIGHT),
-    ) {
-        Icon(if (eliminated) Icons.Filled.Refresh else Icons.Filled.Close, contentDescription = null)
-        Spacer(Modifier.width(8.dp))
-        Text(eliminatedActionLabel(eliminated), style = MaterialTheme.typography.titleMedium)
     }
 }
 

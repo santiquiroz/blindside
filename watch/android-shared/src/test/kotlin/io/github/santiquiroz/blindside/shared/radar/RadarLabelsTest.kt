@@ -90,12 +90,6 @@ class RadarLabelsTest {
     }
 
     @Test
-    fun `the eliminated button names its action`() {
-        assertEquals("ME DIERON", eliminatedActionLabel(eliminated = false))
-        assertEquals("REAPARECÍ", eliminatedActionLabel(eliminated = true))
-    }
-
-    @Test
     fun `status chips mark ok with a filled dot and faults with a hollow one`() {
         assertEquals(StatusMark.FILLED, statusMark(StatusItem("BLE", ok = true)))
         assertEquals(StatusMark.HOLLOW, statusMark(StatusItem("BLE", ok = false)))

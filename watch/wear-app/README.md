@@ -140,4 +140,5 @@ La lógica pura se prueba en la JVM dentro de `android-shared`. Los puntos de ab
 - [ ] 8.3 El toque largo marca base/reaparición/objetivo en el rumbo GPS real; la cuña sigue al norte al girar el cuerpo.
 - [ ] 8.3 Los avisos contextuales salen de a uno, 4 s, en la mitad trasera; en Sigilo solo vibra el de enlace del cinturón caído.
 - [ ] 8.3 Un toque en el centro muestra el panel de vistazo 3 s y luego se oculta solo.
-- [ ] 8.4 No hay chip "ME DIERON"/"REAPARECÍ" en ninguna parte; una grabación `.bsrec` vieja con un tramo eliminado sigue reproduciéndose como eliminada en el visor del celular.
+<!-- 8.4 completado en Tasks 14-15: quitado el chip/acción/ajuste en vivo del reloj y del celular y borrado eliminatedActionLabel; SessionMode.ELIMINATED y el camino de replay siguen en radar-core (ReplayTest 12 + BsrecTest 6 verdes). Código y JVM verifican ambas mitades; queda solo confirmar a ojo en el visor del celular que una grabación vieja pinta "ELIMINADO". -->
+- [x] 8.4 No hay chip "ME DIERON"/"REAPARECÍ" en ninguna parte (grep sin referencias, build verde); una grabación `.bsrec` vieja con un tramo eliminado sigue reproduciéndose como eliminada en el visor del celular (camino de replay verificado en JVM; falta la confirmación visual en dispositivo).

@@ -13,7 +13,6 @@ import io.github.santiquiroz.blindside.phone.R
 object PhoneNotification {
     const val NOTIFICATION_ID = 11
     private const val CHANNEL_ID = "blindside_phone_session"
-    private const val REQUEST_TOGGLE = 1
     private const val REQUEST_STOP = 2
 
     fun ensureChannel(context: Context) {
@@ -27,7 +26,6 @@ object PhoneNotification {
         .setContentText(status)
         .setOngoing(true)
         .setContentIntent(openAppIntent(context))
-        .addAction(R.drawable.ic_radar, "Eliminado", servicePendingIntent(context, REQUEST_TOGGLE, PhoneSessionCommands.toggleEliminatedIntent(context)))
         .addAction(R.drawable.ic_radar, "Detener", servicePendingIntent(context, REQUEST_STOP, PhoneSessionCommands.stopIntent(context)))
         .build()
 
