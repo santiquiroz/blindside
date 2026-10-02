@@ -118,3 +118,23 @@ Marca cada punto en el reloj real. Si un punto falla, anota qué viste y la hora
     - En ambiente o con la pantalla apagada (Sigilo) no hay anillo ni rumbo.
     - Ajustes → "Brújula: no" quita el anillo y el abanico crece hasta el borde.
     - Si el reloj reporta siempre precisión baja con el sensor de rotación, anotarlo como desviación: el anillo quedaría tenue todo el tiempo.
+
+## Pasada de pulido del reloj (spec §8)
+
+La lógica pura se prueba en la JVM dentro de `android-shared`. Los puntos de abajo necesitan el Watch 7 real + el cinturón y se marcan a mano; no bloquean una fusión.
+
+### Baseline
+- Pruebas en efdf63a: android-shared=330, wear-app=47, phone-app=166.
+
+### Lista de verificación en dispositivo (§8)
+- [ ] 8.1 El anillo de la brújula se anima a ~60 fps, sin saltos por muestra: `adb shell dumpsys gfxinfo io.github.santiquiroz.blindside` en demo antes y después; anotar el % de cuadros con jank.
+- [ ] 8.1 Los contactos se deslizan entre los cuadros del cinturón; un giro rápido del cuerpo rota la escena al instante (giroscopio) y luego se asienta.
+- [ ] 8.1 El giro de escena del giroscopio va en el sentido correcto (girar el cuerpo a la derecha deja un objetivo estático donde está).
+- [ ] 8.2 "Calibrar postura táctica" captura en 3 s; levantar la réplica al agarre rota solo el radar en ~0,4 s; bajarla vuelve a lo normal.
+- [ ] 8.2 AUTO elige el lado correcto (izquierda/derecha) según cómo lleva el reloj este jugador.
+- [ ] 8.3 La ventanita del bisel rota rumbo → hora → tiempo de partida; un toque corto la fija/suelta.
+- [ ] 8.3 El reloj de partida cuenta regresiva; vibra una vez a los 5 min restantes y una vez al terminar.
+- [ ] 8.3 El toque largo marca base/reaparición/objetivo en el rumbo GPS real; la cuña sigue al norte al girar el cuerpo.
+- [ ] 8.3 Los avisos contextuales salen de a uno, 4 s, en la mitad trasera; en Sigilo solo vibra el de enlace del cinturón caído.
+- [ ] 8.3 Un toque en el centro muestra el panel de vistazo 3 s y luego se oculta solo.
+- [ ] 8.4 No hay chip "ME DIERON"/"REAPARECÍ" en ninguna parte; una grabación `.bsrec` vieja con un tramo eliminado sigue reproduciéndose como eliminada en el visor del celular.
