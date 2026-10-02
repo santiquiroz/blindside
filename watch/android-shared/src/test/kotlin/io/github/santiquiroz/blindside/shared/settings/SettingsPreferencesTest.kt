@@ -36,6 +36,7 @@ class SettingsPreferencesTest {
             sharedUpdatedMs = 1_727_790_153_123L,
             contactColor = ContactColor.RED,
             compass = false,
+            gameDurationMs = 7_200_000L,
         )
         val prefs = mutablePreferencesOf()
         writeSettings(prefs, original)

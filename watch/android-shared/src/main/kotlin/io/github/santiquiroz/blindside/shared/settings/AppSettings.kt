@@ -3,6 +3,7 @@ package io.github.santiquiroz.blindside.shared.settings
 import io.github.santiquiroz.blindside.core.config.Handedness
 import io.github.santiquiroz.blindside.core.config.RADAR_A
 import io.github.santiquiroz.blindside.core.config.RADAR_B
+import io.github.santiquiroz.blindside.shared.hud.DEFAULT_GAME_DURATION_MS
 import io.github.santiquiroz.blindside.shared.sensors.GravityTemplate
 
 enum class ScreenMode { SIGILO, VISTA }
@@ -39,6 +40,7 @@ data class AppSettings(
     val sharedUpdatedMs: Long = 0L,
     val contactColor: ContactColor = ContactColor.GREEN,
     val compass: Boolean = true,
+    val gameDurationMs: Long = DEFAULT_GAME_DURATION_MS,
 )
 
 typealias SettingsTransform = (AppSettings) -> AppSettings

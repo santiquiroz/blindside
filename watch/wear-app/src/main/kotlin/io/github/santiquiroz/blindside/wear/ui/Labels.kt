@@ -118,6 +118,11 @@ fun screenModeLabel(mode: ScreenMode): String = when (mode) {
     ScreenMode.VISTA -> "Vista (siempre encendida)"
 }
 
+fun gameDurationLabel(durationMs: Long): String = when (durationMs) {
+    0L -> "Sin límite"
+    else -> "${durationMs / 3_600_000L} h"
+}
+
 fun postureLabel(posture: WatchPosture): String = when (posture) {
     WatchPosture.AUTO -> "Automática"
     WatchPosture.NORMAL -> "Normal"
