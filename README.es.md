@@ -77,6 +77,8 @@ Ya existen "sensores de latidos" caseros construidos con el mismo radar; consult
 
 ## Cableado
 
+![Diagrama de cableado del cinturón](docs/wiring.svg)
+
 Todo funciona a **3,3 V**: alimentá los radares y los acelerómetros desde el pin **3V3** del ESP32 (no 5 V) y compartí una **GND** común. En el UART, el TX del sensor va al RX del ESP32 y viceversa. Todos los pines están en [firmware/include/blindside_config.h](firmware/include/blindside_config.h).
 
 **Radares — 2× HLK-LD2450 (UART, 256000 baudios, 3,3 V):**

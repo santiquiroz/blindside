@@ -77,6 +77,8 @@ DIY "heartbeat sensors" built on the same radar already exist; see [Prior art](#
 
 ## Wiring
 
+![Belt wiring diagram](docs/wiring.svg)
+
 Everything runs at **3.3 V**: power the radars and the IMUs from the ESP32's **3V3** pin (not 5 V) and share a common **GND**. On the UART, the sensor's TX goes to the ESP32's RX and vice versa. All pins live in [firmware/include/blindside_config.h](firmware/include/blindside_config.h).
 
 **Radars — 2× HLK-LD2450 (UART, 256000 baud, 3.3 V):**
