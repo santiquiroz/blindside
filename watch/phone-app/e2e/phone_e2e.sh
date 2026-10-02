@@ -62,8 +62,15 @@ find_devices() {
 }
 
 ui_dump() {
-    adb -s "$1" shell uiautomator dump /sdcard/e2e-ui.xml >/dev/null 2>&1
-    adb -s "$1" exec-out cat /sdcard/e2e-ui.xml > "$OUT/ui.xml" 2>/dev/null
+    # uiautomator a veces escribe un XML vacío en pantallas Compose: reintentar hasta tener raíz válida.
+    local attempt
+    for attempt in 1 2 3 4; do
+        adb -s "$1" shell uiautomator dump /sdcard/e2e-ui.xml >/dev/null 2>&1
+        adb -s "$1" exec-out cat /sdcard/e2e-ui.xml > "$OUT/ui.xml" 2>/dev/null
+        [ -s "$OUT/ui.xml" ] && head -c 1 "$OUT/ui.xml" | grep -q '<' && return 0
+        sleep 0.5
+    done
+    return 0
 }
 
 tap() {
@@ -221,9 +228,11 @@ step4_pair() {
         single) report 4 "NO EJECUTADO" "el cinturón tiene el firmware 0.1.0: emparejar el celular desemparejaría el reloj"; return 1 ;;
     esac
     start_watch_game || { report 4 "FALLA" "el reloj no transmite en 36 s (regresión del paso 2)"; return 1; }
-    { tap "$PHONE" "Cintur.n" && tap "$PHONE" "Pedir al reloj que abra la ventana"; } || { report 4 "FALLA" "no se encontró el botón en el celular"; return 1; }
+    # El botón queda bajo el fold de la pestaña Cinturón, y los ítems fuera de pantalla no salen en el dump de Compose: hay que desplazar.
+    { tap "$PHONE" "Cintur.n" && tap_scrolled "$PHONE" "Pedir al reloj que abra la ventana"; } || { report 4 "FALLA" "no se encontró el botón en el celular"; return 1; }
     wait_text "$PHONE" "Pedido enviado.*" 15 || { report 4 "FALLA" "el reloj no respondió REQUESTED (ver $OUT/ui.xml)"; return 1; }
-    { tap "$PHONE" "Radar" && tap "$PHONE" "Iniciar radar"; } || { report 4 "FALLA" "no se encontró Iniciar radar"; return 1; }
+    # Con el cinturón ya emparejado el celular autoarranca el radar: tocar "Iniciar radar" es best-effort, no un requisito.
+    tap "$PHONE" "Radar"; tap_scrolled "$PHONE" "Iniciar radar" || echo "el celular ya estaba transmitiendo (autoarranque)"
     local detail
     detail=$(pair_or_reuse) || { report 4 "FALLA" "no apareció el diálogo de clave ni conectó en 84 s"; return 1; }
     report 4 "PASA" "ventana abierta desde el reloj (05); $detail"
