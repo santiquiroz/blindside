@@ -13,7 +13,6 @@ internal object Keys {
     val HANDEDNESS = stringPreferencesKey("handedness")
     val SCREEN_MODE = stringPreferencesKey("screen_mode")
     val VIBRATION_USAGE = stringPreferencesKey("vibration_usage")
-    val ELIMINATED = booleanPreferencesKey("eliminated")
     val BELT_ADDRESS = stringPreferencesKey("belt_address")
     val POSTURE = stringPreferencesKey("watch_posture")
     val AUTO_START_RADAR = booleanPreferencesKey("auto_start_radar")
@@ -39,7 +38,6 @@ fun settingsFrom(prefs: Preferences): AppSettings {
         radars = DEFAULT_RADARS.map { radarFrom(prefs, it.radarId) },
         screenMode = enumOrDefault(prefs[Keys.SCREEN_MODE], defaults.screenMode),
         vibrationUsage = enumOrDefault(prefs[Keys.VIBRATION_USAGE], defaults.vibrationUsage),
-        eliminated = prefs[Keys.ELIMINATED] ?: defaults.eliminated,
         beltAddress = prefs[Keys.BELT_ADDRESS],
         posture = enumOrDefault(prefs[Keys.POSTURE], defaults.posture),
         postureTemplate = templateFrom(prefs),
@@ -55,7 +53,6 @@ fun writeSettings(prefs: MutablePreferences, settings: AppSettings) {
     prefs[Keys.HANDEDNESS] = settings.handedness.name
     prefs[Keys.SCREEN_MODE] = settings.screenMode.name
     prefs[Keys.VIBRATION_USAGE] = settings.vibrationUsage.name
-    prefs[Keys.ELIMINATED] = settings.eliminated
     prefs[Keys.POSTURE] = settings.posture.name
     prefs[Keys.AUTO_START_RADAR] = settings.autoStartRadar
     prefs[Keys.SHARED_UPDATED_MS] = settings.sharedUpdatedMs

@@ -23,7 +23,7 @@ fun recordFor(input: SessionInput, startNanos: Long): BsrecRecord? = when (input
     is SessionInput.Marker -> record(RecordType.MANUAL_MARKER, input.nowNanos, startNanos, ByteArray(0))
     is SessionInput.Link -> modeRecord(BsrecPayloads.linkChange(input.connected), input.nowNanos, startNanos)
     is SessionInput.ModeChanged ->
-        modeRecord(BsrecPayloads.modeChange(sessionMode(input.eliminated, input.screenMode)), input.nowNanos, startNanos)
+        modeRecord(BsrecPayloads.modeChange(screenModeToSessionMode(input.screenMode)), input.nowNanos, startNanos)
     is SessionInput.Tick, is SessionInput.PlayDeferred, SessionInput.Flush -> null
 }
 
@@ -33,11 +33,8 @@ fun trackConfirmedRecord(event: TrackConfirmed, startNanos: Long): BsrecRecord =
 fun vibrationStartedRecord(alert: ContactAlert, startedNanos: Long, startNanos: Long): BsrecRecord =
     record(RecordType.VIBRATION_STARTED, startedNanos, startNanos, BsrecPayloads.vibrationStarted(alert.displayId, alert.side))
 
-fun sessionMode(eliminated: Boolean, screenMode: ScreenMode): SessionMode = when {
-    eliminated -> SessionMode.ELIMINATED
-    screenMode == ScreenMode.VISTA -> SessionMode.VIEW
-    else -> SessionMode.STEALTH
-}
+fun screenModeToSessionMode(screenMode: ScreenMode): SessionMode =
+    if (screenMode == ScreenMode.VISTA) SessionMode.VIEW else SessionMode.STEALTH
 
 fun msSinceStart(eventNanos: Long, startNanos: Long): Long =
     ((eventNanos - startNanos) / NANOS_PER_MS).coerceAtLeast(0L)

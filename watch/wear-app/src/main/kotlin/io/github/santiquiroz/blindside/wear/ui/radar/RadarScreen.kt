@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -37,8 +36,6 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.wear.compose.material.Chip
-import androidx.wear.compose.material.ChipDefaults
 import androidx.wear.compose.material.Text
 import io.github.santiquiroz.blindside.core.scene.RadarScene
 import io.github.santiquiroz.blindside.shared.compass.CompassReading
@@ -54,7 +51,6 @@ import io.github.santiquiroz.blindside.shared.radar.StatusMark
 import io.github.santiquiroz.blindside.shared.radar.advanceSceneSpinDeg
 import io.github.santiquiroz.blindside.shared.radar.centerLabel
 import io.github.santiquiroz.blindside.shared.radar.drawRadar
-import io.github.santiquiroz.blindside.shared.radar.eliminatedActionLabel
 import io.github.santiquiroz.blindside.shared.radar.fanHalfAngleFor
 import io.github.santiquiroz.blindside.shared.radar.frameFraction
 import io.github.santiquiroz.blindside.shared.radar.interpolatedBlips
@@ -110,10 +106,9 @@ fun RadarScreen(
     session: SessionUiState,
     settings: AppSettings,
     ambient: Boolean,
-    onToggleEliminated: () -> Unit,
 ) {
     ReportRadarVisibility()
-    KeepScreenOn(keepScreenOn(settings.screenMode, session.eliminated))
+    KeepScreenOn(keepScreenOn(settings.screenMode))
     val elapsedMs by rememberElapsedMs()
     val shift = burnInOffset(settings.screenMode, elapsedMs)
     val contacts = showContacts(session.scene, ambient)
@@ -154,7 +149,7 @@ fun RadarScreen(
                 drawTacticalWedges(session.tacticalPoints, here, frame.azimuthDeg.toDouble(), ring, wedgeColors, measurer)
             }
         }
-        RadarOverlay(session, settings, ambient, shift, postureDeg, reading, frame.azimuthDeg, glanceTapMs, onToggleEliminated)
+        RadarOverlay(session, settings, ambient, shift, postureDeg, reading, frame.azimuthDeg, glanceTapMs)
     }
 }
 
@@ -251,7 +246,6 @@ private fun RadarOverlay(
     reading: CompassReading?,
     animatedAzimuthDeg: Float,
     glanceTapMs: Long?,
-    onToggleEliminated: () -> Unit,
 ) {
     val link = radarMessage(session)
     val placement = Modifier.fillMaxSize()
@@ -263,7 +257,7 @@ private fun RadarOverlay(
             CenterLabel(label, isLinkMessage = label == link, Modifier.align(Alignment.Center))
         }
         // Spec §5.4: the dimmed screen keeps ≤ 15 % lit pixels, so ambient shows only the fan and "--".
-        if (!ambient) BottomPanel(session, compassWarningLabel(reading), onToggleEliminated, Modifier.align(Alignment.BottomCenter))
+        if (!ambient) BottomPanel(session, compassWarningLabel(reading), Modifier.align(Alignment.BottomCenter))
         if (!ambient) {
             HudOverlay(
                 frontHeadingDeg = reading?.let { frontHeadingDeg(animatedAzimuthDeg.toDouble(), postureDeg) },
@@ -289,13 +283,12 @@ private fun CenterLabel(label: String, isLinkMessage: Boolean, modifier: Modifie
 }
 
 @Composable
-private fun BottomPanel(session: SessionUiState, compassWarning: String?, onToggleEliminated: () -> Unit, modifier: Modifier) {
+private fun BottomPanel(session: SessionUiState, compassWarning: String?, modifier: Modifier) {
     Column(modifier = modifier.padding(bottom = PANEL_BOTTOM_PADDING), horizontalAlignment = Alignment.CenterHorizontally) {
         compassWarning?.let { Text(it, color = BlindsideColors.Warn, fontSize = 11.sp, maxLines = 1) }
         if (session.dndMaySilenceAlerts) Text(DND_RADAR_WARNING, color = BlindsideColors.Warn, fontSize = 11.sp, maxLines = 1)
         warningLabel(session.scene?.warnings.orEmpty())?.let { Text(it, color = BlindsideColors.Warn, fontSize = 11.sp) }
         statusRows(statusItems(session.scene, session.watchSteps)).forEach { StatusRow(it) }
-        EliminatedChip(session.eliminated, onToggleEliminated)
     }
 }
 
@@ -327,16 +320,6 @@ private fun StatusDot(mark: StatusMark, tint: Color) {
             StatusMark.HOLLOW -> drawCircle(tint, style = Stroke(width = STATUS_DOT_STROKE.toPx()))
         }
     }
-}
-
-@Composable
-private fun EliminatedChip(eliminated: Boolean, onToggle: () -> Unit) {
-    Chip(
-        label = { Text(eliminatedActionLabel(eliminated), maxLines = 1) },
-        onClick = onToggle,
-        colors = if (eliminated) ChipDefaults.primaryChipColors() else ChipDefaults.secondaryChipColors(),
-        modifier = Modifier.fillMaxWidth(0.6f),
-    )
 }
 
 @Composable

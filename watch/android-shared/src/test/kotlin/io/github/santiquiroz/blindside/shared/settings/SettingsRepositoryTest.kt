@@ -28,20 +28,20 @@ class SettingsRepositoryTest {
         val store = PreferenceDataStoreFactory.create(scope = scope) { File(dir, "settings.preferences_pb") }
         val repository = SettingsRepository(store, onWriteFailed = {})
         val (written, read) = runBlocking {
-            val written = repository.update { it.copy(screenMode = ScreenMode.VISTA, eliminated = true) }
+            val written = repository.update { it.copy(screenMode = ScreenMode.VISTA, compass = false) }
             written to repository.current()
         }
         scope.cancel()
         assertTrue(written)
         assertEquals(ScreenMode.VISTA, read.screenMode)
-        assertTrue(read.eliminated)
+        assertFalse(read.compass)
     }
 
     @Test
     fun `a failed write is reported instead of thrown`() {
         val failures = mutableListOf<IOException>()
         val repository = SettingsRepository(DiskFullStore(), onWriteFailed = { failures += it })
-        val written = runBlocking { repository.update { it.copy(eliminated = true) } }
+        val written = runBlocking { repository.update { it.copy(compass = false) } }
         assertFalse(written)
         assertEquals(listOf("disk full"), failures.map { it.message })
     }

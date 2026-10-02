@@ -90,10 +90,9 @@ class RecordEncodingTest {
     }
 
     @Test
-    fun `mode changes record the session mode the replay understands`() {
-        assertEquals(SessionMode.ELIMINATED, modeOf(SessionInput.ModeChanged(eliminated = true, screenMode = ScreenMode.VISTA, nowNanos = at(1))))
-        assertEquals(SessionMode.VIEW, modeOf(SessionInput.ModeChanged(eliminated = false, screenMode = ScreenMode.VISTA, nowNanos = at(1))))
-        assertEquals(SessionMode.STEALTH, modeOf(SessionInput.ModeChanged(eliminated = false, screenMode = ScreenMode.SIGILO, nowNanos = at(1))))
+    fun `a screen-mode change records view or stealth`() {
+        assertEquals(SessionMode.VIEW, modeOf(SessionInput.ModeChanged(screenMode = ScreenMode.VISTA, nowNanos = at(1))))
+        assertEquals(SessionMode.STEALTH, modeOf(SessionInput.ModeChanged(screenMode = ScreenMode.SIGILO, nowNanos = at(1))))
     }
 
     @Test

@@ -29,7 +29,6 @@ class SettingsPreferencesTest {
             ),
             screenMode = ScreenMode.VISTA,
             vibrationUsage = VibrationUsage.NOTIFICATION,
-            eliminated = true,
             beltAddress = "AA:BB:CC:DD:EE:FF",
             posture = WatchPosture.TACTICAL_RIGHT,
             autoStartRadar = false,

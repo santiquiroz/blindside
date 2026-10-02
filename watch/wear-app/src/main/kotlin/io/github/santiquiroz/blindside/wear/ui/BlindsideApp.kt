@@ -16,7 +16,6 @@ import io.github.santiquiroz.blindside.wear.SpikeScreen
 import io.github.santiquiroz.blindside.wear.bridge.publishSharedSettings
 import io.github.santiquiroz.blindside.shared.session.SessionSource
 import io.github.santiquiroz.blindside.shared.session.SessionStore
-import io.github.santiquiroz.blindside.shared.session.toggleEliminated
 import io.github.santiquiroz.blindside.shared.settings.AppSettings
 import io.github.santiquiroz.blindside.shared.settings.SettingsRepository
 import io.github.santiquiroz.blindside.shared.settings.SettingsTransform
@@ -38,14 +37,13 @@ fun BlindsideApp(settingsRepository: SettingsRepository) {
     val navigate: (String) -> Unit = { route -> navController.navigate(route) }
     val showRadar: () -> Unit = { navigateToRadar(navController) }
     val startDemo: () -> Unit = { startRadar(context, SessionSource.DEMO, showRadar) }
-    val onToggleEliminated: () -> Unit = { toggleEliminated(scope, settingsRepository) }
     val onPairPhone: () -> Unit = { WearSessionCommands.openPairing(context) }
     LaunchRadarOnOpen(settingsRepository, showRadar)
     LaunchedEffect(settingsRepository) { publishSharedSettings(context, settingsRepository) }
     BlindsideWearTheme {
         SwipeDismissableNavHost(navController = navController, startDestination = ROUTE_HOME, modifier = Modifier.background(BlindsideColors.Bg)) {
-            composable(ROUTE_HOME) { HomeScreen(session, navigate, showRadar, onToggleEliminated) }
-            composable(ROUTE_RADAR) { RadarScreen(session, settings, ambient, onToggleEliminated) }
+            composable(ROUTE_HOME) { HomeScreen(session, navigate, showRadar) }
+            composable(ROUTE_RADAR) { RadarScreen(session, settings, ambient) }
             composable(ROUTE_SETTINGS) {
                 SettingsScreen(settings, update, navigate, startDemo.takeUnless { session.running }, rememberPhonePairing(session), onPairPhone)
             }

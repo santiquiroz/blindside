@@ -10,13 +10,8 @@ import org.junit.jupiter.api.Test
 class ScreenPolicyTest {
     @Test
     fun `only vista keeps the screen on`() {
-        assertTrue(keepScreenOn(ScreenMode.VISTA, eliminated = false))
-        assertFalse(keepScreenOn(ScreenMode.SIGILO, eliminated = false))
-    }
-
-    @Test
-    fun `eliminated lets the screen turn off even in vista`() {
-        assertFalse(keepScreenOn(ScreenMode.VISTA, eliminated = true))
+        assertTrue(keepScreenOn(ScreenMode.VISTA))
+        assertFalse(keepScreenOn(ScreenMode.SIGILO))
     }
 
     @Test

@@ -32,7 +32,6 @@ data class AppSettings(
     val radars: List<RadarSettings> = DEFAULT_RADARS,
     val screenMode: ScreenMode = ScreenMode.SIGILO,
     val vibrationUsage: VibrationUsage = VibrationUsage.ALARM,
-    val eliminated: Boolean = false,
     val beltAddress: String? = null,
     val posture: WatchPosture = WatchPosture.AUTO,
     val postureTemplate: GravityTemplate? = null,
@@ -58,8 +57,6 @@ fun AppSettings.withRadar(updated: RadarSettings): AppSettings =
 
 fun AppSettings.withHandedness(newHandedness: Handedness): AppSettings =
     copy(handedness = newHandedness, radars = radars.map { it.copy(yawDegOverride = null) })
-
-fun AppSettings.forNewSession(): AppSettings = copy(eliminated = false)
 
 fun AppSettings.withFlipXToggled(radarId: Int): AppSettings =
     withRadar(radar(radarId).let { it.copy(flipX = !it.flipX) })

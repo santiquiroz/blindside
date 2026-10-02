@@ -11,7 +11,6 @@ interface PipelinePort {
     fun onWatchStep(eventNanos: Long)
     fun onBeltInfo(json: String, nowNanos: Long)
     fun onLinkState(connected: Boolean, nowNanos: Long): List<PipelineEvent>
-    fun setEliminated(on: Boolean)
     fun scene(nowNanos: Long): RadarScene
 }
 
@@ -28,8 +27,6 @@ class RadarPipelineAdapter(private val pipeline: RadarPipeline) : PipelinePort {
     override fun onBeltInfo(json: String, nowNanos: Long) = pipeline.onBeltInfo(json, nowNanos)
 
     override fun onLinkState(connected: Boolean, nowNanos: Long) = pipeline.onLinkState(connected, nowNanos)
-
-    override fun setEliminated(on: Boolean) = pipeline.setEliminated(on)
 
     override fun scene(nowNanos: Long) = pipeline.scene(nowNanos)
 }

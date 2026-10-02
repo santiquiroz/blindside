@@ -36,7 +36,6 @@ import io.github.santiquiroz.blindside.shared.sensors.DeviceSensors
 import io.github.santiquiroz.blindside.shared.settings.AppSettings
 import io.github.santiquiroz.blindside.shared.settings.ScreenMode
 import io.github.santiquiroz.blindside.shared.settings.SettingsRepository
-import io.github.santiquiroz.blindside.shared.settings.forNewSession
 import io.github.santiquiroz.blindside.shared.settings.toPipelineConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -46,8 +45,6 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
@@ -88,7 +85,6 @@ class RunningSession(
     }
 
     private suspend fun start() {
-        settings.update { it.forNewSession() }
         val initial = settings.current()
         traits = host.traitsFor(context, purpose)
         flagDndRisk(initial)
@@ -228,16 +224,11 @@ class RunningSession(
     }
 
     private suspend fun forwardMode() {
-        modeChanges().collect { (eliminated, mode) ->
+        settings.settings.map { it.screenMode }.distinctUntilChanged().collect { mode ->
             screenMode = mode
-            inputs.trySend(SessionInput.ModeChanged(eliminated, mode, nowNanos()))
+            inputs.trySend(SessionInput.ModeChanged(mode, nowNanos()))
         }
     }
-
-    private fun modeChanges(): Flow<Pair<Boolean, ScreenMode>> =
-        combine(SessionStore.state.map { it.eliminated }, settings.settings.map { it.screenMode }) { eliminated, mode ->
-            eliminated to mode
-        }.distinctUntilChanged()
 
     private fun flagDndRisk(initial: AppSettings) {
         val atRisk = dndMaySilenceNow(context, initial.vibrationUsage)

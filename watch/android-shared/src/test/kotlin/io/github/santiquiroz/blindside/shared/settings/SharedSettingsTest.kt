@@ -30,7 +30,7 @@ class SharedSettingsTest {
 
     @Test
     fun `a non shared edit keeps the stamp`() {
-        val edited = base.copy(screenMode = ScreenMode.VISTA, eliminated = true, beltAddress = "AA:BB")
+        val edited = base.copy(screenMode = ScreenMode.VISTA, beltAddress = "AA:BB")
         assertEquals(100L, stampSharedEdit(base, edited, nowMs = 500L).sharedUpdatedMs)
     }
 
@@ -50,7 +50,7 @@ class SharedSettingsTest {
 
     @Test
     fun `adopting copies hand, mounts, signs and posture only`() {
-        val local = AppSettings(screenMode = ScreenMode.VISTA, beltAddress = "AA:BB", eliminated = true, sharedUpdatedMs = 1L)
+        val local = AppSettings(screenMode = ScreenMode.VISTA, beltAddress = "AA:BB", sharedUpdatedMs = 1L)
         val radars = listOf(RadarSettings(RADAR_A, -30.0, flipX = true, speedSign = -1), RadarSettings(RADAR_B))
         val remote = SharedSettings(Handedness.SWITCHER, radars, WatchPosture.TACTICAL_LEFT, updatedMs = 2L)
         val expected = local.copy(
