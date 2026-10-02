@@ -41,6 +41,7 @@ bool ble_link_take_auth_event(uint8_t slot);
 PeerSecurity ble_link_peer_security(uint8_t slot);
 void ble_link_set_trusted(uint8_t slot, bool trusted);
 void ble_link_set_role(uint8_t slot, LinkRole role);
+void ble_link_reassert_conn_params();
 ControlCommand ble_link_take_control(uint8_t slot);
 uint16_t ble_link_backlog(uint8_t slot);
 bool ble_link_notify(uint8_t slot, uint32_t link_id, const uint8_t* bytes, size_t length);

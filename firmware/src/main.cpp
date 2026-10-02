@@ -28,6 +28,7 @@ PairingState g_pairing;
 DiagnosticsMemory g_diagnostics;
 std::atomic<uint32_t> g_boot_id{0};
 uint32_t g_next_diagnostics_ms = 0;
+uint32_t g_next_param_reassert_ms = 0;
 bool g_identify_active = false;
 uint32_t g_identify_started_ms = 0;
 
@@ -194,6 +195,14 @@ AdvertisingPlan advertising_plan() {
     return AdvertisingPlan{pairing_whitelist_only(g_pairing), g_pairing.window.open, g_pairing.trusted.count};
 }
 
+void reassert_conn_params_if_due(uint32_t now_ms) {
+    if (!deadline_reached(now_ms, g_next_param_reassert_ms)) {
+        return;
+    }
+    ble_link_reassert_conn_params();
+    g_next_param_reassert_ms = now_ms + config::kConnParamReassertPeriodMs;
+}
+
 void print_diagnostics_if_due(uint32_t now_ms) {
     g_diagnostics = diagnostics_report_imu_changes(g_diagnostics, now_ms);
     if (!deadline_reached(now_ms, g_next_diagnostics_ms)) {
@@ -220,6 +229,7 @@ void setup() {
     ble_advertising_start(pairing_whitelist_only(g_pairing), millis());
     start_tasks();
     g_next_diagnostics_ms = millis() + config::kDiagnosticsPeriodMs;
+    g_next_param_reassert_ms = millis() + config::kConnParamReassertPeriodMs;
 }
 
 void loop() {
@@ -228,6 +238,7 @@ void loop() {
     ble_advertising_poll(advertising_plan(), now_ms);
     handle_control(now_ms);
     show_led(now_ms);
+    reassert_conn_params_if_due(now_ms);
     print_diagnostics_if_due(now_ms);
     delay(config::kLoopPeriodMs);
 }

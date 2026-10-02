@@ -5,7 +5,7 @@
 
 namespace config {
 
-constexpr char kFirmwareVersion[] = "0.2.0";
+constexpr char kFirmwareVersion[] = "0.2.1";
 constexpr uint32_t kSerialBaud = 115200;
 constexpr size_t kSerialTxBufferBytes = 1024;
 
@@ -33,6 +33,8 @@ constexpr int kBootButtonPin = 0;
 
 constexpr uint32_t kDiagnosticsPeriodMs = 5000;
 constexpr uint32_t kLoopPeriodMs = 5;
+// Spacing between phone connection-parameter re-requests: enough for Android to apply one before the next.
+constexpr uint32_t kConnParamReassertPeriodMs = 2000;
 
 constexpr int kSensorCore = 1;
 constexpr uint32_t kRadarTaskPriority = 6;

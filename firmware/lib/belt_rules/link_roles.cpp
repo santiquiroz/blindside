@@ -30,9 +30,10 @@ ConnParamsRequest conn_params_for_role(LinkRole role) {
     return role == LinkRole::Phone ? kPhoneParams : kWatchParams;
 }
 
-// Only the phone is asked again, and once: the watch app tunes its own priority, and a central that insists wins.
-bool conn_params_retry_wanted(LinkRole role, const LinkParams& params, bool already_retried) {
-    if (role != LinkRole::Phone || already_retried) {
+// Only the phone is re-asked: the watch app tunes its own priority. Re-assert the slow band up to a bounded cap so a
+// central that renegotiates fast after each request is pushed back without an unbounded ping-pong.
+bool conn_params_retry_wanted(LinkRole role, const LinkParams& params, uint8_t retries_done) {
+    if (role != LinkRole::Phone || retries_done >= kMaxPhoneParamRetries) {
         return false;
     }
     return !params_match_request(params, conn_params_for_role(role));

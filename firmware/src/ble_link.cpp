@@ -33,7 +33,7 @@ struct LinkSlot {
     std::atomic<bool> trusted{false};
     std::atomic<bool> peer_bonded{false};
     std::atomic<bool> auth_event{false};
-    std::atomic<bool> params_retried{false};
+    std::atomic<uint8_t> param_retries{0};
     std::atomic<uint8_t> role{0};
     std::atomic<uint16_t> mtu{kDefaultAttMtu};
     std::atomic<uint16_t> interval_units{0};
@@ -88,10 +88,10 @@ void request_conn_params(uint16_t handle, const ConnParamsRequest& request) {
 
 void insist_on_role_params(LinkSlot& slot, uint16_t handle) {
     LinkRole role = static_cast<LinkRole>(slot.role.load());
-    if (!conn_params_retry_wanted(role, params_of(slot), slot.params_retried.load())) {
+    if (!conn_params_retry_wanted(role, params_of(slot), slot.param_retries.load())) {
         return;
     }
-    slot.params_retried = true;
+    slot.param_retries++;
     request_conn_params(handle, conn_params_for_role(role));
 }
 
@@ -99,7 +99,7 @@ void claim_slot(LinkSlot& slot, const NimBLEConnInfo& info) {
     slot.subscribed = false;
     slot.trusted = false;
     slot.auth_event = false;
-    slot.params_retried = false;
+    slot.param_retries = 0;
     xQueueReset(slot.control_queue);
     slot.role = static_cast<uint8_t>(LinkRole::Watch);
     slot.peer_bonded = NimBLEDevice::isBonded(info.getIdAddress());
@@ -355,8 +355,19 @@ void ble_link_set_role(uint8_t slot, LinkRole role) {
         return;
     }
     g_slots[slot].role = static_cast<uint8_t>(role);
-    g_slots[slot].params_retried = false;
+    g_slots[slot].param_retries = 0;
     request_conn_params(handle, conn_params_for_role(role));
+}
+
+// Android can silently keep its fast interval after the connect-time request without ever firing an update event,
+// so re-request the phone's slow band from the loop too; insist_on_role_params caps the attempts.
+void ble_link_reassert_conn_params() {
+    for (size_t slot = 0; slot < kMaxLinks; ++slot) {
+        uint16_t handle = g_slots[slot].handle.load();
+        if (handle != kNoConnHandle) {
+            insist_on_role_params(g_slots[slot], handle);
+        }
+    }
 }
 
 ControlCommand ble_link_take_control(uint8_t slot) {

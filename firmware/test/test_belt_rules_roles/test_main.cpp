@@ -56,15 +56,23 @@ void test_the_phone_asks_for_60_to_100_ms() {
     TEST_ASSERT_EQUAL_UINT16(400, phone.timeout_units);
 }
 
-void test_only_the_phone_is_asked_again_and_only_once() {
+void test_the_phone_is_reasked_up_to_a_bounded_cap() {
+    LinkParams android_fast{24, 0, 400};
     LinkParams android_low_power{96, 2, 500};
     LinkParams phone_with_latency{60, 2, 400};
     LinkParams phone_as_asked{60, 0, 400};
-    TEST_ASSERT_TRUE(conn_params_retry_wanted(LinkRole::Phone, android_low_power, false));
-    TEST_ASSERT_TRUE(conn_params_retry_wanted(LinkRole::Phone, phone_with_latency, false));
-    TEST_ASSERT_FALSE(conn_params_retry_wanted(LinkRole::Phone, android_low_power, true));
-    TEST_ASSERT_FALSE(conn_params_retry_wanted(LinkRole::Phone, phone_as_asked, false));
-    TEST_ASSERT_FALSE(conn_params_retry_wanted(LinkRole::Watch, android_low_power, false));
+    // The central can renegotiate a fast interval after each request: re-ask the slow band every time, up to the cap.
+    for (uint8_t done = 0; done < kMaxPhoneParamRetries; ++done) {
+        TEST_ASSERT_TRUE(conn_params_retry_wanted(LinkRole::Phone, android_fast, done));
+    }
+    // After the cap, yield so a stubborn central can't ping-pong forever.
+    TEST_ASSERT_FALSE(conn_params_retry_wanted(LinkRole::Phone, android_fast, kMaxPhoneParamRetries));
+    // Out of band either way (too slow, or extra latency) is re-asked below the cap.
+    TEST_ASSERT_TRUE(conn_params_retry_wanted(LinkRole::Phone, android_low_power, 0));
+    TEST_ASSERT_TRUE(conn_params_retry_wanted(LinkRole::Phone, phone_with_latency, 0));
+    // In band is never re-asked, whatever the count; the watch tunes its own priority and is never re-asked.
+    TEST_ASSERT_FALSE(conn_params_retry_wanted(LinkRole::Phone, phone_as_asked, 0));
+    TEST_ASSERT_FALSE(conn_params_retry_wanted(LinkRole::Watch, android_fast, 0));
 }
 
 void test_slots_are_found_by_connection_handle() {
@@ -137,7 +145,7 @@ int run_all_tests() {
     RUN_TEST(test_role_names_match_the_info_contract);
     RUN_TEST(test_the_watch_asks_for_30_to_50_ms);
     RUN_TEST(test_the_phone_asks_for_60_to_100_ms);
-    RUN_TEST(test_only_the_phone_is_asked_again_and_only_once);
+    RUN_TEST(test_the_phone_is_reasked_up_to_a_bounded_cap);
     RUN_TEST(test_slots_are_found_by_connection_handle);
     RUN_TEST(test_a_full_belt_has_no_free_slot);
     RUN_TEST(test_the_belt_advertises_while_a_slot_is_free);

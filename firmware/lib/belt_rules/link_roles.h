@@ -14,6 +14,9 @@ constexpr uint16_t kWatchIntervalMinUnits = 24;
 constexpr uint16_t kWatchIntervalMaxUnits = 40;
 constexpr uint16_t kPhoneIntervalMinUnits = 48;
 constexpr uint16_t kPhoneIntervalMaxUnits = 80;
+// The phone's central (Android) can renegotiate a fast interval after each request; re-assert the slow band this
+// many times so the watch keeps priority, then yield so a stubborn central can't ping-pong forever.
+constexpr uint8_t kMaxPhoneParamRetries = 6;
 
 enum class LinkRole : uint8_t { Watch = 0, Phone = 1 };
 
@@ -36,6 +39,6 @@ struct AdvertisingNeed {
 LinkRole role_from_argument(uint8_t argument);
 const char* role_name(LinkRole role);
 ConnParamsRequest conn_params_for_role(LinkRole role);
-bool conn_params_retry_wanted(LinkRole role, const LinkParams& params, bool already_retried);
+bool conn_params_retry_wanted(LinkRole role, const LinkParams& params, uint8_t retries_done);
 int slot_for_handle(const uint16_t* handles, size_t count, uint16_t handle);
 bool advertising_wanted(const AdvertisingNeed& need);
