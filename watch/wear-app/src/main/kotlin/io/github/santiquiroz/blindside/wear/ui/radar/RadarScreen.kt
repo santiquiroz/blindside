@@ -92,7 +92,7 @@ import kotlin.math.roundToInt
 
 private const val BURN_IN_CLOCK_TICK_MS = 30_000L
 private const val NANOS_PER_MS = 1_000_000L
-private const val HEADING_SAMPLE_MS = 1_000L
+private const val HEADING_SAMPLE_MS = 250L
 private const val HERE_POLL_MS = 3_000L
 private const val CENTER_TAP_FRACTION = 0.33f
 private val CENTER_LABEL_SIZE = 26.sp
@@ -130,7 +130,6 @@ fun RadarScreen(
     val yawRate = rememberYawRate(compassOn)
     val frameState = rememberRadarFrame(compassOn, compass, yawRate)
     val frame by frameState
-    val headingAzimuth by rememberSampledAzimuth(frameState)
     val scenes = rememberScenePair(session.scene)
     val reading = compass.value.takeIf { compassOn }
     val bandPx = with(LocalDensity.current) { COMPASS_BAND.toPx() }
@@ -162,17 +161,7 @@ fun RadarScreen(
                 drawTacticalWedges(session.tacticalPoints, here, frame.azimuthDeg.toDouble(), ring, wedgeColors, measurer)
             }
         }
-        RadarOverlay(session, settings, ambient, shift, postureDeg, reading, headingAzimuth, glanceOpen) { glanceOpen = false }
-    }
-}
-
-// The bezel heading is coarse text, so it is sampled once a second off the 60 fps frame instead of read in composition,
-// which would recompose the whole overlay subtree every frame and defeat the §8.1 "sin recomponer" draw path.
-@Composable
-private fun rememberSampledAzimuth(frame: State<RadarFrame>): State<Float> = produceState(0f) {
-    while (true) {
-        value = frame.value.azimuthDeg
-        delay(HEADING_SAMPLE_MS)
+        RadarOverlay(session, settings, ambient, shift, postureDeg, reading, frameState, glanceOpen) { glanceOpen = false }
     }
 }
 
@@ -289,7 +278,7 @@ private fun RadarOverlay(
     shift: PointPx,
     postureDeg: Float,
     reading: CompassReading?,
-    headingAzimuthDeg: Float,
+    headingFrame: State<RadarFrame>,
     glanceOpen: Boolean,
     onDismissGlance: () -> Unit,
 ) {
@@ -303,7 +292,7 @@ private fun RadarOverlay(
             CenterLabel(label, isLinkMessage = label == link, Modifier.align(Alignment.Center))
         }
         if (!ambient && reading != null) {
-            HeadingReadout(headingDegreesText(frontHeadingDeg(headingAzimuthDeg.toDouble(), postureDeg)), Modifier.align(Alignment.TopCenter))
+            HeadingReadout(headingFrame, postureDeg, Modifier.align(Alignment.TopCenter))
         }
         // Spec §5.4: the dimmed screen keeps ≤ 15 % lit pixels, so ambient shows only the fan and "--".
         if (!ambient) BottomPanel(session, compassWarningLabel(reading), Modifier.align(Alignment.BottomCenter))
@@ -320,8 +309,15 @@ private fun RadarOverlay(
 }
 
 // A small dim heading readout at the front edge; the compass ring already carries the cardinal, so this is degrees only.
+// It samples the eased frame a few times a second inside its own leaf, so only this text recomposes, not the radar.
 @Composable
-private fun HeadingReadout(text: String, modifier: Modifier) {
+private fun HeadingReadout(frame: State<RadarFrame>, postureDeg: Float, modifier: Modifier) {
+    val text by produceState("", postureDeg) {
+        while (true) {
+            value = headingDegreesText(frontHeadingDeg(frame.value.azimuthDeg.toDouble(), postureDeg))
+            delay(HEADING_SAMPLE_MS)
+        }
+    }
     Text(
         text,
         modifier.padding(top = 2.dp),
