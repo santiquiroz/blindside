@@ -278,6 +278,7 @@ private fun RadarOverlay(
                 gameStartElapsedMs = session.gameStartElapsedMs,
                 gameDurationMs = settings.gameDurationMs,
                 beltLinkDown = beltLinkDown(session),
+                hydrationBaselineMs = session.hydrationBaselineMs,
                 tapAtMs = glanceTapMs,
                 modifier = Modifier.fillMaxSize(),
             )

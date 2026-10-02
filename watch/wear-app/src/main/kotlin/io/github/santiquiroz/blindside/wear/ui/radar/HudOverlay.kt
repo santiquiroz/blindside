@@ -38,8 +38,9 @@ import io.github.santiquiroz.blindside.shared.hud.gameClockText
 import io.github.santiquiroz.blindside.shared.hud.gameRemainingMs
 import io.github.santiquiroz.blindside.shared.hud.glanceRows
 import io.github.santiquiroz.blindside.shared.hud.glanceVisible
-import io.github.santiquiroz.blindside.shared.hud.hydrationDue
+import io.github.santiquiroz.blindside.shared.hud.hydrationTick
 import io.github.santiquiroz.blindside.shared.hud.stepAlertQueue
+import io.github.santiquiroz.blindside.shared.session.SessionStore
 import io.github.santiquiroz.blindside.shared.hud.toggledPin
 import io.github.santiquiroz.blindside.shared.theme.BlindsideColors
 import io.github.santiquiroz.blindside.shared.theme.BlindsideFonts
@@ -59,11 +60,12 @@ fun HudOverlay(
     gameStartElapsedMs: Long?,
     gameDurationMs: Long,
     beltLinkDown: Boolean,
+    hydrationBaselineMs: Long?,
     tapAtMs: Long?,
     modifier: Modifier,
 ) {
     val nowMs by rememberHudClock()
-    val alert by rememberAlert(beltLinkDown)
+    val alert by rememberAlert(beltLinkDown, hydrationBaselineMs)
     var pinned by remember { mutableStateOf<BezelField?>(null) }
     val field = bezelFieldAt(nowMs, pinned)
     Box(modifier) {
@@ -137,25 +139,28 @@ private fun rememberHudClock(): State<Long> = produceState(SystemClock.elapsedRe
 
 // The alert line shows one kind at a time; it is fed by the signals wired today (belt link down, hydration timer).
 @Composable
-private fun rememberAlert(beltLinkDown: Boolean): State<AlertKind?> {
+private fun rememberAlert(beltLinkDown: Boolean, hydrationBaselineMs: Long?): State<AlertKind?> {
     val linkDown by rememberUpdatedState(beltLinkDown)
     val showing = remember { mutableStateOf<AlertKind?>(null) }
-    StepAlertQueue(linkDownProvider = { linkDown }, showing = showing)
+    StepAlertQueue(linkDownProvider = { linkDown }, hydrationBaselineMs = hydrationBaselineMs, showing = showing)
     return showing
 }
 
 @Composable
-private fun StepAlertQueue(linkDownProvider: () -> Boolean, showing: MutableState<AlertKind?>) {
+private fun StepAlertQueue(linkDownProvider: () -> Boolean, hydrationBaselineMs: Long?, showing: MutableState<AlertKind?>) {
+    // The baseline is read once per effect start and persisted back to the session, so screen wakes resume the cadence.
     LaunchedEffect(Unit) {
         var state = AlertQueueState()
-        var lastHydrationMs = SystemClock.elapsedRealtime()
+        var baseline = hydrationBaselineMs
         while (true) {
             val now = SystemClock.elapsedRealtime()
             if (linkDownProvider()) state = enqueueAlert(state, AlertKind.BELT_LINK_DOWN)
-            if (hydrationDue(lastHydrationMs, now)) {
-                state = enqueueAlert(state, AlertKind.HYDRATION)
-                lastHydrationMs = now
+            val tick = hydrationTick(baseline, now)
+            if (tick.baselineMs != baseline) {
+                baseline = tick.baselineMs
+                SessionStore.markHydrationBaseline(baseline)
             }
+            if (tick.remind) state = enqueueAlert(state, AlertKind.HYDRATION)
             state = stepAlertQueue(state, now)
             showing.value = state.showing
             delay(HUD_TICK_MS)

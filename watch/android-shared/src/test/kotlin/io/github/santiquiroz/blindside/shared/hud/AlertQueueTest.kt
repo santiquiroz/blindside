@@ -48,4 +48,25 @@ class AlertQueueTest {
         assertFalse(hydrationDue(1_000L, 1_000L + 2_699_999L))
         assertTrue(hydrationDue(1_000L, 1_000L + 2_700_000L))
     }
+
+    @Test
+    fun `a null baseline only seeds the clock without reminding at startup`() {
+        val tick = hydrationTick(null, 5_000L)
+        assertFalse(tick.remind)
+        assertEquals(5_000L, tick.baselineMs)
+    }
+
+    @Test
+    fun `before the window the baseline is kept and no reminder fires`() {
+        val tick = hydrationTick(1_000L, 1_000L + 2_699_999L)
+        assertFalse(tick.remind)
+        assertEquals(1_000L, tick.baselineMs)
+    }
+
+    @Test
+    fun `a window that elapsed with the screen off reminds once and restarts the clock on the next wake`() {
+        val tick = hydrationTick(1_000L, 1_000L + 3_600_000L)
+        assertTrue(tick.remind)
+        assertEquals(1_000L + 3_600_000L, tick.baselineMs)
+    }
 }

@@ -39,5 +39,15 @@ fun hydrationDue(lastHydrationMs: Long?, nowMs: Long, periodMs: Long = HYDRATION
     return nowMs - lastHydrationMs >= periodMs
 }
 
+// Whether to remind now, plus the baseline to persist. A null baseline only seeds the clock (no reminder at startup);
+// a due baseline reminds once and restarts, so a window missed with the screen off still reminds on the next wake.
+data class HydrationTick(val remind: Boolean, val baselineMs: Long)
+
+fun hydrationTick(baselineMs: Long?, nowMs: Long, periodMs: Long = HYDRATION_PERIOD_MS): HydrationTick {
+    if (baselineMs == null) return HydrationTick(remind = false, baselineMs = nowMs)
+    if (!hydrationDue(baselineMs, nowMs, periodMs)) return HydrationTick(remind = false, baselineMs = baselineMs)
+    return HydrationTick(remind = true, baselineMs = nowMs)
+}
+
 // Spec §8.3: in Sigilo only critical alerts vibrate; in Vista any alert may.
 fun alertVibrates(kind: AlertKind, mode: ScreenMode): Boolean = kind.critical || mode == ScreenMode.VISTA

@@ -26,6 +26,7 @@ data class SessionUiState(
     val phonePairing: PhonePairing = PhonePairing.IDLE,
     val phonePairingAtMs: Long? = null,
     val gameStartElapsedMs: Long? = null,
+    val hydrationBaselineMs: Long? = null,
     val tacticalPoints: Map<TacticalKind, GeoPoint> = emptyMap(),
     val lastTacticalKind: TacticalKind? = null,
 )
@@ -43,6 +44,9 @@ object SessionStore {
 
     // A long-press stores the current GPS fix as the next tactical kind; a stop resets the whole state and clears them.
     fun markTactical(at: GeoPoint) = mutableState.update { markedTactical(it, at) }
+
+    // The hydration cadence lives here, not in the HUD, so it survives the screen sleeping in Sigilo (spec §8.3).
+    fun markHydrationBaseline(nowMs: Long) = mutableState.update { it.copy(hydrationBaselineMs = nowMs) }
 
     fun setRadarVisible(visible: Boolean) {
         mutableRadarVisible.value = visible
