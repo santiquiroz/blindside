@@ -15,8 +15,12 @@ import io.github.santiquiroz.blindside.shared.ble.BeltLink
 import io.github.santiquiroz.blindside.shared.demo.DemoSource
 import io.github.santiquiroz.blindside.shared.demo.demoPackets
 import io.github.santiquiroz.blindside.shared.haptics.HapticPlayer
+import io.github.santiquiroz.blindside.shared.haptics.SYSTEM_PATTERN
 import io.github.santiquiroz.blindside.shared.haptics.dndMaySilenceNow
 import io.github.santiquiroz.blindside.shared.haptics.millisUntil
+import io.github.santiquiroz.blindside.shared.hud.FIVE_MIN_MS
+import io.github.santiquiroz.blindside.shared.hud.crossedThreshold
+import io.github.santiquiroz.blindside.shared.hud.gameRemainingMs
 import io.github.santiquiroz.blindside.shared.permissions.PERMISSION_ACTIVITY_RECOGNITION
 import io.github.santiquiroz.blindside.shared.recording.InfoHeaderSink
 import io.github.santiquiroz.blindside.shared.recording.NoOpRecordSink
@@ -52,6 +56,7 @@ import java.time.ZoneId
 
 private const val TAG = "BlindsideSession"
 private const val FLUSH_EVERY_MS = 2_000L
+private const val GAME_CLOCK_POLL_MS = 1_000L
 
 private fun nowNanos(): Long = SystemClock.elapsedRealtimeNanos()
 
@@ -87,9 +92,10 @@ class RunningSession(
         val initial = settings.current()
         traits = host.traitsFor(context, purpose)
         flagDndRisk(initial)
-        consumer = scope.launch(pipelineDispatcher) { consume(createEngine(initial)) }
+        val player = HapticPlayer.create(context, initial.vibrationUsage)
+        consumer = scope.launch(pipelineDispatcher) { consume(createEngine(initial, player)) }
         holdWakeLock()
-        launchLoops()
+        launchLoops(initial, player)
         if (traits.readsDeviceSensors) startSensors()
         startSource(initial)
     }
@@ -127,9 +133,8 @@ class RunningSession(
         }
     }
 
-    private fun createEngine(initial: AppSettings): SessionEngine {
+    private fun createEngine(initial: AppSettings, player: HapticPlayer): SessionEngine {
         val startNanos = nowNanos()
-        val player = HapticPlayer.create(context, initial.vibrationUsage)
         val pipeline = RadarPipeline(toPipelineConfig(initial))
         return SessionEngine(
             pipeline = RadarPipelineAdapter(pipeline),
@@ -183,11 +188,29 @@ class RunningSession(
         loops += scope.launch { repeatEvery(SessionWakeLock.RENEW_EVERY_MS) { wakeLock.acquireOrRenew() } }
     }
 
-    private fun launchLoops() {
+    private fun launchLoops(initial: AppSettings, player: HapticPlayer) {
         loops += scope.launch { repeatEvery(FLUSH_EVERY_MS) { inputs.trySend(SessionInput.Flush) } }
         loops += scope.launch { tickScenes() }
         loops += scope.launch { forwardMode() }
+        if (purpose == SessionPurpose.GAME && initial.gameDurationMs > 0L) {
+            loops += scope.launch { tickGameClock(initial.gameDurationMs, player) }
+        }
     }
+
+    // The game clock pulses from the service, not the Compose frame clock, so 5-min and end buzzes still fire in Sigilo.
+    private suspend fun tickGameClock(durationMs: Long, player: HapticPlayer) {
+        var previousRemaining = durationMs
+        while (currentCoroutineContext().isActive) {
+            delay(GAME_CLOCK_POLL_MS)
+            val start = SessionStore.state.value.gameStartElapsedMs ?: continue
+            val remaining = gameRemainingMs(start, SystemClock.elapsedRealtime(), durationMs)
+            if (gameClockPulses(previousRemaining, remaining)) player.play(SYSTEM_PATTERN)
+            previousRemaining = remaining
+        }
+    }
+
+    private fun gameClockPulses(previousRemaining: Long, remaining: Long): Boolean =
+        crossedThreshold(previousRemaining, remaining, FIVE_MIN_MS) || crossedThreshold(previousRemaining, remaining, 0L)
 
     private suspend fun repeatEvery(periodMs: Long, action: () -> Unit) {
         while (currentCoroutineContext().isActive) {

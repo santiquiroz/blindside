@@ -3,6 +3,7 @@ package io.github.santiquiroz.blindside.wear.ui.radar
 import android.os.SystemClock
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,7 +14,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
@@ -21,16 +21,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material.Chip
@@ -43,7 +47,6 @@ import io.github.santiquiroz.blindside.shared.compass.advanceHeading
 import io.github.santiquiroz.blindside.shared.compass.compassColors
 import io.github.santiquiroz.blindside.shared.compass.compassWarningLabel
 import io.github.santiquiroz.blindside.shared.compass.frontHeadingDeg
-import io.github.santiquiroz.blindside.shared.compass.headingText
 import io.github.santiquiroz.blindside.shared.radar.DND_RADAR_WARNING
 import io.github.santiquiroz.blindside.shared.radar.PointPx
 import io.github.santiquiroz.blindside.shared.radar.StatusItem
@@ -64,10 +67,14 @@ import io.github.santiquiroz.blindside.shared.radar.statusMark
 import io.github.santiquiroz.blindside.shared.radar.statusRows
 import io.github.santiquiroz.blindside.shared.radar.toDrawModel
 import io.github.santiquiroz.blindside.shared.radar.warningLabel
+import io.github.santiquiroz.blindside.shared.ble.BleStatus
 import io.github.santiquiroz.blindside.shared.sensors.effectivePostureRotationDeg
 import io.github.santiquiroz.blindside.shared.session.SIGILO_FRAME_MS
+import io.github.santiquiroz.blindside.shared.session.SessionSource
+import io.github.santiquiroz.blindside.shared.session.SessionStore
 import io.github.santiquiroz.blindside.shared.session.SessionUiState
 import io.github.santiquiroz.blindside.shared.settings.AppSettings
+import io.github.santiquiroz.blindside.shared.tactical.GeoPoint
 import io.github.santiquiroz.blindside.shared.theme.BlindsideColors
 import io.github.santiquiroz.blindside.shared.theme.BlindsideFonts
 import io.github.santiquiroz.blindside.wear.ui.KeepScreenOn
@@ -75,10 +82,13 @@ import io.github.santiquiroz.blindside.wear.ui.ReportRadarVisibility
 import io.github.santiquiroz.blindside.wear.ui.burnInOffset
 import io.github.santiquiroz.blindside.wear.ui.keepScreenOn
 import kotlinx.coroutines.delay
+import kotlin.math.hypot
 import kotlin.math.roundToInt
 
 private const val BURN_IN_CLOCK_TICK_MS = 30_000L
 private const val NANOS_PER_MS = 1_000_000L
+private const val HERE_POLL_MS = 3_000L
+private const val CENTER_TAP_FRACTION = 0.33f
 private val CENTER_LABEL_SIZE = 26.sp
 private val LINK_MESSAGE_SIZE = 14.sp
 private val LINK_MESSAGE_SIDE_PADDING = 28.dp
@@ -118,7 +128,11 @@ fun RadarScreen(
     val reading = compass.value.takeIf { compassOn }
     val bandPx = with(LocalDensity.current) { COMPASS_BAND.toPx() }
     val measurer = rememberTextMeasurer()
-    Box(Modifier.fillMaxSize().background(BlindsideColors.Bg)) {
+    val lastFix = rememberLastFix()
+    val here by rememberHere(lastFix, compassOn)
+    val wedgeColors = remember { TacticalWedgeColors(BlindsideColors.Accent, BlindsideColors.AccentDim, BlindsideColors.Warn) }
+    var glanceTapMs by remember { mutableStateOf<Long?>(null) }
+    Box(radarGestures(lastFix) { glanceTapMs = SystemClock.elapsedRealtime() }) {
         // The symmetric tick band turns against the heading on the compositor, once per frame, with no recomposition.
         reading?.let { r ->
             Canvas(Modifier.fillMaxSize().graphicsLayer { rotationZ = -frame.azimuthDeg }) {
@@ -137,11 +151,45 @@ fun RadarScreen(
                 val colors = compassColors(settings.screenMode, r.trust)
                 drawCompassLetters(frame.azimuthDeg.toDouble(), ring, postureDeg, colors, measurer)
                 drawFrontIndex(ring, postureDeg, colors.index)
+                drawTacticalWedges(session.tacticalPoints, here, frame.azimuthDeg.toDouble(), ring, wedgeColors, measurer)
             }
         }
-        RadarOverlay(session, ambient, shift, postureDeg, reading, frame.azimuthDeg, onToggleEliminated)
+        RadarOverlay(session, settings, ambient, shift, postureDeg, reading, frame.azimuthDeg, glanceTapMs, onToggleEliminated)
     }
 }
+
+@Composable
+private fun radarGestures(lastFix: () -> GeoPoint?, onCenterTap: () -> Unit): Modifier =
+    Modifier.fillMaxSize().background(BlindsideColors.Bg).pointerInput(Unit) {
+        detectTapGestures(
+            onLongPress = { lastFix()?.let(SessionStore::markTactical) },
+            onTap = { offset -> if (isCenterTap(offset, size)) onCenterTap() },
+        )
+    }
+
+private fun isCenterTap(offset: Offset, size: IntSize): Boolean {
+    val dx = offset.x - size.width / 2f
+    val dy = offset.y - size.height / 2f
+    return hypot(dx, dy) < size.width.coerceAtMost(size.height) * CENTER_TAP_FRACTION
+}
+
+// The current fix drives the wedges; it is polled slowly because a mark and its bearing only need a coarse fix.
+@Composable
+private fun rememberHere(lastFix: () -> GeoPoint?, active: Boolean): State<GeoPoint?> {
+    val here = remember { mutableStateOf<GeoPoint?>(null) }
+    LaunchedEffect(active) {
+        if (!active) return@LaunchedEffect
+        while (true) {
+            here.value = lastFix()
+            delay(HERE_POLL_MS)
+        }
+    }
+    return here
+}
+
+// Spec §8.3: belt link down is the one alert that must still vibrate in Sigilo; it rides the engine's system-buzz path.
+private fun beltLinkDown(session: SessionUiState): Boolean =
+    session.source == SessionSource.BELT && session.ble in setOf(BleStatus.RECONNECTING, BleStatus.BOND_LOST)
 
 // One frame loop drives both the heading ease and the gyro spin washout; idle (0,0) whenever the compass is off.
 @Composable
@@ -196,11 +244,13 @@ private fun foldInterpolated(scenes: ScenePair, t: Float): RadarScene? {
 @Composable
 private fun RadarOverlay(
     session: SessionUiState,
+    settings: AppSettings,
     ambient: Boolean,
     shift: PointPx,
     postureDeg: Float,
     reading: CompassReading?,
     animatedAzimuthDeg: Float,
+    glanceTapMs: Long?,
     onToggleEliminated: () -> Unit,
 ) {
     val link = radarMessage(session)
@@ -214,8 +264,15 @@ private fun RadarOverlay(
         }
         // Spec §5.4: the dimmed screen keeps ≤ 15 % lit pixels, so ambient shows only the fan and "--".
         if (!ambient) BottomPanel(session, compassWarningLabel(reading), onToggleEliminated, Modifier.align(Alignment.BottomCenter))
-        if (reading != null) {
-            HeadingWindow(headingText(frontHeadingDeg(animatedAzimuthDeg.toDouble(), postureDeg)), Modifier.align(Alignment.BottomCenter))
+        if (!ambient) {
+            HudOverlay(
+                frontHeadingDeg = reading?.let { frontHeadingDeg(animatedAzimuthDeg.toDouble(), postureDeg) },
+                gameStartElapsedMs = session.gameStartElapsedMs,
+                gameDurationMs = settings.gameDurationMs,
+                beltLinkDown = beltLinkDown(session),
+                tapAtMs = glanceTapMs,
+                modifier = Modifier.fillMaxSize(),
+            )
         }
     }
 }
@@ -240,19 +297,6 @@ private fun BottomPanel(session: SessionUiState, compassWarning: String?, onTogg
         statusRows(statusItems(session.scene, session.watchSteps)).forEach { StatusRow(it) }
         EliminatedChip(session.eliminated, onToggleEliminated)
     }
-}
-
-@Composable
-private fun HeadingWindow(text: String, modifier: Modifier) {
-    // A window in the bezel at the rear, like a dive watch date: the letters pass under it and the fan keeps the front.
-    Text(
-        text,
-        modifier.padding(bottom = 4.dp).background(BlindsideColors.Bg, RoundedCornerShape(6.dp)).padding(horizontal = 4.dp),
-        color = BlindsideColors.Text,
-        fontFamily = BlindsideFonts.Mono,
-        fontSize = 11.sp,
-        maxLines = 1,
-    )
 }
 
 @Composable

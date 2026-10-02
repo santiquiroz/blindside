@@ -6,6 +6,7 @@ import android.bluetooth.BluetoothManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.IBinder
+import android.os.SystemClock
 import android.util.Log
 import androidx.core.content.ContextCompat
 import io.github.santiquiroz.blindside.shared.permissions.PERMISSION_BLUETOOTH_CONNECT
@@ -93,7 +94,7 @@ abstract class SessionService : Service() {
         currentSource = source
         currentPurpose = purpose
         goForeground(source)
-        SessionStore.update { startedState(it, source, purpose) }
+        SessionStore.update { startedState(it, source, purpose, SystemClock.elapsedRealtime()) }
         val created = RunningSession(this, source, settingsRepository(), scope, wakeLock, host, purpose)
         session = created
         created.begin()
