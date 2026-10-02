@@ -16,6 +16,7 @@ import io.github.santiquiroz.blindside.shared.session.PhonePairing
 import io.github.santiquiroz.blindside.shared.session.SessionSource
 import io.github.santiquiroz.blindside.shared.session.SessionUiState
 import io.github.santiquiroz.blindside.shared.session.StartError
+import io.github.santiquiroz.blindside.shared.hud.AlertKind
 import io.github.santiquiroz.blindside.core.config.RADAR_A
 import io.github.santiquiroz.blindside.shared.settings.ContactColor
 import io.github.santiquiroz.blindside.shared.settings.ScreenMode
@@ -138,6 +139,15 @@ fun usageLabel(usage: VibrationUsage): String = when (usage) {
 fun contactColorLabel(color: ContactColor): String = when (color) {
     ContactColor.GREEN -> "Verde"
     ContactColor.RED -> "Rojo"
+}
+
+fun alertText(kind: AlertKind): String = when (kind) {
+    AlertKind.BELT_LINK_DOWN -> "Enlace del cinturón caído"
+    AlertKind.BATTERY_LOW_WATCH -> "Batería baja: reloj"
+    AlertKind.BATTERY_LOW_PHONE -> "Batería baja: celular"
+    AlertKind.BATTERY_LOW_BELT -> "Batería baja: cinturón"
+    AlertKind.HYDRATION -> "Hidrátate"
+    AlertKind.DUSK_SOON -> "Atardecer próximo"
 }
 
 fun radarName(radarId: Int): String = if (radarId == RADAR_A) "Radar A (izq.)" else "Radar B (der.)"
