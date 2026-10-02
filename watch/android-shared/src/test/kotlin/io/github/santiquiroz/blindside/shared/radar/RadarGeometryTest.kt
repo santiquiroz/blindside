@@ -51,6 +51,15 @@ class RadarGeometryTest {
     }
 
     @Test
+    fun `the range scale marks two four and six metres up the front axis`() {
+        val marks = rangeMarks(origin, radius)
+        assertEquals(listOf(2, 4, 6), marks.map { it.meters })
+        assertPoint(PointPx(240f, 278f - 200f / 3f), marks[0].at)
+        assertPoint(PointPx(240f, 278f - 400f / 3f), marks[1].at)
+        assertPoint(PointPx(240f, 78f), marks[2].at)
+    }
+
+    @Test
     fun `the right-handed coverage becomes a canvas arc`() {
         assertEquals(SectorDraw(-190f, 180f), sectorArc(CoverageSector(-100.0, 80.0)))
     }

@@ -17,9 +17,11 @@ class GlancePanelTest {
     @Test
     fun `rows carry the three cards and show a dash for what is unknown`() {
         val rows = glanceRows(
-            GlanceData("14:05", "1:59:30", heartRate = 132, steps = 4210, distanceM = 2400.0,
+            GlanceData("14:05", heartRate = 132, steps = 4210, distanceM = 2400.0,
                 watchBattery = 61, phoneBattery = null, beltBattery = 88),
         )
+        assertEquals("Hora", rows[0].label)
+        assertEquals("14:05", rows[0].value)
         assertEquals("Pulso", rows[1].label)
         assertEquals("132", rows[1].value)
         assertTrue(rows.any { it.label == "Baterías" && it.value == "61% / --% / 88%" })

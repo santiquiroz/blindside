@@ -26,10 +26,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
@@ -43,9 +47,12 @@ import io.github.santiquiroz.blindside.shared.compass.HeadingAnimation
 import io.github.santiquiroz.blindside.shared.compass.advanceHeading
 import io.github.santiquiroz.blindside.shared.compass.compassColors
 import io.github.santiquiroz.blindside.shared.compass.compassWarningLabel
-import io.github.santiquiroz.blindside.shared.compass.frontHeadingDeg
 import io.github.santiquiroz.blindside.shared.radar.DND_RADAR_WARNING
+import io.github.santiquiroz.blindside.shared.radar.MAX_RANGE_M
 import io.github.santiquiroz.blindside.shared.radar.PointPx
+import io.github.santiquiroz.blindside.shared.radar.RangeMark
+import io.github.santiquiroz.blindside.shared.radar.rangeMarks
+import io.github.santiquiroz.blindside.shared.radar.rotatePoint
 import io.github.santiquiroz.blindside.shared.radar.StatusItem
 import io.github.santiquiroz.blindside.shared.radar.StatusMark
 import io.github.santiquiroz.blindside.shared.radar.advanceSceneSpinDeg
@@ -83,7 +90,6 @@ import kotlin.math.roundToInt
 
 private const val BURN_IN_CLOCK_TICK_MS = 30_000L
 private const val NANOS_PER_MS = 1_000_000L
-private const val BEZEL_SAMPLE_MS = 1_000L
 private const val HERE_POLL_MS = 3_000L
 private const val CENTER_TAP_FRACTION = 0.33f
 private val CENTER_LABEL_SIZE = 26.sp
@@ -121,7 +127,6 @@ fun RadarScreen(
     val yawRate = rememberYawRate(compassOn)
     val frameState = rememberRadarFrame(compassOn, compass, yawRate)
     val frame by frameState
-    val bezelAzimuthDeg by rememberBezelAzimuth(frameState)
     val scenes = rememberScenePair(session.scene)
     val reading = compass.value.takeIf { compassOn }
     val bandPx = with(LocalDensity.current) { COMPASS_BAND.toPx() }
@@ -129,8 +134,8 @@ fun RadarScreen(
     val lastFix = rememberLastFix()
     val here by rememberHere(lastFix, compassOn)
     val wedgeColors = remember { TacticalWedgeColors(BlindsideColors.Accent, BlindsideColors.AccentDim, BlindsideColors.Warn) }
-    var glanceTapMs by remember { mutableStateOf<Long?>(null) }
-    Box(radarGestures(lastFix) { glanceTapMs = SystemClock.elapsedRealtime() }) {
+    var glanceOpen by remember { mutableStateOf(false) }
+    Box(radarGestures(lastFix) { glanceOpen = !glanceOpen }) {
         // The symmetric tick band turns against the heading on the compositor, once per frame, with no recomposition.
         reading?.let { r ->
             Canvas(Modifier.fillMaxSize().graphicsLayer { rotationZ = -frame.azimuthDeg }) {
@@ -144,6 +149,7 @@ fun RadarScreen(
             val drawnScene = foldInterpolated(scenes, frameFractionNow(scenes, compassOn, modeFramePeriodMs(settings.screenMode)))
             val logical = toDrawModel(drawnScene, size.width, size.height, shift, contacts, margin, fitHalfAngleDeg)
             drawRadar(logical.rotatedAbout(pivot, postureDeg + frame.spinDeg), radarColorsFor(settings.contactColor))
+            if (!ambient) drawRangeScale(rangeMarks(logical.origin, logical.radiusPx), pivot, postureDeg, measurer)
             reading?.let { r ->
                 val ring = RingGeometry(pivot, size.minDimension / 2f, bandPx)
                 val colors = compassColors(settings.screenMode, r.trust)
@@ -152,8 +158,29 @@ fun RadarScreen(
                 drawTacticalWedges(session.tacticalPoints, here, frame.azimuthDeg.toDouble(), ring, wedgeColors, measurer)
             }
         }
-        RadarOverlay(session, settings, ambient, shift, postureDeg, reading, bezelAzimuthDeg, glanceTapMs)
+        RadarOverlay(session, settings, ambient, shift, postureDeg, reading, glanceOpen) { glanceOpen = false }
     }
+}
+
+private val RANGE_LABEL_SIZE = 9.sp
+private const val RANGE_LABEL_INSET_PX = 12f
+
+// The metre scale rides the radar frame (posture rotation, not the gyro washout) and stays dim so it never saturates.
+private fun DrawScope.drawRangeScale(marks: List<RangeMark>, pivot: PointPx, rotationDeg: Float, measurer: TextMeasurer) {
+    marks.forEach { mark ->
+        val p = nudgeToward(rotatePoint(mark.at, pivot, rotationDeg), pivot, RANGE_LABEL_INSET_PX)
+        val label = if (mark.meters >= MAX_RANGE_M.toInt()) "${mark.meters} m" else "${mark.meters}"
+        val layout = measurer.measure(label, TextStyle(color = BlindsideColors.Text2, fontSize = RANGE_LABEL_SIZE, fontFamily = BlindsideFonts.Mono))
+        drawText(layout, topLeft = Offset(p.x - layout.size.width / 2f, p.y - layout.size.height / 2f))
+    }
+}
+
+private fun nudgeToward(from: PointPx, target: PointPx, px: Float): PointPx {
+    val dx = target.x - from.x
+    val dy = target.y - from.y
+    val distance = hypot(dx, dy)
+    if (distance < 1e-3f) return from
+    return PointPx(from.x + dx / distance * px, from.y + dy / distance * px)
 }
 
 @Composable
@@ -215,16 +242,6 @@ private fun rememberRadarFrame(active: Boolean, compass: State<CompassReading?>,
     return frame
 }
 
-// The bezel heading is coarse text, so it is sampled once a second off the 60 fps frame instead of read in composition,
-// which would recompose the whole overlay subtree every frame and defeat the §8.1 "sin recomponer" draw path.
-@Composable
-private fun rememberBezelAzimuth(frame: State<RadarFrame>): State<Float> = produceState(0f) {
-    while (true) {
-        value = frame.value.azimuthDeg
-        delay(BEZEL_SAMPLE_MS)
-    }
-}
-
 // A new belt scene becomes the target to glide toward; the one before it stays as the start of the glide.
 @Composable
 private fun rememberScenePair(scene: RadarScene?): ScenePair {
@@ -258,8 +275,8 @@ private fun RadarOverlay(
     shift: PointPx,
     postureDeg: Float,
     reading: CompassReading?,
-    bezelAzimuthDeg: Float,
-    glanceTapMs: Long?,
+    glanceOpen: Boolean,
+    onDismissGlance: () -> Unit,
 ) {
     val link = radarMessage(session)
     val placement = Modifier.fillMaxSize()
@@ -274,12 +291,10 @@ private fun RadarOverlay(
         if (!ambient) BottomPanel(session, compassWarningLabel(reading), Modifier.align(Alignment.BottomCenter))
         if (!ambient) {
             HudOverlay(
-                frontHeadingDeg = reading?.let { frontHeadingDeg(bezelAzimuthDeg.toDouble(), postureDeg) },
-                gameStartElapsedMs = session.gameStartElapsedMs,
-                gameDurationMs = settings.gameDurationMs,
                 beltLinkDown = beltLinkDown(session),
                 hydrationBaselineMs = session.hydrationBaselineMs,
-                tapAtMs = glanceTapMs,
+                glanceOpen = glanceOpen,
+                onDismissGlance = onDismissGlance,
                 modifier = Modifier.fillMaxSize(),
             )
         }

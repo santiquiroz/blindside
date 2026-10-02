@@ -64,6 +64,12 @@ fun toDrawModel(
     )
 }
 
+data class RangeMark(val meters: Int, val at: PointPx)
+
+// The metre scale along the front axis (bearing 0): the two rings plus the outer edge, before posture rotation.
+fun rangeMarks(origin: PointPx, radiusPx: Float): List<RangeMark> =
+    (RING_RANGES_M + MAX_RANGE_M).map { RangeMark(it.toInt(), polarToPx(origin, radiusPx, 0.0, it)) }
+
 fun showContacts(scene: RadarScene?, ambient: Boolean): Boolean =
     scene != null && scene.linkUp && !scene.eliminated && !ambient
 

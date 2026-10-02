@@ -8,7 +8,6 @@ data class GlanceRow(val label: String, val value: String)
 
 data class GlanceData(
     val clockText: String,
-    val gameTimeText: String,
     val heartRate: Int?,
     val steps: Int?,
     val distanceM: Double?,
@@ -23,7 +22,7 @@ fun glanceVisible(tapAtMs: Long?, nowMs: Long, holdMs: Long = GLANCE_HOLD_MS): B
 }
 
 fun glanceRows(data: GlanceData): List<GlanceRow> = listOf(
-    GlanceRow("Hora / partida", "${data.clockText} · ${data.gameTimeText}"),
+    GlanceRow("Hora", data.clockText),
     GlanceRow("Pulso", intOrDash(data.heartRate)),
     GlanceRow("Pasos / dist.", "${intOrDash(data.steps)} · ${data.distanceM?.let(::tacticalDistanceLabel) ?: "--"}"),
     GlanceRow("Baterías", "${pct(data.watchBattery)} / ${pct(data.phoneBattery)} / ${pct(data.beltBattery)}"),
