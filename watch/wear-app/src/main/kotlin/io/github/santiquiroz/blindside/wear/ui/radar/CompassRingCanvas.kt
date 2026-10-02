@@ -28,28 +28,31 @@ private val LETTER_SIZE = 10.sp
 
 data class RingGeometry(val center: PointPx, val outerRadiusPx: Float, val bandPx: Float)
 
-fun DrawScope.drawCompassRing(
+// The symmetric tick band carries no azimuth: the caller spins this whole layer by -azimuth on the compositor.
+fun DrawScope.drawCompassTicks(ring: RingGeometry, colors: CompassColors) {
+    compassTicks().forEach { drawTick(it, ring, colors) }
+}
+
+private fun DrawScope.drawTick(tick: CompassTick, ring: RingGeometry, colors: CompassColors) {
+    val length = ring.bandPx * if (tick.major) MAJOR_TICK_FRACTION else MINOR_TICK_FRACTION
+    drawLine(
+        color = if (tick.major) colors.major else colors.tick,
+        start = offsetOf(pointOnRing(ring.center, ring.outerRadiusPx, tick.angleDeg)),
+        end = offsetOf(pointOnRing(ring.center, ring.outerRadiusPx - length, tick.angleDeg)),
+        strokeWidth = TICK_STROKE_PX,
+        cap = StrokeCap.Round,
+    )
+}
+
+// Drawn in the non-rotated layer: the letters keep their heading-driven positions but stay upright for this posture.
+fun DrawScope.drawCompassLetters(
     azimuthDeg: Double,
     ring: RingGeometry,
     postureRotationDeg: Float,
     colors: CompassColors,
     measurer: TextMeasurer,
 ) {
-    compassTicks().forEach { drawTick(it, azimuthDeg, ring, colors) }
     CARDINAL_MARKS.forEach { drawCardinal(it, azimuthDeg, ring, postureRotationDeg, colors, measurer) }
-    drawFrontIndex(ring, postureRotationDeg, colors.index)
-}
-
-private fun DrawScope.drawTick(tick: CompassTick, azimuthDeg: Double, ring: RingGeometry, colors: CompassColors) {
-    val angle = markScreenAngleDeg(tick.angleDeg, azimuthDeg)
-    val length = ring.bandPx * if (tick.major) MAJOR_TICK_FRACTION else MINOR_TICK_FRACTION
-    drawLine(
-        color = if (tick.major) colors.major else colors.tick,
-        start = offsetOf(pointOnRing(ring.center, ring.outerRadiusPx, angle)),
-        end = offsetOf(pointOnRing(ring.center, ring.outerRadiusPx - length, angle)),
-        strokeWidth = TICK_STROKE_PX,
-        cap = StrokeCap.Round,
-    )
 }
 
 private fun DrawScope.drawCardinal(
@@ -68,7 +71,8 @@ private fun DrawScope.drawCardinal(
     rotate(postureRotationDeg, pivot = anchor) { drawText(layout, topLeft = topLeft) }
 }
 
-private fun DrawScope.drawFrontIndex(ring: RingGeometry, postureRotationDeg: Float, color: Color) {
+// The front index marks the watch's 12 o'clock in the current posture, fixed independent of heading.
+fun DrawScope.drawFrontIndex(ring: RingGeometry, postureRotationDeg: Float, color: Color) {
     val inner = ring.outerRadiusPx - ring.bandPx
     drawLine(
         color = color,

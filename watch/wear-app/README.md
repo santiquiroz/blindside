@@ -127,6 +127,7 @@ La lógica pura se prueba en la JVM dentro de `android-shared`. Los puntos de ab
 - Pruebas en efdf63a: android-shared=330, wear-app=47, phone-app=166.
 
 ### Lista de verificación en dispositivo (§8)
+<!-- 8.1 cableado en Task 4: la brújula, los contactos y el giro de escena se dibujan desde el reloj de cuadros (withFrameNanos). -->
 - [ ] 8.1 El anillo de la brújula se anima a ~60 fps, sin saltos por muestra: `adb shell dumpsys gfxinfo io.github.santiquiroz.blindside` en demo antes y después; anotar el % de cuadros con jank.
 - [ ] 8.1 Los contactos se deslizan entre los cuadros del cinturón; un giro rápido del cuerpo rota la escena al instante (giroscopio) y luego se asienta.
 - [ ] 8.1 El giro de escena del giroscopio va en el sentido correcto (girar el cuerpo a la derecha deja un objetivo estático donde está).

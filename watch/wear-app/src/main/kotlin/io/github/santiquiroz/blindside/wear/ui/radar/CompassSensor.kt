@@ -15,9 +15,6 @@ import androidx.lifecycle.compose.LifecycleStartEffect
 import io.github.santiquiroz.blindside.shared.compass.CompassReading
 import io.github.santiquiroz.blindside.shared.compass.azimuthFromRotationVector
 import io.github.santiquiroz.blindside.shared.compass.compassTrust
-import io.github.santiquiroz.blindside.shared.compass.smoothedHeadingDeg
-
-private const val NANOS_PER_MS = 1_000_000L
 
 @Composable
 fun rememberCompassReading(active: Boolean): State<CompassReading?> {
@@ -38,20 +35,13 @@ private fun startCompass(context: Context, reading: MutableState<CompassReading?
     val manager = context.getSystemService(SensorManager::class.java) ?: return null
     val sensor = manager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR) ?: return null
     val listener = CompassListener { reading.value = it }
-    manager.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_UI)
+    manager.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_GAME)
     return { manager.unregisterListener(listener) }
 }
 
 private class CompassListener(private val emit: (CompassReading) -> Unit) : SensorEventListener {
-    private var smoothedDeg: Double? = null
-    private var lastNanos: Long? = null
-
     override fun onSensorChanged(event: SensorEvent) {
-        val dtMs = lastNanos?.let { (event.timestamp - it) / NANOS_PER_MS } ?: 0L
-        lastNanos = event.timestamp
-        val next = smoothedHeadingDeg(smoothedDeg, azimuthFromRotationVector(event.values), dtMs)
-        smoothedDeg = next
-        emit(CompassReading(next, compassTrust(event.accuracy)))
+        emit(CompassReading(azimuthFromRotationVector(event.values), compassTrust(event.accuracy)))
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
