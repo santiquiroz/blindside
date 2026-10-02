@@ -12,7 +12,7 @@ A distinct buzz on your wrist when someone new moves into view.
 </div>
 
 > [!NOTE]
-> **Status: design phase.** This repository currently contains the v1 design and the research behind it. There is no firmware or watch app yet; those are the next milestones. First field target: a 5-hour game on 11 October 2026. Star or watch the repo to follow along.
+> **Status: built and field-ready.** The ESP32 firmware, the Wear OS watch app and an optional Android phone companion are all here and validated on real hardware. Grab the installable APKs and firmware from the [latest release](https://github.com/santiquiroz/blindside/releases/latest). First field target: a 5-hour game on 11 October 2026.
 
 ---
 
@@ -26,7 +26,7 @@ A distinct buzz on your wrist when someone new moves into view.
   - compensates for your own turns and steps;
   - draws the contacts on a round radar display.
 - **Newly confirmed contacts buzz your wrist** with a different rhythm for left, center or right. You don't have to look. Alerts are paced: at most one buzz per second, so contacts that show up together queue and buzz one after another (center first). There's also a per-sector pause and a cap of 10 per minute, so a crowd doesn't turn into one long buzz.
-- No phone, no Wi-Fi and no cloud: the belt talks only to the watch you paired it with.
+- **Works without a phone**, no Wi-Fi and no cloud: the belt talks to the watch over Bluetooth LE. An optional Android companion app can pair alongside the watch for a bigger screen, recordings and a replay viewer — the watch always keeps priority.
 
 ```
 [box L: LD2450 + MPU6050] ─7 wires─┐

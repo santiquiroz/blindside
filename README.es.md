@@ -12,7 +12,7 @@ Una vibración distintiva en tu muñeca cuando alguien nuevo entra en tu campo d
 </div>
 
 > [!NOTE]
-> **Estado: fase de diseño.** Actualmente este repositorio contiene el diseño v1 y la investigación detrás de él. Todavía no hay firmware ni aplicación para el reloj; esos son los siguientes hitos. Primera meta de campo: una partida de 5 horas el 11 de octubre de 2026. Dale una estrella o sigue el repositorio para estar al tanto.
+> **Estado: construido y listo para campo.** El firmware del ESP32, la app del reloj (Wear OS) y una app compañera de Android opcional ya están, validados en hardware real. Descarga los APK y el firmware instalables desde el [último release](https://github.com/santiquiroz/blindside/releases/latest). Primera meta de campo: una partida de 5 horas el 11 de octubre de 2026.
 
 ---
 
@@ -26,7 +26,7 @@ Una vibración distintiva en tu muñeca cuando alguien nuevo entra en tu campo d
   - compensa tus propios giros y pasos;
   - dibuja los contactos en una pantalla de radar circular.
 - **Los contactos recién confirmados hacen vibrar tu muñeca** con un ritmo diferente para izquierda, centro o derecha. No tienes que mirar. Las alertas van espaciadas: como mucho una vibración por segundo, así que los contactos que llegan juntos hacen fila y vibran uno tras otro (primero el del centro). Además hay una pausa por sector y un tope de 10 por minuto, para que un grupo de gente no se convierta en una sola vibración larga.
-- Sin teléfono, sin Wi-Fi y sin nube: el cinturón solo se comunica con el reloj con el que lo emparejaste.
+- **Funciona sin teléfono**, sin Wi-Fi y sin nube: el cinturón se comunica con el reloj por Bluetooth LE. Una app compañera de Android opcional puede emparejarse junto al reloj para una pantalla más grande, las grabaciones y un visor de repeticiones — el reloj siempre tiene la prioridad.
 
 ```
 [caja izq: LD2450 + MPU6050] ─7 hilos─┐
