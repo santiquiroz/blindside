@@ -65,7 +65,7 @@ import io.github.santiquiroz.blindside.shared.radar.toDrawModel
 import io.github.santiquiroz.blindside.shared.radar.warningLabel
 import io.github.santiquiroz.blindside.shared.ble.BleStatus
 import io.github.santiquiroz.blindside.shared.sensors.effectivePostureRotationDeg
-import io.github.santiquiroz.blindside.shared.session.SIGILO_FRAME_MS
+import io.github.santiquiroz.blindside.shared.session.modeFramePeriodMs
 import io.github.santiquiroz.blindside.shared.session.SessionSource
 import io.github.santiquiroz.blindside.shared.session.SessionStore
 import io.github.santiquiroz.blindside.shared.session.SessionUiState
@@ -138,7 +138,7 @@ fun RadarScreen(
         Canvas(Modifier.fillMaxSize()) {
             val margin = if (compassOn) bandPx else 0f
             val pivot = screenCenter(size.width, size.height, shift)
-            val drawnScene = foldInterpolated(scenes, frameFractionNow(scenes, compassOn))
+            val drawnScene = foldInterpolated(scenes, frameFractionNow(scenes, compassOn, modeFramePeriodMs(settings.screenMode)))
             val logical = toDrawModel(drawnScene, size.width, size.height, shift, contacts, margin, fitHalfAngleDeg)
             drawRadar(logical.rotatedAbout(pivot, postureDeg + frame.spinDeg), radarColorsFor(settings.contactColor))
             reading?.let { r ->
@@ -225,9 +225,10 @@ private fun rememberScenePair(scene: RadarScene?): ScenePair {
 private fun frameDeltaMs(lastNanos: Long, nowNanos: Long): Long =
     if (lastNanos == 0L) 0L else (nowNanos - lastNanos) / NANOS_PER_MS
 
-private fun frameFractionNow(scenes: ScenePair, animating: Boolean): Float {
+// The glide spans exactly one publication period, which the watch sets by screen mode (Vista 33 ms, Sigilo 100 ms).
+private fun frameFractionNow(scenes: ScenePair, animating: Boolean, periodMs: Long): Float {
     if (!animating) return 1f
-    return frameFraction(SystemClock.elapsedRealtime() - scenes.frameStartMs, SIGILO_FRAME_MS)
+    return frameFraction(SystemClock.elapsedRealtime() - scenes.frameStartMs, periodMs)
 }
 
 private fun foldInterpolated(scenes: ScenePair, t: Float): RadarScene? {

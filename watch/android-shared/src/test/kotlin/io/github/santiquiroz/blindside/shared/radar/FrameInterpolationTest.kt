@@ -2,6 +2,10 @@ package io.github.santiquiroz.blindside.shared.radar
 
 import io.github.santiquiroz.blindside.core.scene.Blip
 import io.github.santiquiroz.blindside.core.scene.Confidence
+import io.github.santiquiroz.blindside.shared.session.SIGILO_FRAME_MS
+import io.github.santiquiroz.blindside.shared.session.VISTA_FRAME_MS
+import io.github.santiquiroz.blindside.shared.session.modeFramePeriodMs
+import io.github.santiquiroz.blindside.shared.settings.ScreenMode
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -15,6 +19,14 @@ class FrameInterpolationTest {
         assertEquals(0.5f, frameFraction(50, 100), 1e-6f)
         assertEquals(1f, frameFraction(250, 100), 1e-6f)
         assertEquals(1f, frameFraction(10, 0), 1e-6f)
+    }
+
+    @Test
+    fun `a full vista frame glides the whole way when the period tracks the mode, not the sigilo constant`() {
+        // The bug: dividing a 33 ms Vista frame by the 100 ms Sigilo period only reaches ~0.33 before the scene shifts.
+        assertEquals(0.33f, frameFraction(VISTA_FRAME_MS, SIGILO_FRAME_MS), 0.01f)
+        assertEquals(1f, frameFraction(VISTA_FRAME_MS, modeFramePeriodMs(ScreenMode.VISTA)), 1e-6f)
+        assertEquals(1f, frameFraction(SIGILO_FRAME_MS, modeFramePeriodMs(ScreenMode.SIGILO)), 1e-6f)
     }
 
     @Test
