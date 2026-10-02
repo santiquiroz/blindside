@@ -3,6 +3,9 @@
 #include <Arduino.h>
 
 #include "ble_link.h"
+#include "diag_format.h"
+#include "nimble_internals.h"
+#include "pairing.h"
 #include "radar_port.h"
 #include "stream_sender.h"
 
@@ -30,19 +33,29 @@ void print_imu(uint8_t imu_id, const ImuSnapshot& now, const ImuSnapshot& before
                   static_cast<unsigned long>(now.samples - before.samples));
 }
 
-void print_link() {
-    LinkSnapshot link = ble_link_snapshot();
-    Serial.printf(" link[conn=%d sub=%d trusted=%d mtu=%u itvl=%u lat=%u sup=%u disc=%d]", link.connected ? 1 : 0,
-                  link.subscribed ? 1 : 0, link.trusted ? 1 : 0, static_cast<unsigned>(link.mtu),
-                  static_cast<unsigned>(link.params.interval_units), static_cast<unsigned>(link.params.latency),
-                  static_cast<unsigned>(link.params.supervision_units), link.last_disconnect_reason);
+LinkDiag link_diag(const LinkSnapshot& link, const LinkDelivery& delivery) {
+    LinkTally tally = tally_for_link(delivery, link.link_id);
+    return LinkDiag{link.connected, link.role, link.trusted, link.subscribed,
+                    link.mtu,       link.params, tally.sent, tally.dropped};
+}
+
+DiagTail diag_tail(const PairingWindow& window, uint32_t now_ms) {
+    return DiagTail{pairing_bond_count(), window, now_ms, ble_link_last_disconnect_reason(), nimble_free_acl_buffers(),
+                    nimble_host_stack_free()};
+}
+
+void print_links(const PairingWindow& window, uint32_t now_ms) {
+    SenderStats stats = stream_sender_stats();
+    for (uint8_t slot = 0; slot < kMaxLinks; ++slot) {
+        Serial.print(format_link_diag(slot, link_diag(ble_link_snapshot(slot), stats.links[slot])).text);
+    }
+    Serial.print(format_diag_tail(diag_tail(window, now_ms)).text);
 }
 
 void print_sender() {
     SenderStats stats = stream_sender_stats();
-    Serial.printf(" tx[sent=%lu fail=%lu dropped=%lu skipped=%lu]\n", static_cast<unsigned long>(stats.packets_sent),
-                  static_cast<unsigned long>(stats.notify_failures), static_cast<unsigned long>(stats.dropped_total),
-                  static_cast<unsigned long>(stats.skipped_cuts));
+    Serial.printf(" tx[fail=%lu dropped=%lu skipped=%lu]\n", static_cast<unsigned long>(stats.notify_failures),
+                  static_cast<unsigned long>(stats.dropped_total), static_cast<unsigned long>(stats.skipped_cuts));
 }
 
 void report_imu_change(uint8_t imu_id, const ImuSnapshot& imu, uint32_t now_ms) {
@@ -69,7 +82,7 @@ DiagnosticsMemory diagnostics_report_imu_changes(const DiagnosticsMemory& memory
     return next;
 }
 
-DiagnosticsMemory diagnostics_print(const DiagnosticsMemory& memory, uint32_t now_ms) {
+DiagnosticsMemory diagnostics_print(const DiagnosticsMemory& memory, uint32_t now_ms, const PairingWindow& window) {
     DiagnosticsMemory next = memory;
     Serial.printf("diag up=%lus", static_cast<unsigned long>(now_ms / 1000));
     for (uint8_t i = 0; i < kRadarCount; ++i) {
@@ -79,7 +92,7 @@ DiagnosticsMemory diagnostics_print(const DiagnosticsMemory& memory, uint32_t no
         next.window_start[i] = imu_task_snapshot(i);
         print_imu(i, next.window_start[i], memory.window_start[i]);
     }
-    print_link();
+    print_links(window, now_ms);
     print_sender();
     return next;
 }

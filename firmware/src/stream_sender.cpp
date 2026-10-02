@@ -16,7 +16,7 @@ constexpr size_t kOutboxCapacity = 6;
 
 struct SenderState {
     SenderSources sources;
-    Outbox outbox;
+    Fanout fanout;
     uint16_t next_seq;
     uint32_t next_status_ms;
     uint32_t reported_generation;
@@ -26,6 +26,12 @@ struct SenderState {
 
 struct StatusPair {
     StatusEntry entries[kRadarCount];
+};
+
+struct LinkView {
+    FanoutLink links[kMaxLinks];
+    LinkParams params[kMaxLinks];
+    NotifyOrder order;
 };
 
 StreamBacklog g_backlog;
@@ -62,6 +68,22 @@ void drain_sources(SenderState& state) {
     state.upstream_drops_seen = drops;
 }
 
+FanoutLink fanout_link(const LinkSnapshot& link) {
+    bool gated = stream_gate_open(StreamGateInput{link.connected, link.subscribed, link.trusted, link.mtu});
+    return FanoutLink{gated, link.role, link.link_id, link.mtu};
+}
+
+LinkView current_links() {
+    LinkView view{};
+    for (uint8_t slot = 0; slot < kMaxLinks; ++slot) {
+        LinkSnapshot link = ble_link_snapshot(slot);
+        view.links[slot] = fanout_link(link);
+        view.params[slot] = link.params;
+    }
+    view.order = notify_order(view.links);
+    return view;
+}
+
 LinkHealth current_health(uint32_t now_ms) {
     LinkHealth health{};
     for (uint8_t i = 0; i < kRadarCount; ++i) {
@@ -83,13 +105,14 @@ StatusPair current_status() {
     return status;
 }
 
-CutInput cut_input_for(const SenderState& state, uint32_t cut_ms, uint32_t generation) {
+// LINK carries the parameters of the first link in notify order, the watch's when it is streaming.
+CutInput cut_input_for(const SenderState& state, uint32_t cut_ms, uint32_t generation, const LinkView& view) {
     CutInput input = backlog_cut_input(g_backlog, cut_ms);
     if (status_due(cut_ms, state.next_status_ms)) {
         input = with_status(input, current_status().entries);
     }
     if (link_report_due(generation, state.reported_generation)) {
-        input = with_link(input, ble_link_snapshot().params);
+        input = with_link(input, view.params[view.order.slots[0]]);
     }
     return input;
 }
@@ -104,44 +127,52 @@ void remember_optional_sections(SenderState& state, const BundleResult& result, 
     }
 }
 
-void bundle(SenderState& state, uint32_t cut_ms, uint16_t mtu) {
+void bundle(SenderState& state, uint32_t cut_ms, const LinkView& view) {
     uint32_t generation = ble_link_report_generation();
-    CutInput input = cut_input_for(state, cut_ms, generation);
+    CutInput input = cut_input_for(state, cut_ms, generation, view);
     HeaderFields header{packet_flags(current_health(cut_ms)), state.next_seq, cut_ms};
-    BundleResult result = bundle_cut(input, header, payload_limit_for_mtu(mtu), g_packets, kOutboxCapacity);
+    size_t limit = payload_limit_for_mtu(gated_min_mtu(view.links));
+    BundleResult result = bundle_cut(input, header, limit, g_packets, kOutboxCapacity);
     backlog_consume(g_backlog, result);
-    state.outbox = outbox_refilled(state.outbox, result.packet_count);
+    state.fanout = fanout_refilled(state.fanout, result.packet_count, view.links);
     state.next_seq = result.next_seq;
     remember_optional_sections(state, result, cut_ms, generation);
 }
 
-void make_cut(SenderState& state, uint32_t cut_ms) {
-    LinkSnapshot link = ble_link_snapshot();
-    bool gate_open = stream_gate_open(StreamGateInput{link.connected, link.subscribed, link.trusted, link.mtu});
-    switch (cut_action(gate_open, state.outbox)) {
+void make_cut(SenderState& state, uint32_t cut_ms, const LinkView& view) {
+    bool gate_open = view.order.count > 0;
+    switch (cut_action(gate_open, fanout_pending(state.fanout, view.order))) {
         case CutAction::DiscardAll:
             backlog_clear(g_backlog);
-            state.outbox = outbox_cleared(state.outbox);
+            state.fanout = fanout_cleared(state.fanout);
             break;
         case CutAction::KeepBacklog:
             state.skipped_cuts++;
             break;
         case CutAction::Bundle:
-            bundle(state, cut_ms, link.mtu);
+            bundle(state, cut_ms, view);
             break;
     }
 }
 
-bool send_head(SenderState& state) {
-    const Packet& packet = g_packets[state.outbox.head];
-    bool sent = ble_link_notify(packet.bytes, packet.length);
-    state.outbox = outbox_after_send(state.outbox, sent);
-    return sent;
+bool notify_planned_link(const Delivery& delivery) {
+    if (!notify_allowed(delivery, ble_link_backlog(delivery.slot))) {
+        return false;
+    }
+    const Packet& packet = g_packets[delivery.packet];
+    return ble_link_notify(delivery.slot, delivery.link_id, packet.bytes, packet.length);
 }
 
-void flush_outbox(SenderState& state, uint32_t cut_ms) {
-    while (!outbox_empty(state.outbox)) {
-        if (send_head(state)) {
+bool delivered_or_dropped(SenderState& state, const Delivery& delivery) {
+    bool sent = notify_planned_link(delivery);
+    state.fanout = fanout_after_notify(state.fanout, delivery, sent);
+    return sent || !delivery.protected_link;
+}
+
+void flush_outbox(SenderState& state, const NotifyOrder& order, uint32_t cut_ms) {
+    for (Delivery delivery = next_delivery(state.fanout, order); delivery.found;
+         delivery = next_delivery(state.fanout, order)) {
+        if (delivered_or_dropped(state, delivery)) {
             continue;
         }
         if (!retry_allowed(cut_ms, millis())) {
@@ -152,7 +183,13 @@ void flush_outbox(SenderState& state, uint32_t cut_ms) {
 }
 
 void publish_stats(const SenderState& state) {
-    SenderStats stats{state.outbox.sent, state.outbox.failures, g_backlog.dropped_total, state.skipped_cuts};
+    SenderStats stats{};
+    stats.notify_failures = state.fanout.failures;
+    stats.dropped_total = g_backlog.dropped_total;
+    stats.skipped_cuts = state.skipped_cuts;
+    for (size_t slot = 0; slot < kMaxLinks; ++slot) {
+        stats.links[slot] = state.fanout.links[slot];
+    }
     taskENTER_CRITICAL(&g_stats_lock);
     g_stats = stats;
     taskEXIT_CRITICAL(&g_stats_lock);
@@ -164,9 +201,11 @@ void bundler_task(void*) {
     for (;;) {
         vTaskDelayUntil(&wake, pdMS_TO_TICKS(kCutPeriodMs));
         uint32_t cut_ms = millis();
+        LinkView view = current_links();
         drain_sources(g_state);
-        make_cut(g_state, cut_ms);
-        flush_outbox(g_state, cut_ms);
+        g_state.fanout = fanout_synced(g_state.fanout, view.links);
+        make_cut(g_state, cut_ms, view);
+        flush_outbox(g_state, view.order, cut_ms);
         publish_stats(g_state);
     }
 }

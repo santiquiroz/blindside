@@ -108,20 +108,26 @@ TLV sections: u8 type | u8 len | payload[len]
 | Bytes | Meaning |
 |---|---|
 | `01 <id>` | Restart radar `<id>`: enable config, then restart (`A3`) |
-| `03` | IDENTIFY: blink the LED 3×. Ignored while a session is active |
-| `04 <0/1>` | SESSION_ACTIVE: the watch sets 1 on start and 0 on stop |
+| `03` | IDENTIFY: blink the LED 3×. Ignored while any bonded device has a session active |
+| `04 <0/1>` | SESSION_ACTIVE: a client sets 1 on start and 0 on stop; kept per bonded device, across its reconnections (firmware 0.2.0) |
+| `05` | OPEN_PAIRING_WINDOW (firmware 0.2.0): opens the pairing window for 60 s; only from a trusted link; no acknowledgement |
+| `06 <0/1>` | SET_ROLE (firmware 0.2.0): 0 = watch (default), 1 = phone; the phone writes `06 01` first |
 
 ### `info` JSON (example)
 
 ```json
-{"proto":1,"fw":"0.1.0","boot_id":"9f3a12c4","reset":"POWERON","mtu":255,
+{"proto":1,"fw":"0.2.0","boot_id":"9f3a12c4","reset":"POWERON","mtu":255,
  "radars":[{"id":0,"fw":"V2.04.23101915","baud":256000},{"id":1,"fw":"V2.04.23101915","baud":256000}],
- "imus":[{"id":0,"who":104,"gyro_lsb_dps":65.5,"accel_lsb_g":4096,"repeats":0},{"id":1,"who":112,"gyro_lsb_dps":65.5,"accel_lsb_g":4096,"repeats":3}],
- "tx_power_dbm":9,"conn":{"interval_ms":45.0,"latency":0,"timeout_ms":5000},"uptime_s":42}
+ "imus":[{"id":0,"who":104,"repeats":0},{"id":1,"who":112,"repeats":3}],"tx_power_dbm":9,
+ "conns":[{"role":"watch","itvl_ms":45.0,"lat":0,"timeout_ms":4000,"sent":1234,"dropped":0},
+          {"role":"phone","itvl_ms":75.0,"lat":0,"timeout_ms":4000,"sent":1200,"dropped":3}],
+ "bonds":2,"uptime_s":42}
 ```
 
-- **Size limit: ≤ 512 B** (the ATT maximum attribute length). The value is longer than one ATT read at MTU 247, so the watch reads it long (ATT Read Blob; Android's `readCharacteristic` does it on its own, and NimBLE serves it). Readers must accept it in one piece of up to 512 B.
-- `imus[i].repeats` (u32): raw 200 Hz readings repeated since boot because a read failed or its slot was skipped (spec §4.2, "Las repeticiones se cuentan por IMU en `info`"). With every field at its longest the document is 442 B (plan 02's 400 B worst case of the other fields plus `,"repeats":4294967295` twice, 21 B each), under the limit.
+- **Size limit: ≤ 512 B** (the ATT maximum attribute length). The value is longer than one ATT read at MTU 247, so clients read it long (ATT Read Blob; Android's `readCharacteristic` does it on its own, and NimBLE serves it). Readers must accept it in one piece of up to 512 B. With two links and every field at its longest the document is 511 B.
+- `imus[i].repeats` (u32): raw 200 Hz readings repeated since boot because a read failed or its slot was skipped (spec §4.2, "Las repeticiones se cuentan por IMU en `info`").
+- `mtu` is the reading link's own ATT MTU and the only `"mtu"` key.
+- Firmware 0.2.0 (phase-2 spec §2): `conns` lists each connected link (`role` `watch`/`phone`, `itvl_ms`, `lat`, `timeout_ms`, `sent`, `dropped`; counters per connection, modulo 1 000 000) and `bonds` counts the kept bonds (0-2). It removed `conn` and the per-IMU `gyro_lsb_dps`/`accel_lsb_g`, whose fixed values (65.5, 4096) readers default to. Details: `protocol/PROTOCOL.md` §5.
 - Readers ignore fields they do not know.
 
 ## `radar-core` public API (consumed by `wear-app`)

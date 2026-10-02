@@ -6,6 +6,7 @@
 
 #include <atomic>
 
+#include "ble_advertising.h"
 #include "ble_link.h"
 #include "ble_rules.h"
 #include "blindside_config.h"
@@ -15,6 +16,7 @@
 #include "imu_task.h"
 #include "info_json.h"
 #include "led_pattern.h"
+#include "nimble_internals.h"
 #include "pairing.h"
 #include "radar_port.h"
 #include "status_led.h"
@@ -26,13 +28,17 @@ PairingState g_pairing;
 DiagnosticsMemory g_diagnostics;
 std::atomic<uint32_t> g_boot_id{0};
 uint32_t g_next_diagnostics_ms = 0;
-bool g_session_active = false;
 bool g_identify_active = false;
 uint32_t g_identify_started_ms = 0;
 
 void print_banner() {
     Serial.printf("blindside fw %s boot_id=%08lx reset=%s\n", config::kFirmwareVersion,
                   static_cast<unsigned long>(g_boot_id.load()), reset_reason_name(esp_reset_reason()));
+}
+
+// Before any link exists every controller buffer is free, so this is the controller's total (the cap's headroom).
+void print_ble_buffers() {
+    Serial.printf("ble: controller acl buffers=%u\n", static_cast<unsigned>(nimble_free_acl_buffers()));
 }
 
 RadarInfo radar_info(uint8_t radar_id) {
@@ -45,13 +51,30 @@ ImuInfo imu_info(uint8_t imu_id) {
     return ImuInfo{imu_id, imu.who_am_i, imu.repeats};
 }
 
-BeltInfo current_info(uint32_t now_ms) {
-    LinkSnapshot link = ble_link_snapshot();
+ConnInfo conn_info(const LinkSnapshot& link, const LinkDelivery& delivery) {
+    LinkTally tally = tally_for_link(delivery, link.link_id);
+    return ConnInfo{link.role, link.params, tally.sent, tally.dropped};
+}
+
+BeltInfo with_links(const BeltInfo& info) {
+    BeltInfo next = info;
+    SenderStats stats = stream_sender_stats();
+    for (uint8_t slot = 0; slot < kMaxLinks; ++slot) {
+        LinkSnapshot link = ble_link_snapshot(slot);
+        if (link.connected) {
+            next.conns[next.conn_count++] = conn_info(link, stats.links[slot]);
+        }
+    }
+    next.bonds = pairing_bond_count();
+    return next;
+}
+
+BeltInfo current_info(uint32_t now_ms, uint8_t reader_slot) {
     BeltInfo info{};
     info.firmware_version = config::kFirmwareVersion;
     info.boot_id = g_boot_id.load();
     info.reset_reason = reset_reason_name(esp_reset_reason());
-    info.mtu = link.mtu;
+    info.mtu = ble_link_snapshot(reader_slot).mtu;
     for (uint8_t i = 0; i < kRadarCount; ++i) {
         info.radars[i] = radar_info(i);
     }
@@ -59,14 +82,13 @@ BeltInfo current_info(uint32_t now_ms) {
         info.imus[i] = imu_info(i);
     }
     info.tx_power_dbm = ble_link_tx_power();
-    info.conn = link.params;
     info.uptime_s = now_ms / 1000;
-    return info;
+    return with_links(info);
 }
 
 // Runs on the NimBLE host task at each read of `info`; current_info only reads atomics and locked snapshots.
-size_t write_info_json(char* out, size_t out_size) {
-    return format_info_json(current_info(millis()), out, out_size);
+size_t write_info_json(uint8_t reader_slot, char* out, size_t out_size) {
+    return format_info_json(current_info(millis(), reader_slot), out, out_size);
 }
 
 void start_ble() {
@@ -104,30 +126,59 @@ void start_tasks() {
 }
 
 void start_identify(uint32_t now_ms) {
-    if (!identify_allowed(g_session_active)) {
-        return;
-    }
     g_identify_active = true;
     g_identify_started_ms = now_ms;
 }
 
-void handle_control(uint32_t now_ms) {
-    ControlCommand command = ble_link_take_control();
-    switch (command.kind) {
-        case ControlKind::RestartRadar:
+void set_role(uint8_t slot, uint8_t argument) {
+    LinkRole role = role_from_argument(argument);
+    ble_link_set_role(slot, role);
+    pairing_note_role(g_pairing, slot, role);
+}
+
+// pairing_poll runs first in loop(), so a link that just authenticated is already trusted here.
+ControlAction action_for(uint8_t slot, const ControlCommand& command) {
+    return control_action(command.kind, ble_link_snapshot(slot).trusted, pairing_session_running(g_pairing));
+}
+
+void apply_control(uint8_t slot, const ControlCommand& command, uint32_t now_ms) {
+    switch (action_for(slot, command)) {
+        case ControlAction::RestartRadar:
             radar_port_request_restart(command.argument);
             break;
-        case ControlKind::Identify:
+        case ControlAction::Identify:
             start_identify(now_ms);
             break;
-        case ControlKind::SessionActive:
-            g_session_active = command.argument == 1;
+        case ControlAction::SetSession:
+            pairing_note_session(g_pairing, slot, command.argument == 1);
             break;
-        case ControlKind::Invalid:
+        case ControlAction::OpenPairingWindow:
+            pairing_open_window(g_pairing, now_ms);
+            break;
+        case ControlAction::SetRole:
+            set_role(slot, command.argument);
+            break;
+        case ControlAction::RejectInvalid:
             Serial.println("control: ignored invalid write");
             break;
-        case ControlKind::None:
+        case ControlAction::RejectUntrusted:
+            Serial.println("control: ignored a write from an untrusted link");
             break;
+        case ControlAction::Ignore:
+            break;
+    }
+}
+
+void handle_slot_control(uint8_t slot, uint32_t now_ms) {
+    for (ControlCommand command = ble_link_take_control(slot); command.kind != ControlKind::None;
+         command = ble_link_take_control(slot)) {
+        apply_control(slot, command, now_ms);
+    }
+}
+
+void handle_control(uint32_t now_ms) {
+    for (uint8_t slot = 0; slot < kMaxLinks; ++slot) {
+        handle_slot_control(slot, now_ms);
     }
 }
 
@@ -135,7 +186,12 @@ void show_led(uint32_t now_ms) {
     if (g_identify_active && identify_finished(g_identify_started_ms, now_ms)) {
         g_identify_active = false;
     }
-    status_led_show(LedInputs{now_ms, g_pairing.window.open, g_identify_active, g_identify_started_ms});
+    status_led_show(LedInputs{now_ms, g_pairing.window.open, g_identify_active, g_identify_started_ms,
+                              pairing_session_running(g_pairing)});
+}
+
+AdvertisingPlan advertising_plan() {
+    return AdvertisingPlan{pairing_whitelist_only(g_pairing), g_pairing.window.open, g_pairing.trusted.count};
 }
 
 void print_diagnostics_if_due(uint32_t now_ms) {
@@ -143,7 +199,7 @@ void print_diagnostics_if_due(uint32_t now_ms) {
     if (!deadline_reached(now_ms, g_next_diagnostics_ms)) {
         return;
     }
-    g_diagnostics = diagnostics_print(g_diagnostics, now_ms);
+    g_diagnostics = diagnostics_print(g_diagnostics, now_ms, g_pairing.window);
     g_next_diagnostics_ms = now_ms + config::kDiagnosticsPeriodMs;
 }
 
@@ -153,14 +209,15 @@ void setup() {
     Serial.setTxBufferSize(config::kSerialTxBufferBytes);
     Serial.begin(config::kSerialBaud);
     status_led_begin();
-    status_led_show(LedInputs{millis(), false, false, 0});
+    status_led_show(LedInputs{millis(), false, false, 0, false});
     pinMode(config::kBootButtonPin, INPUT_PULLUP);
     start_ble();
     // esp_random() is only truly random once the radio is on, which start_ble() just did.
     g_boot_id = esp_random();
     print_banner();
+    print_ble_buffers();
     g_pairing = pairing_begin(millis());
-    ble_link_start_advertising(pairing_whitelist_only(g_pairing), millis());
+    ble_advertising_start(pairing_whitelist_only(g_pairing), millis());
     start_tasks();
     g_next_diagnostics_ms = millis() + config::kDiagnosticsPeriodMs;
 }
@@ -168,7 +225,7 @@ void setup() {
 void loop() {
     uint32_t now_ms = millis();
     pairing_poll(g_pairing, now_ms);
-    ble_link_poll_advertising(pairing_whitelist_only(g_pairing), now_ms);
+    ble_advertising_poll(advertising_plan(), now_ms);
     handle_control(now_ms);
     show_led(now_ms);
     print_diagnostics_if_due(now_ms);

@@ -8,15 +8,15 @@
 namespace {
 
 LedInputs plain(uint32_t now_ms) {
-    return LedInputs{now_ms, false, false, 0};
+    return LedInputs{now_ms, false, false, 0, false};
 }
 
 LedInputs pairing(uint32_t now_ms) {
-    return LedInputs{now_ms, true, false, 0};
+    return LedInputs{now_ms, true, false, 0, false};
 }
 
 LedInputs identify(uint32_t now_ms, uint32_t started_ms, bool pairing_open) {
-    return LedInputs{now_ms, pairing_open, true, started_ms};
+    return LedInputs{now_ms, pairing_open, true, started_ms, false};
 }
 
 }  // namespace
@@ -117,6 +117,12 @@ void test_pairing_window_blinks_every_250_ms() {
     TEST_ASSERT_TRUE(led_on(pairing(2500)));
 }
 
+void test_pairing_window_stays_dark_while_a_session_runs() {
+    for (uint32_t t = 2000; t < 62000; t += 37) {
+        TEST_ASSERT_FALSE(led_on(LedInputs{t, true, false, 0, true}));
+    }
+}
+
 void test_identify_blinks_three_times_then_stops() {
     const uint32_t start = 10000;
     TEST_ASSERT_TRUE(led_on(identify(start, start, false)));
@@ -164,6 +170,7 @@ int run_all_tests() {
     RUN_TEST(test_led_is_on_for_the_first_two_seconds_after_boot);
     RUN_TEST(test_led_stays_off_in_game);
     RUN_TEST(test_pairing_window_blinks_every_250_ms);
+    RUN_TEST(test_pairing_window_stays_dark_while_a_session_runs);
     RUN_TEST(test_identify_blinks_three_times_then_stops);
     RUN_TEST(test_identify_pattern_wins_over_the_pairing_blink);
     RUN_TEST(test_serial_key_commands_are_exact_after_trimming);

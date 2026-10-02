@@ -13,6 +13,7 @@ struct LedInputs {
     bool pairing_window_open;
     bool identify_active;
     uint32_t identify_started_ms;
+    bool session_active;
 };
 
 bool led_on(const LedInputs& inputs);
