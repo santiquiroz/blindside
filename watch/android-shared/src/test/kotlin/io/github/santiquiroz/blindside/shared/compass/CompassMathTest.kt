@@ -66,6 +66,13 @@ class CompassMathTest {
     }
 
     @Test
+    fun `the degrees-only text is three digits without a cardinal`() {
+        assertEquals("318°", headingDegreesText(318.4))
+        assertEquals("000°", headingDegreesText(359.7))
+        assertEquals("005°", headingDegreesText(5.0))
+    }
+
+    @Test
     fun `only medium or high accuracy is trusted`() {
         assertEquals(listOf(CompassTrust.CALIBRATE, CompassTrust.CALIBRATE, CompassTrust.CALIBRATE, CompassTrust.GOOD, CompassTrust.GOOD), listOf(-1, 0, 1, 2, 3).map(::compassTrust))
     }

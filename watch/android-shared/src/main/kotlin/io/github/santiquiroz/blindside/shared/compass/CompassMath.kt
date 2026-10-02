@@ -59,6 +59,12 @@ fun headingText(headingDeg: Double): String {
     return String.format(Locale.ROOT, "%03d° %s", whole, cardinalLabel(headingDeg))
 }
 
+// Just the degrees, for a non-invasive readout next to the compass front index (the ring already shows the cardinal).
+fun headingDegreesText(headingDeg: Double): String {
+    val whole = normalizedDeg(headingDeg).roundToInt() % FULL_TURN_DEG.toInt()
+    return String.format(Locale.ROOT, "%03d°", whole)
+}
+
 fun compassTrust(accuracy: Int): CompassTrust =
     if (accuracy >= SENSOR_ACCURACY_MEDIUM) CompassTrust.GOOD else CompassTrust.CALIBRATE
 
