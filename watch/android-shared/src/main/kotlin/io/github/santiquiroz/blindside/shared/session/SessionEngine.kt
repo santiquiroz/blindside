@@ -39,7 +39,6 @@ class SessionEngine(
     private val onError: (Throwable) -> Unit,
 ) {
     private var gate = HapticGate()
-    private var eliminated = false
 
     fun handle(input: SessionInput) {
         try {
@@ -54,7 +53,6 @@ class SessionEngine(
     private fun process(input: SessionInput) {
         recordFor(input, startNanos)?.let(records::record)
         systemFirst(feed(input)).forEach(::react)
-        trackEliminated(input)
         replayDeferred(input)
         publishSceneOnTick(input)
         flushOnRequest(input)
@@ -72,7 +70,6 @@ class SessionEngine(
             is SessionInput.Gyro -> pipeline.onWatchGyro(input.x, input.y, input.z, input.eventNanos)
             is SessionInput.Step -> pipeline.onWatchStep(input.eventNanos)
             is SessionInput.BeltInfo -> pipeline.onBeltInfo(input.json, input.nowNanos)
-            is SessionInput.ModeChanged -> pipeline.setEliminated(input.eliminated)
             else -> Unit
         }
         return emptyList()
@@ -102,12 +99,8 @@ class SessionEngine(
         records.record(vibrationStartedRecord(alert, nowNanos, startNanos))
     }
 
-    private fun trackEliminated(input: SessionInput) {
-        if (input is SessionInput.ModeChanged) eliminated = input.eliminated
-    }
-
     private fun replayDeferred(input: SessionInput) {
-        if (input is SessionInput.PlayDeferred && !eliminated) playOrDefer(input.alert)
+        if (input is SessionInput.PlayDeferred) playOrDefer(input.alert)
     }
 
     private fun publishSceneOnTick(input: SessionInput) {

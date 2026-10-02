@@ -3,6 +3,8 @@ package io.github.santiquiroz.blindside.shared.settings
 import io.github.santiquiroz.blindside.core.config.Handedness
 import io.github.santiquiroz.blindside.core.config.RADAR_A
 import io.github.santiquiroz.blindside.core.config.RADAR_B
+import io.github.santiquiroz.blindside.shared.hud.DEFAULT_GAME_DURATION_MS
+import io.github.santiquiroz.blindside.shared.sensors.GravityTemplate
 
 enum class ScreenMode { SIGILO, VISTA }
 
@@ -12,6 +14,7 @@ enum class ContactColor { GREEN, RED }
 
 // Positive turns the drawing clockwise: +90° puts "arriba" at 3 o'clock, the fingers with the watch on the inside of the left wrist.
 enum class WatchPosture(val rotationDeg: Float) {
+    AUTO(0f),
     NORMAL(0f),
     TACTICAL_LEFT(90f),
     TACTICAL_RIGHT(-90f),
@@ -29,13 +32,14 @@ data class AppSettings(
     val radars: List<RadarSettings> = DEFAULT_RADARS,
     val screenMode: ScreenMode = ScreenMode.SIGILO,
     val vibrationUsage: VibrationUsage = VibrationUsage.ALARM,
-    val eliminated: Boolean = false,
     val beltAddress: String? = null,
-    val posture: WatchPosture = WatchPosture.NORMAL,
+    val posture: WatchPosture = WatchPosture.AUTO,
+    val postureTemplate: GravityTemplate? = null,
     val autoStartRadar: Boolean = true,
     val sharedUpdatedMs: Long = 0L,
     val contactColor: ContactColor = ContactColor.GREEN,
     val compass: Boolean = true,
+    val gameDurationMs: Long = DEFAULT_GAME_DURATION_MS,
 )
 
 typealias SettingsTransform = (AppSettings) -> AppSettings
@@ -53,8 +57,6 @@ fun AppSettings.withRadar(updated: RadarSettings): AppSettings =
 
 fun AppSettings.withHandedness(newHandedness: Handedness): AppSettings =
     copy(handedness = newHandedness, radars = radars.map { it.copy(yawDegOverride = null) })
-
-fun AppSettings.forNewSession(): AppSettings = copy(eliminated = false)
 
 fun AppSettings.withFlipXToggled(radarId: Int): AppSettings =
     withRadar(radar(radarId).let { it.copy(flipX = !it.flipX) })

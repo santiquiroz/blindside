@@ -11,7 +11,7 @@ sealed interface SessionInput {
     data class BeltInfo(val json: String, val nowNanos: Long) : SessionInput
     data class Rssi(val dbm: Int, val nowNanos: Long) : SessionInput
     data class Link(val connected: Boolean, val nowNanos: Long) : SessionInput
-    data class ModeChanged(val eliminated: Boolean, val screenMode: ScreenMode, val nowNanos: Long) : SessionInput
+    data class ModeChanged(val screenMode: ScreenMode, val nowNanos: Long) : SessionInput
     data class Marker(val nowNanos: Long) : SessionInput
     data class Tick(val nowNanos: Long) : SessionInput
     data class PlayDeferred(val alert: ContactAlert, val atNanos: Long) : SessionInput

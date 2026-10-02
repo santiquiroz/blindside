@@ -118,3 +118,32 @@ Marca cada punto en el reloj real. Si un punto falla, anota qué viste y la hora
     - En ambiente o con la pantalla apagada (Sigilo) no hay anillo ni rumbo.
     - Ajustes → "Brújula: no" quita el anillo y el abanico crece hasta el borde.
     - Si el reloj reporta siempre precisión baja con el sensor de rotación, anotarlo como desviación: el anillo quedaría tenue todo el tiempo.
+
+## Pasada de pulido del reloj (spec §8)
+
+La lógica pura se prueba en la JVM dentro de `android-shared`. Los puntos de abajo necesitan el Watch 7 real + el cinturón y se marcan a mano; no bloquean una fusión.
+
+### Baseline
+- Pruebas en efdf63a: android-shared=330, wear-app=47, phone-app=166.
+- Pruebas finales en dddfff5: radar-core=258, android-shared=364, wear-app=46, phone-app=166.
+
+### Lista de verificación en dispositivo (§8)
+<!-- 8.1 cableado en Task 4: la brújula, los contactos y el giro de escena se dibujan desde el reloj de cuadros (withFrameNanos). -->
+- [ ] 8.1 El anillo de la brújula se anima a ~60 fps, sin saltos por muestra: `adb shell dumpsys gfxinfo io.github.santiquiroz.blindside` en demo antes y después; anotar el % de cuadros con jank.
+- [ ] 8.1 Los contactos se deslizan entre los cuadros del cinturón; un giro rápido del cuerpo rota la escena al instante (giroscopio) y luego se asienta.
+- [ ] 8.1 El giro de escena del giroscopio va en el sentido correcto (girar el cuerpo a la derecha deja un objetivo estático donde está).
+<!-- 8.2 cableado en Task 7: Ajustes → "Calibrar postura táctica" guarda la plantilla; el radar rota solo con el detector de postura (sensor de gravedad). -->
+- [ ] 8.2 "Calibrar postura táctica" captura en 3 s; levantar la réplica al agarre rota solo el radar en ~0,4 s; bajarla vuelve a lo normal.
+- [ ] 8.2 AUTO elige el lado correcto (izquierda/derecha) según cómo lleva el reloj este jugador.
+<!-- 8.3 cableado en Task 13: HudOverlay dibuja el bisel/avisos/vistazo; el reloj de partida pulsa desde el servicio (RunningSession.tickGameClock); el toque largo marca un punto GPS (LocationManager) y las cuñas se dibujan en el anillo. Permiso ACCESS_FINE_LOCATION pedido con el resto al iniciar (no bloquea). Desviaciones: (a) las fuentes de aviso cableadas hoy son enlace del cinturón caído e hidratación; batería (reloj/celular/cinturón) y atardecer quedan pendientes de plumbing de datos en el estado de sesión. (b) El panel de vistazo solo tiene hora y tiempo de partida con datos reales; pulso/pasos/distancia/baterías salen "--" por la misma razón. (c) El aviso crítico (enlace caído) vibra en Sigilo por el camino de SystemAlert del motor (hapticFor/buzzSystem), que ya corre con pantalla apagada; no se tocó SessionEngine. (d) Sin fix GPS el toque largo no marca y no se muestra "Sin GPS" en pantalla (queda como verificación en dispositivo); el puente al GPS del celular es una palanca posterior, no se construye aquí. -->
+- [ ] 8.3 La ventanita del bisel rota rumbo → hora → tiempo de partida; un toque corto la fija/suelta.
+- [ ] 8.3 El reloj de partida cuenta regresiva; vibra una vez a los 5 min restantes y una vez al terminar.
+- [ ] 8.3 El toque largo marca base/reaparición/objetivo en el rumbo GPS real; la cuña sigue al norte al girar el cuerpo.
+- [ ] 8.3 Los avisos contextuales salen de a uno, 4 s, en la mitad trasera; en Sigilo solo vibra el de enlace del cinturón caído.
+- [ ] 8.3 Un toque en el centro muestra el panel de vistazo 3 s y luego se oculta solo.
+<!-- 8.4 completado en Tasks 14-15: quitado el chip/acción/ajuste en vivo del reloj y del celular y borrado eliminatedActionLabel; SessionMode.ELIMINATED y el camino de replay siguen en radar-core (ReplayTest 12 + BsrecTest 6 verdes). Código y JVM verifican ambas mitades; queda solo confirmar a ojo en el visor del celular que una grabación vieja pinta "ELIMINADO". -->
+- [x] 8.4 No hay chip "ME DIERON"/"REAPARECÍ" en ninguna parte (grep sin referencias, build verde); una grabación `.bsrec` vieja con un tramo eliminado sigue reproduciéndose como eliminada en el visor del celular (camino de replay verificado en JVM; falta la confirmación visual en dispositivo).
+
+## Criterio de fusión (spec §8)
+
+Criterio de fusión: los cuatro módulos en verde (`radar-core`, `android-shared`, `wear-app`, `phone-app`) y `:wear-app:assembleDebug` y `:phone-app:assembleDebug` compilan. Los puntos en dispositivo de arriba los revisa a mano Santiago y no bloquean la fusión (regla de oro, spec §8 intro). El ejecutor nunca fusiona.

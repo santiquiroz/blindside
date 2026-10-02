@@ -16,6 +16,7 @@ import io.github.santiquiroz.blindside.shared.session.PhonePairing
 import io.github.santiquiroz.blindside.shared.session.SessionSource
 import io.github.santiquiroz.blindside.shared.session.SessionUiState
 import io.github.santiquiroz.blindside.shared.session.StartError
+import io.github.santiquiroz.blindside.shared.hud.AlertKind
 import io.github.santiquiroz.blindside.core.config.RADAR_A
 import io.github.santiquiroz.blindside.shared.settings.ContactColor
 import io.github.santiquiroz.blindside.shared.settings.ScreenMode
@@ -94,6 +95,13 @@ fun startErrorMessage(error: StartError): String = when (error) {
 
 const val START_RADAR_LABEL = "Iniciar radar"
 const val SETTINGS_ENTRY_LABEL = "Ajustes"
+const val CALIBRATE_POSTURE_LABEL = "Calibrar postura táctica"
+const val CALIBRATE_HOLD_LABEL = "Sostén la réplica"
+const val POSTURE_ALREADY_SET_MESSAGE = "Ya hay una calibración guardada"
+const val POSTURE_SAVED_MESSAGE = "Postura guardada"
+const val POSTURE_CALIBRATE_FAILED_MESSAGE = "No te muevas; vuelve a intentar"
+const val DONE_LABEL = "Listo"
+const val RETRY_LABEL = "Reintentar"
 const val AUTO_START_SETTING_LABEL = "Iniciar radar al abrir"
 const val VIBRATION_TEST_LABEL = "Probar vibraciones"
 const val DEMO_LABEL = "Demo"
@@ -111,7 +119,13 @@ fun screenModeLabel(mode: ScreenMode): String = when (mode) {
     ScreenMode.VISTA -> "Vista (siempre encendida)"
 }
 
+fun gameDurationLabel(durationMs: Long): String = when (durationMs) {
+    0L -> "Sin límite"
+    else -> "${durationMs / 3_600_000L} h"
+}
+
 fun postureLabel(posture: WatchPosture): String = when (posture) {
+    WatchPosture.AUTO -> "Automática"
     WatchPosture.NORMAL -> "Normal"
     WatchPosture.TACTICAL_LEFT -> "Táctica izquierda (+90°)"
     WatchPosture.TACTICAL_RIGHT -> "Táctica derecha (-90°)"
@@ -125,6 +139,15 @@ fun usageLabel(usage: VibrationUsage): String = when (usage) {
 fun contactColorLabel(color: ContactColor): String = when (color) {
     ContactColor.GREEN -> "Verde"
     ContactColor.RED -> "Rojo"
+}
+
+fun alertText(kind: AlertKind): String = when (kind) {
+    AlertKind.BELT_LINK_DOWN -> "Enlace del cinturón caído"
+    AlertKind.BATTERY_LOW_WATCH -> "Batería baja: reloj"
+    AlertKind.BATTERY_LOW_PHONE -> "Batería baja: celular"
+    AlertKind.BATTERY_LOW_BELT -> "Batería baja: cinturón"
+    AlertKind.HYDRATION -> "Hidrátate"
+    AlertKind.DUSK_SOON -> "Atardecer próximo"
 }
 
 fun radarName(radarId: Int): String = if (radarId == RADAR_A) "Radar A (izq.)" else "Radar B (der.)"

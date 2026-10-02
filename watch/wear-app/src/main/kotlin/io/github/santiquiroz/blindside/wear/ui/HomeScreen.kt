@@ -33,7 +33,6 @@ import io.github.santiquiroz.blindside.shared.ble.needsRetry
 import io.github.santiquiroz.blindside.shared.permissions.SESSION_PERMISSIONS
 import io.github.santiquiroz.blindside.shared.permissions.StartDecision
 import io.github.santiquiroz.blindside.shared.permissions.startDecision
-import io.github.santiquiroz.blindside.shared.radar.eliminatedActionLabel
 import io.github.santiquiroz.blindside.shared.session.SessionSource
 import io.github.santiquiroz.blindside.shared.session.SessionUiState
 import io.github.santiquiroz.blindside.shared.theme.BlindsideColors
@@ -54,9 +53,8 @@ fun HomeScreen(
     session: SessionUiState,
     onNavigate: (String) -> Unit,
     onShowRadar: () -> Unit,
-    onToggleEliminated: () -> Unit,
 ) {
-    if (session.running) RunningHome(session, onShowRadar, onToggleEliminated) else IdleHome(session, onNavigate, onShowRadar)
+    if (session.running) RunningHome(session, onShowRadar) else IdleHome(session, onNavigate, onShowRadar)
 }
 
 @Composable
@@ -92,7 +90,6 @@ private fun IdleHomeItem(kind: HomeItem, session: SessionUiState, actions: IdleH
 private fun RunningHome(
     session: SessionUiState,
     onShowRadar: () -> Unit,
-    onToggleEliminated: () -> Unit,
 ) {
     val context = LocalContext.current
     var confirmingStop by remember { mutableStateOf(false) }
@@ -101,7 +98,6 @@ private fun RunningHome(
         if (needsRetry(session.ble)) item { RetryNotice(bleStatusLabel(session.ble)) { WearSessionCommands.retryLink(context) } }
         if (session.recordingFailed) item { Text(RECORDING_FAILED_MESSAGE, color = BlindsideColors.Warn) }
         item { NavChip("Ver radar", onShowRadar) }
-        item { NavChip(eliminatedActionLabel(session.eliminated), onToggleEliminated) }
         item { NavChip("Marcar rival") { WearSessionCommands.marker(context) } }
         item { NavChip(stopLabel(confirmingStop)) { confirmingStop = handleStopTap(context, confirmingStop) } }
         session.recordingName?.let { name -> item { Notice(name) } }

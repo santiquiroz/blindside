@@ -7,7 +7,7 @@ const val BURN_IN_STEP_MS = 3 * 60 * 1_000L
 private const val BURN_IN_SHIFT_PX = 2f
 private val BURN_IN_STEPS = listOf(0 to 0, 1 to 0, 1 to 1, 0 to 1, -1 to 1, -1 to 0, -1 to -1, 0 to -1)
 
-fun keepScreenOn(mode: ScreenMode, eliminated: Boolean): Boolean = mode == ScreenMode.VISTA && !eliminated
+fun keepScreenOn(mode: ScreenMode): Boolean = mode == ScreenMode.VISTA
 
 fun burnInOffset(mode: ScreenMode, elapsedMs: Long): PointPx {
     if (mode != ScreenMode.VISTA) return PointPx(0f, 0f)

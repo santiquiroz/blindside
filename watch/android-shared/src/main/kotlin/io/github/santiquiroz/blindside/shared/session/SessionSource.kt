@@ -20,9 +20,8 @@ fun startBlocker(source: SessionSource, bluetoothGranted: Boolean, hasAdapter: B
 
 fun sourceFrom(name: String?): SessionSource = SessionSource.entries.firstOrNull { it.name == name } ?: SessionSource.BELT
 
-fun ongoingStatus(eliminated: Boolean, source: SessionSource, purpose: SessionPurpose = SessionPurpose.GAME): String = when {
+fun ongoingStatus(source: SessionSource, purpose: SessionPurpose = SessionPurpose.GAME): String = when {
     purpose == SessionPurpose.DIAGNOSTIC -> "Diagnóstico del cinturón"
-    eliminated -> "Eliminado"
     source == SessionSource.DEMO -> "Demo en curso"
     else -> "Partida en curso"
 }

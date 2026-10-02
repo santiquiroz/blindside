@@ -1,11 +1,11 @@
 package io.github.santiquiroz.blindside.shared.session
 
-import android.app.NotificationManager
 import android.app.Service
 import android.bluetooth.BluetoothManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.IBinder
+import android.os.SystemClock
 import android.util.Log
 import androidx.core.content.ContextCompat
 import io.github.santiquiroz.blindside.shared.permissions.PERMISSION_BLUETOOTH_CONNECT
@@ -17,9 +17,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
 
 private const val TAG = "BlindsideService"
 
@@ -38,7 +35,6 @@ abstract class SessionService : Service() {
     private var session: RunningSession? = null
     private var currentSource = SessionSource.BELT
     private var currentPurpose = SessionPurpose.GAME
-    private var notificationSync: Job? = null
     private var companions: List<Job> = emptyList()
     private val commands = SerialCommands(scope, ::logFailedCommand, ::handle)
 
@@ -64,7 +60,6 @@ abstract class SessionService : Service() {
             SessionActions.ACTION_STOP -> onStop(startId)
             SessionActions.ACTION_MARKER -> session?.mark() ?: stopSelf(startId)
             SessionActions.ACTION_RETRY_LINK -> session?.retryLink() ?: stopSelf(startId)
-            SessionActions.ACTION_TOGGLE_ELIMINATED -> if (session != null) toggleEliminated(scope, settingsRepository()) else stopSelf(startId)
             SessionActions.ACTION_OPEN_PAIRING -> requestPairingWindow(startId)
             SessionActions.ACTION_SEND_COMMAND -> sendCommand(intent, startId)
             SessionActions.ACTION_REFRESH_INFO -> refreshInfo(startId)
@@ -93,11 +88,10 @@ abstract class SessionService : Service() {
         currentSource = source
         currentPurpose = purpose
         goForeground(source)
-        SessionStore.update { startedState(it, source, purpose) }
+        SessionStore.update { startedState(it, source, purpose, SystemClock.elapsedRealtime()) }
         val created = RunningSession(this, source, settingsRepository(), scope, wakeLock, host, purpose)
         session = created
         created.begin()
-        notificationSync = scope.launch { syncNotification(source, purpose) }
         companions = host.launchCompanions(this, scope)
     }
 
@@ -118,7 +112,6 @@ abstract class SessionService : Service() {
     private fun detachSession(): RunningSession? {
         val current = session ?: return null
         session = null
-        notificationSync?.cancel()
         companions.forEach { it.cancel() }
         companions = emptyList()
         return current
@@ -164,15 +157,8 @@ abstract class SessionService : Service() {
 
     private fun goForeground(source: SessionSource) {
         host.ensureNotificationChannel(this)
-        val notification = host.notification(this, ongoingStatus(eliminated = false, source = source, purpose = currentPurpose))
+        val notification = host.notification(this, ongoingStatus(source, currentPurpose))
         startForeground(host.notificationId, notification, host.foregroundTypes(source))
-    }
-
-    private suspend fun syncNotification(source: SessionSource, purpose: SessionPurpose) {
-        SessionStore.state.map { it.eliminated }.distinctUntilChanged().collect { eliminated ->
-            val notification = host.notification(this, ongoingStatus(eliminated, source, purpose))
-            getSystemService(NotificationManager::class.java).notify(host.notificationId, notification)
-        }
     }
 
     private fun hasBluetoothPermissions(): Boolean =

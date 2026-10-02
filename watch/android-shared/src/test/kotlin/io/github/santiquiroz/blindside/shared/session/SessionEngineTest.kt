@@ -104,14 +104,6 @@ class SessionEngineTest {
     }
 
     @Test
-    fun `a deferred contact is dropped once the player is eliminated`() {
-        engine.handle(SessionInput.ModeChanged(eliminated = true, screenMode = ScreenMode.SIGILO, nowNanos = at(100)))
-        engine.handle(SessionInput.PlayDeferred(leftContact, at(1_240)))
-        assertTrue(played.isEmpty())
-        assertTrue(vibrationRecords().isEmpty())
-    }
-
-    @Test
     fun `a track confirmation is recorded and does not vibrate`() {
         pipeline.packetEvents = listOf(TrackConfirmed(displayId = 2, tNanos = at(120)))
         engine.handle(SessionInput.Packet(byteArrayOf(1), at(100)))
@@ -130,10 +122,10 @@ class SessionEngineTest {
     }
 
     @Test
-    fun `a mode change reaches the pipeline and is recorded`() {
-        engine.handle(SessionInput.ModeChanged(eliminated = true, screenMode = ScreenMode.SIGILO, nowNanos = at(7)))
-        assertEquals(listOf("eliminated:true"), pipeline.calls)
-        assertEquals(SessionMode.ELIMINATED, BsrecPayloads.readModeChange(records.items.single().payload))
+    fun `a screen-mode change is recorded and does not touch the pipeline`() {
+        engine.handle(SessionInput.ModeChanged(screenMode = ScreenMode.VISTA, nowNanos = at(7)))
+        assertTrue(pipeline.calls.isEmpty())
+        assertEquals(SessionMode.VIEW, BsrecPayloads.readModeChange(records.items.single().payload))
     }
 
     @Test
@@ -207,10 +199,6 @@ private class FakePipeline : PipelinePort {
     override fun onLinkState(connected: Boolean, nowNanos: Long): List<PipelineEvent> {
         calls += "link:$connected"
         return linkEvents
-    }
-
-    override fun setEliminated(on: Boolean) {
-        calls += "eliminated:$on"
     }
 
     override fun scene(nowNanos: Long): RadarScene {

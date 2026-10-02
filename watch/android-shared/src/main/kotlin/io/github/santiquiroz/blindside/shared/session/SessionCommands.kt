@@ -47,8 +47,6 @@ class SessionCommands(private val serviceClass: Class<out Service>) {
         context.startService(serviceIntent(context, SessionActions.ACTION_REFRESH_INFO))
     }
 
-    fun toggleEliminatedIntent(context: Context): Intent = serviceIntent(context, SessionActions.ACTION_TOGGLE_ELIMINATED)
-
     fun stopIntent(context: Context): Intent = serviceIntent(context, SessionActions.ACTION_STOP)
 
     private fun serviceIntent(context: Context, action: String): Intent =

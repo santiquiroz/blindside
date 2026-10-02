@@ -11,14 +11,6 @@ import org.junit.jupiter.api.Test
 
 class AppSettingsTest {
     @Test
-    fun `a new session never starts eliminated`() {
-        val leftOver = AppSettings(eliminated = true, screenMode = ScreenMode.VISTA, beltAddress = "AA:BB:CC:DD:EE:FF")
-        val fresh = leftOver.forNewSession()
-        assertFalse(fresh.eliminated)
-        assertEquals(leftOver.copy(eliminated = false), fresh)
-    }
-
-    @Test
     fun `changing handedness clears yaw overrides`() {
         val tuned = AppSettings().withRadar(RadarSettings(RADAR_B, yawDegOverride = 33.0, flipX = true))
         val changed = tuned.withHandedness(Handedness.LEFT)

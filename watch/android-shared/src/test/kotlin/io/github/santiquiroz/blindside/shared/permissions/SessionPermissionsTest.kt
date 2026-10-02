@@ -31,6 +31,12 @@ class SessionPermissionsTest {
     }
 
     @Test
+    fun `starts even when location is denied`() {
+        val grants = allGranted + (PERMISSION_ACCESS_FINE_LOCATION to false)
+        assertEquals(StartDecision.Start(watchSteps = true), startDecision(grants))
+    }
+
+    @Test
     fun `blocks when bluetooth connect is denied`() {
         val grants = allGranted + (PERMISSION_BLUETOOTH_CONNECT to false)
         assertEquals(StartDecision.BlockedBluetoothDenied, startDecision(grants))
@@ -60,6 +66,7 @@ class SessionPermissionsTest {
             PERMISSION_BLUETOOTH_CONNECT,
             PERMISSION_ACTIVITY_RECOGNITION,
             PERMISSION_POST_NOTIFICATIONS,
+            PERMISSION_ACCESS_FINE_LOCATION,
         )
         assertEquals(expected, SESSION_PERMISSIONS.toSet())
     }
