@@ -45,6 +45,7 @@ fun SettingsScreen(
         item { SettingChip(AUTO_START_SETTING_LABEL, yesNo(settings.autoStartRadar)) { onUpdate { it.copy(autoStartRadar = !it.autoStartRadar) } } }
         item { SettingChip("Mano", handednessLabel(settings.handedness)) { onUpdate { it.withHandedness(nextHandedness(it.handedness)) } } }
         item { SettingChip("Postura del reloj", postureLabel(settings.posture)) { onUpdate { it.copy(posture = nextPosture(it.posture)) } } }
+        item { NavChip(CALIBRATE_POSTURE_LABEL) { onNavigate(ROUTE_CALIBRATE_POSTURE) } }
         item { SettingChip("Pantalla", screenModeLabel(settings.screenMode)) { onUpdate { it.copy(screenMode = toggledScreenMode(it.screenMode)) } } }
         item { SettingChip("Color de contactos", contactColorLabel(settings.contactColor)) { onUpdate { it.copy(contactColor = toggledContactColor(it.contactColor)) } } }
         item { SettingChip("Brújula", yesNo(settings.compass)) { onUpdate { it.copy(compass = !it.compass) } } }

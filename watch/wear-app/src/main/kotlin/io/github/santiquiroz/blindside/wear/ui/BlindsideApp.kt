@@ -50,6 +50,7 @@ fun BlindsideApp(settingsRepository: SettingsRepository) {
                 SettingsScreen(settings, update, navigate, startDemo.takeUnless { session.running }, rememberPhonePairing(session), onPairPhone)
             }
             composable(ROUTE_PRACTICE) { PracticeScreen(settings) }
+            composable(ROUTE_CALIBRATE_POSTURE) { CalibratePostureScreen(settings, update) { navController.popBackStack() } }
             composable(ROUTE_SPIKES) { SpikeScreen(settingsRepository) }
         }
     }

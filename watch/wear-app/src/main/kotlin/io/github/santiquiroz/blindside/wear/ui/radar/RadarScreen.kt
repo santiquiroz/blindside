@@ -64,6 +64,7 @@ import io.github.santiquiroz.blindside.shared.radar.statusMark
 import io.github.santiquiroz.blindside.shared.radar.statusRows
 import io.github.santiquiroz.blindside.shared.radar.toDrawModel
 import io.github.santiquiroz.blindside.shared.radar.warningLabel
+import io.github.santiquiroz.blindside.shared.sensors.effectivePostureRotationDeg
 import io.github.santiquiroz.blindside.shared.session.SIGILO_FRAME_MS
 import io.github.santiquiroz.blindside.shared.session.SessionUiState
 import io.github.santiquiroz.blindside.shared.settings.AppSettings
@@ -106,7 +107,8 @@ fun RadarScreen(
     val elapsedMs by rememberElapsedMs()
     val shift = burnInOffset(settings.screenMode, elapsedMs)
     val contacts = showContacts(session.scene, ambient)
-    val postureDeg = settings.posture.rotationDeg
+    val tactical by rememberTacticalPosture(active = !ambient, template = settings.postureTemplate)
+    val postureDeg = effectivePostureRotationDeg(settings.posture, tactical, settings.postureTemplate)
     val fitHalfAngleDeg = remember(settings.handedness, settings.radars) { fanHalfAngleFor(settings) }
     val compassOn = settings.compass && !ambient
     val compass = rememberCompassReading(compassOn)

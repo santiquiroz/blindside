@@ -131,6 +131,7 @@ La lógica pura se prueba en la JVM dentro de `android-shared`. Los puntos de ab
 - [ ] 8.1 El anillo de la brújula se anima a ~60 fps, sin saltos por muestra: `adb shell dumpsys gfxinfo io.github.santiquiroz.blindside` en demo antes y después; anotar el % de cuadros con jank.
 - [ ] 8.1 Los contactos se deslizan entre los cuadros del cinturón; un giro rápido del cuerpo rota la escena al instante (giroscopio) y luego se asienta.
 - [ ] 8.1 El giro de escena del giroscopio va en el sentido correcto (girar el cuerpo a la derecha deja un objetivo estático donde está).
+<!-- 8.2 cableado en Task 7: Ajustes → "Calibrar postura táctica" guarda la plantilla; el radar rota solo con el detector de postura (sensor de gravedad). -->
 - [ ] 8.2 "Calibrar postura táctica" captura en 3 s; levantar la réplica al agarre rota solo el radar en ~0,4 s; bajarla vuelve a lo normal.
 - [ ] 8.2 AUTO elige el lado correcto (izquierda/derecha) según cómo lleva el reloj este jugador.
 - [ ] 8.3 La ventanita del bisel rota rumbo → hora → tiempo de partida; un toque corto la fija/suelta.

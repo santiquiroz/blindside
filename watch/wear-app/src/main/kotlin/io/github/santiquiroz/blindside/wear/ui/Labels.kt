@@ -94,6 +94,13 @@ fun startErrorMessage(error: StartError): String = when (error) {
 
 const val START_RADAR_LABEL = "Iniciar radar"
 const val SETTINGS_ENTRY_LABEL = "Ajustes"
+const val CALIBRATE_POSTURE_LABEL = "Calibrar postura táctica"
+const val CALIBRATE_HOLD_LABEL = "Sostén la réplica"
+const val POSTURE_ALREADY_SET_MESSAGE = "Ya hay una calibración guardada"
+const val POSTURE_SAVED_MESSAGE = "Postura guardada"
+const val POSTURE_CALIBRATE_FAILED_MESSAGE = "No te muevas; vuelve a intentar"
+const val DONE_LABEL = "Listo"
+const val RETRY_LABEL = "Reintentar"
 const val AUTO_START_SETTING_LABEL = "Iniciar radar al abrir"
 const val VIBRATION_TEST_LABEL = "Probar vibraciones"
 const val DEMO_LABEL = "Demo"
