@@ -125,6 +125,7 @@ La lógica pura se prueba en la JVM dentro de `android-shared`. Los puntos de ab
 
 ### Baseline
 - Pruebas en efdf63a: android-shared=330, wear-app=47, phone-app=166.
+- Pruebas finales en dddfff5: radar-core=258, android-shared=364, wear-app=46, phone-app=166.
 
 ### Lista de verificación en dispositivo (§8)
 <!-- 8.1 cableado en Task 4: la brújula, los contactos y el giro de escena se dibujan desde el reloj de cuadros (withFrameNanos). -->
@@ -142,3 +143,7 @@ La lógica pura se prueba en la JVM dentro de `android-shared`. Los puntos de ab
 - [ ] 8.3 Un toque en el centro muestra el panel de vistazo 3 s y luego se oculta solo.
 <!-- 8.4 completado en Tasks 14-15: quitado el chip/acción/ajuste en vivo del reloj y del celular y borrado eliminatedActionLabel; SessionMode.ELIMINATED y el camino de replay siguen en radar-core (ReplayTest 12 + BsrecTest 6 verdes). Código y JVM verifican ambas mitades; queda solo confirmar a ojo en el visor del celular que una grabación vieja pinta "ELIMINADO". -->
 - [x] 8.4 No hay chip "ME DIERON"/"REAPARECÍ" en ninguna parte (grep sin referencias, build verde); una grabación `.bsrec` vieja con un tramo eliminado sigue reproduciéndose como eliminada en el visor del celular (camino de replay verificado en JVM; falta la confirmación visual en dispositivo).
+
+## Criterio de fusión (spec §8)
+
+Criterio de fusión: los cuatro módulos en verde (`radar-core`, `android-shared`, `wear-app`, `phone-app`) y `:wear-app:assembleDebug` y `:phone-app:assembleDebug` compilan. Los puntos en dispositivo de arriba los revisa a mano Santiago y no bloquean la fusión (regla de oro, spec §8 intro). El ejecutor nunca fusiona.
