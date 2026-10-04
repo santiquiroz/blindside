@@ -79,13 +79,13 @@ Ya existen "sensores de latidos" caseros construidos con el mismo radar; consult
 
 ![Diagrama de cableado del cinturón](docs/wiring.svg)
 
-Todo funciona a **3,3 V**: alimentá los radares y los acelerómetros desde el pin **3V3** del ESP32 (no 5 V) y compartí una **GND** común. En el UART, el TX del sensor va al RX del ESP32 y viceversa. Todos los pines están en [firmware/include/blindside_config.h](firmware/include/blindside_config.h).
+**Radares a 5 V, acelerómetros a 3,3 V.** Alimentá cada LD2450 desde el pin **VIN** del ESP32 (los 5 V del USB), cada IMU desde el pin **3V3**, y compartí una **GND** común. El UART del LD2450 trabaja con lógica de 3,3 V, así que TX/RX van directo al ESP32 (TX del sensor → RX del ESP32 y viceversa). Todos los pines están en [firmware/include/blindside_config.h](firmware/include/blindside_config.h).
 
-**Radares — 2× HLK-LD2450 (UART, 256000 baudios, 3,3 V):**
+**Radares — 2× HLK-LD2450 (UART 256000 baudios, alimentación 5 V, lógica 3,3 V):**
 
 | Pin del LD2450 | Radar A → ESP32 | Radar B → ESP32 |
 |---|---|---|
-| VCC (3,3 V) | 3V3 | 3V3 |
+| 5V | VIN | VIN |
 | GND | GND | GND |
 | TX (OT1) → RX del ESP32 | GPIO16 | GPIO26 |
 | RX (RX1) ← TX del ESP32 | GPIO17 | GPIO27 |
@@ -102,7 +102,10 @@ El radar B va por la matriz de GPIO porque los pines por defecto del UART1 (9/10
 | SCL | GPIO33 | GPIO22 |
 
 - **El radar A + IMU A van en la caja de la cadera izquierda; el radar B + IMU B en la derecha.** Cada IMU tiene que quedar rígida con su propio radar — el reloj la usa para cancelar tus giros y tus pasos.
-- El conector del LD2450 es JST ZH de 1,5 mm, no de 2,54 mm.
+- **Un solo pin VIN y un solo 3V3 alimentan las dos cajas:** los hilos de 5V de ambas cajas van a la bornera de VIN, los dos de 3V3 a la de 3V3, y los de GND a las borneras de GND. Dentro de cada caja el hilo de GND se reparte al radar y a la IMU. El consumo total ronda 300 mA a 5 V, directo del power bank.
+- **Usá el conector JST del radar** (JST ZH 1,5 mm, rotulado `GND TX RX 5V`), no su header de pines de 2,54 mm: ese header es para actualizar el firmware por USB, y los jumpers Dupont ahí se sueltan con el movimiento. Su pin `3.3V` es la salida del regulador interno del radar, no una entrada — alimentar los radares desde el 3V3 del ESP32 cargaría sus ráfagas de transmisión sobre el regulador del ESP32 y lo puede hacer reiniciar.
+- **Identificá cada hilo por la etiqueta impresa en la placa, no por el color del cable** — en estos kits JST el rojo no es necesariamente 5V. Invertir 5V y GND puede quemar un radar; verificá con un multímetro antes de enchufarlo. Qué conductor del cable largo lleva qué (pares trenzados) está en el spec, §2.2.
+- Si tenés uno, un condensador de 100–470 µF entre 5V y GND junto a cada radar suaviza sus ráfagas de transmisión.
 - En el primer arranque el firmware saca cada LD2450 del Bluetooth y lo pone a 256000 baudios. Confirmá por el puerto serie USB que la línea `diag` muestre `radar 0: baud=256000` y `radar 1: baud=256000`, y que las IMUs digan `imu0[ok=1 who=0x68 …]` (un clon con 0x70/0x71/0x98 también sirve). La lista completa de banco está en [firmware/HARDWARE_CHECKLIST.md](firmware/HARDWARE_CHECKLIST.md).
 
 ## Cómo funciona (versión corta)

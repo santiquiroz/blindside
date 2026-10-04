@@ -3,7 +3,7 @@
   <rect x="8" y="8" width="984" height="584" rx="14" fill="none" stroke="#25302C" stroke-width="1.5"/>
 
   <text x="500" y="44" text-anchor="middle" fill="#E8ECEA" font-size="24" font-weight="700" font-family="'IBM Plex Sans',sans-serif">Blindside — Cableado del cinturón</text>
-  <text x="500" y="72" text-anchor="middle" fill="#9AA5A0" font-size="14" font-family="'IBM Plex Sans',sans-serif">Todo a 3,3 V · GND común · en el UART el TX del sensor va al RX del ESP32</text>
+  <text x="500" y="72" text-anchor="middle" fill="#9AA5A0" font-size="14" font-family="'IBM Plex Sans',sans-serif">Radares a 5 V (VIN) · IMUs a 3,3 V · GND común · en el UART el TX del sensor va al RX del ESP32</text>
 
   <!-- wires (drawn first, under the boxes) -->
   <!-- left: radar A -->
@@ -12,7 +12,7 @@
   <path d="M280,228 C350,228 350,238 420,238" fill="none" stroke="#3BE37A" stroke-width="2.5"/>
   <path d="M280,253 C350,253 350,268 420,268" fill="none" stroke="#3BE37A" stroke-width="2.5"/>
   <!-- left: imu A -->
-  <path d="M280,360 C350,360 350,172 420,172" fill="none" stroke="#FF5A4E" stroke-width="2.5"/>
+  <path d="M280,360 C350,360 350,330 420,330" fill="none" stroke="#B48CFF" stroke-width="2.5"/>
   <path d="M280,385 C350,385 350,202 420,202" fill="none" stroke="#9AA5A0" stroke-width="2.5"/>
   <path d="M280,413 C350,413 350,408 420,408" fill="none" stroke="#F2B84B" stroke-width="2.5"/>
   <path d="M280,438 C350,438 350,438 420,438" fill="none" stroke="#F2B84B" stroke-width="2.5"/>
@@ -22,7 +22,7 @@
   <path d="M720,228 C650,228 650,238 580,238" fill="none" stroke="#3BE37A" stroke-width="2.5"/>
   <path d="M720,253 C650,253 650,268 580,268" fill="none" stroke="#3BE37A" stroke-width="2.5"/>
   <!-- right: imu B -->
-  <path d="M720,360 C650,360 650,172 580,172" fill="none" stroke="#FF5A4E" stroke-width="2.5"/>
+  <path d="M720,360 C650,360 650,330 580,330" fill="none" stroke="#B48CFF" stroke-width="2.5"/>
   <path d="M720,385 C650,385 650,202 580,202" fill="none" stroke="#9AA5A0" stroke-width="2.5"/>
   <path d="M720,413 C650,413 650,408 580,408" fill="none" stroke="#F2B84B" stroke-width="2.5"/>
   <path d="M720,438 C650,438 650,438 580,438" fill="none" stroke="#F2B84B" stroke-width="2.5"/>
@@ -39,26 +39,27 @@
 
   <!-- ESP32 -->
   <rect x="420" y="150" width="160" height="320" rx="10" fill="#161B1A" stroke="#3BE37A" stroke-width="2"/>
-  <text x="500" y="300" text-anchor="middle" fill="#E8ECEA" font-size="16" font-weight="700" font-family="'IBM Plex Sans',sans-serif">ESP32</text>
-  <text x="500" y="320" text-anchor="middle" fill="#9AA5A0" font-size="12">WROOM-32</text>
-  <text x="500" y="172" text-anchor="middle" fill="#FF5A4E" font-size="11">3V3</text>
-  <text x="500" y="202" text-anchor="middle" fill="#9AA5A0" font-size="11">GND</text>
+  <text x="500" y="176" text-anchor="middle" fill="#FF5A4E" font-size="11">VIN 5V</text>
+  <text x="500" y="206" text-anchor="middle" fill="#9AA5A0" font-size="11">GND</text>
+  <text x="500" y="296" text-anchor="middle" fill="#E8ECEA" font-size="16" font-weight="700" font-family="'IBM Plex Sans',sans-serif">ESP32</text>
+  <text x="500" y="313" text-anchor="middle" fill="#9AA5A0" font-size="12">WROOM-32</text>
+  <text x="500" y="334" text-anchor="middle" fill="#B48CFF" font-size="11">3V3</text>
 
   <!-- device boxes -->
   <!-- Radar A -->
   <rect x="70" y="150" width="210" height="120" rx="10" fill="#161B1A" stroke="#25302C" stroke-width="1.5"/>
   <text x="90" y="178" fill="#E8ECEA" font-size="14" font-weight="700" font-family="'IBM Plex Sans',sans-serif">LD2450 · Radar A</text>
-  <text x="90" y="200" fill="#9AA5A0" font-size="11">UART 256000 · izquierda</text>
-  <text x="272" y="178" text-anchor="end" fill="#FF5A4E" font-size="11">VCC</text>
+  <text x="90" y="200" fill="#9AA5A0" font-size="11">JST · izquierda</text>
+  <text x="272" y="178" text-anchor="end" fill="#FF5A4E" font-size="11">5V</text>
   <text x="272" y="204" text-anchor="end" fill="#9AA5A0" font-size="11">GND</text>
-  <text x="272" y="232" text-anchor="end" fill="#3BE37A" font-size="11">TX (OT1)</text>
-  <text x="272" y="257" text-anchor="end" fill="#3BE37A" font-size="11">RX (RX1)</text>
+  <text x="272" y="232" text-anchor="end" fill="#3BE37A" font-size="11">TX</text>
+  <text x="272" y="257" text-anchor="end" fill="#3BE37A" font-size="11">RX</text>
 
   <!-- IMU A -->
   <rect x="70" y="330" width="210" height="120" rx="10" fill="#161B1A" stroke="#25302C" stroke-width="1.5"/>
   <text x="90" y="358" fill="#E8ECEA" font-size="14" font-weight="700" font-family="'IBM Plex Sans',sans-serif">MPU6050 · IMU A</text>
   <text x="90" y="380" fill="#9AA5A0" font-size="11">I2C 0x68 · bus propio</text>
-  <text x="272" y="364" text-anchor="end" fill="#FF5A4E" font-size="11">VCC</text>
+  <text x="272" y="364" text-anchor="end" fill="#B48CFF" font-size="11">VCC</text>
   <text x="272" y="389" text-anchor="end" fill="#9AA5A0" font-size="11">GND</text>
   <text x="272" y="417" text-anchor="end" fill="#F2B84B" font-size="11">SDA</text>
   <text x="272" y="442" text-anchor="end" fill="#F2B84B" font-size="11">SCL</text>
@@ -66,31 +67,33 @@
   <!-- Radar B -->
   <rect x="720" y="150" width="210" height="120" rx="10" fill="#161B1A" stroke="#25302C" stroke-width="1.5"/>
   <text x="910" y="178" text-anchor="end" fill="#E8ECEA" font-size="14" font-weight="700" font-family="'IBM Plex Sans',sans-serif">Radar B · LD2450</text>
-  <text x="910" y="200" text-anchor="end" fill="#9AA5A0" font-size="11">UART 256000 · derecha</text>
-  <text x="728" y="178" fill="#FF5A4E" font-size="11">VCC</text>
+  <text x="910" y="200" text-anchor="end" fill="#9AA5A0" font-size="11">JST · derecha</text>
+  <text x="728" y="178" fill="#FF5A4E" font-size="11">5V</text>
   <text x="728" y="204" fill="#9AA5A0" font-size="11">GND</text>
-  <text x="728" y="232" fill="#3BE37A" font-size="11">TX (OT1)</text>
-  <text x="728" y="257" fill="#3BE37A" font-size="11">RX (RX1)</text>
+  <text x="728" y="232" fill="#3BE37A" font-size="11">TX</text>
+  <text x="728" y="257" fill="#3BE37A" font-size="11">RX</text>
 
   <!-- IMU B -->
   <rect x="720" y="330" width="210" height="120" rx="10" fill="#161B1A" stroke="#25302C" stroke-width="1.5"/>
   <text x="910" y="358" text-anchor="end" fill="#E8ECEA" font-size="14" font-weight="700" font-family="'IBM Plex Sans',sans-serif">IMU B · MPU6050</text>
   <text x="910" y="380" text-anchor="end" fill="#9AA5A0" font-size="11">I2C 0x68 · bus propio</text>
-  <text x="728" y="364" fill="#FF5A4E" font-size="11">VCC</text>
+  <text x="728" y="364" fill="#B48CFF" font-size="11">VCC</text>
   <text x="728" y="389" fill="#9AA5A0" font-size="11">GND</text>
   <text x="728" y="417" fill="#F2B84B" font-size="11">SDA</text>
   <text x="728" y="442" fill="#F2B84B" font-size="11">SCL</text>
 
   <!-- legend -->
-  <line x1="70" y1="505" x2="110" y2="505" stroke="#FF5A4E" stroke-width="3"/>
-  <text x="118" y="509" fill="#9AA5A0" font-size="12">3,3 V</text>
-  <line x1="200" y1="505" x2="240" y2="505" stroke="#9AA5A0" stroke-width="3"/>
-  <text x="248" y="509" fill="#9AA5A0" font-size="12">GND</text>
-  <line x1="320" y1="505" x2="360" y2="505" stroke="#3BE37A" stroke-width="3"/>
-  <text x="368" y="509" fill="#9AA5A0" font-size="12">UART del radar (TX→RX cruzado)</text>
-  <line x1="660" y1="505" x2="700" y2="505" stroke="#F2B84B" stroke-width="3"/>
-  <text x="708" y="509" fill="#9AA5A0" font-size="12">I2C del acelerómetro</text>
+  <line x1="70" y1="505" x2="100" y2="505" stroke="#FF5A4E" stroke-width="3"/>
+  <text x="106" y="509" fill="#9AA5A0" font-size="12">5 V (VIN)</text>
+  <line x1="200" y1="505" x2="230" y2="505" stroke="#B48CFF" stroke-width="3"/>
+  <text x="236" y="509" fill="#9AA5A0" font-size="12">3,3 V</text>
+  <line x1="310" y1="505" x2="340" y2="505" stroke="#9AA5A0" stroke-width="3"/>
+  <text x="346" y="509" fill="#9AA5A0" font-size="12">GND</text>
+  <line x1="420" y1="505" x2="450" y2="505" stroke="#3BE37A" stroke-width="3"/>
+  <text x="456" y="509" fill="#9AA5A0" font-size="12">UART radar (TX→RX)</text>
+  <line x1="660" y1="505" x2="690" y2="505" stroke="#F2B84B" stroke-width="3"/>
+  <text x="696" y="509" fill="#9AA5A0" font-size="12">I2C acelerómetro</text>
 
-  <text x="500" y="552" text-anchor="middle" fill="#9AA5A0" font-size="12.5" font-family="'IBM Plex Sans',sans-serif">Radar + IMU de la misma caja van en el mismo lado del cuerpo. La IMU debe quedar rígida con su radar.</text>
-  <text x="500" y="572" text-anchor="middle" fill="#9AA5A0" font-size="12.5" font-family="'IBM Plex Sans',sans-serif">Pines en firmware/include/blindside_config.h · prueba de banco en firmware/HARDWARE_CHECKLIST.md</text>
+  <text x="500" y="552" text-anchor="middle" fill="#9AA5A0" font-size="12.5" font-family="'IBM Plex Sans',sans-serif">Radar + IMU de la misma caja van del mismo lado del cuerpo; la IMU rígida con su radar.</text>
+  <text x="500" y="572" text-anchor="middle" fill="#FF5A4E" font-size="12.5" font-family="'IBM Plex Sans',sans-serif">Mapear cada hilo por la etiqueta impresa en la placa, no por el color del cable JST.</text>
 </svg>
