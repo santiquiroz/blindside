@@ -87,8 +87,8 @@ DIY "heartbeat sensors" built on the same radar already exist; see [Prior art](#
 |---|---|---|
 | 5V | VIN | VIN |
 | GND | GND | GND |
-| TX (OT1) → ESP32 RX | GPIO16 | GPIO26 |
-| RX (RX1) ← ESP32 TX | GPIO17 | GPIO27 |
+| TX (OT1) → ESP32 RX | GPIO16 (silkscreen `RX2`) | GPIO26 |
+| RX (RX1) ← ESP32 TX | GPIO17 (silkscreen `TX2`) | GPIO27 |
 
 Radar B rides the GPIO matrix because UART1's default pins (9/10) belong to the SPI flash.
 

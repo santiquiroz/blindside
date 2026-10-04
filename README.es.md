@@ -87,8 +87,8 @@ Ya existen "sensores de latidos" caseros construidos con el mismo radar; consult
 |---|---|---|
 | 5V | VIN | VIN |
 | GND | GND | GND |
-| TX (OT1) → RX del ESP32 | GPIO16 | GPIO26 |
-| RX (RX1) ← TX del ESP32 | GPIO17 | GPIO27 |
+| TX (OT1) → RX del ESP32 | GPIO16 (rótulo `RX2` en la placa) | GPIO26 |
+| RX (RX1) ← TX del ESP32 | GPIO17 (rótulo `TX2` en la placa) | GPIO27 |
 
 El radar B va por la matriz de GPIO porque los pines por defecto del UART1 (9/10) son de la flash SPI.
 
