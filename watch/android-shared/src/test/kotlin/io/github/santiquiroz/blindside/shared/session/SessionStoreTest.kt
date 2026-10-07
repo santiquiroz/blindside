@@ -1,6 +1,12 @@
 package io.github.santiquiroz.blindside.shared.session
 
+import io.github.santiquiroz.blindside.core.scene.MotionState
+import io.github.santiquiroz.blindside.core.scene.RadarScene
 import io.github.santiquiroz.blindside.shared.ble.BleStatus
+import io.github.santiquiroz.blindside.shared.tak.GeoFix
+import io.github.santiquiroz.blindside.shared.tak.Mate
+import io.github.santiquiroz.blindside.shared.tak.TeamUpdate
+import io.github.santiquiroz.blindside.shared.tactical.GeoPoint
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
@@ -55,4 +61,45 @@ class SessionStoreTest {
         assertEquals(SessionPurpose.GAME, startedState(SessionUiState(), SessionSource.BELT).purpose)
         assertNull(stoppedState(diagnostic).purpose)
     }
+
+    @Test
+    fun `anchorHeading without a scene leaves the state unchanged`() {
+        SessionStore.update { SessionUiState() }
+        val before = SessionStore.state.value
+        SessionStore.anchorHeading(10.0, 1_000L)
+        assertEquals(before, SessionStore.state.value)
+        SessionStore.update { SessionUiState() }
+    }
+
+    @Test
+    fun `anchorHeading stores the offset between front heading and body yaw`() {
+        SessionStore.update { SessionUiState(scene = sceneWithYaw(30.0)) }
+        SessionStore.anchorHeading(10.0, 1_000L)
+        assertEquals(340.0, SessionStore.state.value.headingAnchor?.offsetDeg)
+        assertEquals(1_000L, SessionStore.state.value.headingAnchor?.atNanos)
+        SessionStore.update { SessionUiState() }
+    }
+
+    @Test
+    fun `receiveTeam stores the update and its time`() {
+        SessionStore.update { SessionUiState() }
+        val update = TeamUpdate(GeoFix(GeoPoint(5.0, -75.0), 4.0), listOf(Mate("Toro", GeoPoint(5.0, -75.0), 3)))
+        SessionStore.receiveTeam(update, 7L)
+        assertEquals(update, SessionStore.state.value.team)
+        assertEquals(7L, SessionStore.state.value.teamAtMs)
+        SessionStore.update { SessionUiState() }
+    }
+
+    private fun sceneWithYaw(yawDeg: Double) = RadarScene(
+        blips = emptyList(),
+        coverage = emptyList(),
+        linkUp = true,
+        radars = emptyList(),
+        imus = emptyList(),
+        motion = MotionState.STILL,
+        warnings = emptySet(),
+        eliminated = false,
+        bodyYawDeg = yawDeg,
+        yawFromBelt = true,
+    )
 }

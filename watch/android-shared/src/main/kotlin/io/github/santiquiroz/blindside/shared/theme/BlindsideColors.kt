@@ -12,6 +12,7 @@ object BlindsideColors {
     val AlertRed = Color(Tokens.ALERT_RED)
     val AlertRedDim = Color(Tokens.ALERT_RED_DIM)
     val Warn = Color(Tokens.WARN)
+    val Ally = Color(Tokens.ALLY)
     val Text = Color(Tokens.TEXT)
     val Text2 = Color(Tokens.TEXT_2)
 }

@@ -21,6 +21,7 @@ import io.github.santiquiroz.blindside.shared.compass.compassTicks
 import io.github.santiquiroz.blindside.shared.compass.markScreenAngleDeg
 import io.github.santiquiroz.blindside.shared.compass.pointOnRing
 import io.github.santiquiroz.blindside.shared.radar.PointPx
+import io.github.santiquiroz.blindside.shared.tak.MateMark
 import io.github.santiquiroz.blindside.shared.tactical.GeoPoint
 import io.github.santiquiroz.blindside.shared.tactical.TacticalKind
 import io.github.santiquiroz.blindside.shared.tactical.bearingDeg
@@ -128,6 +129,29 @@ private fun DrawScope.drawWedge(
     val color = wedgeColor(kind, colors)
     drawWedgeShape(screenAngle, ring, color, wedgeStyle(kind))
     drawWedgeLabel(tacticalDistanceLabel(distanceM(origin, point)), screenAngle, ring, color, measurer)
+}
+
+// Allies share one colour and the filled shape; the two-letter label tells them apart.
+fun DrawScope.drawMateWedges(
+    marks: List<MateMark>,
+    azimuthDeg: Double,
+    ring: RingGeometry,
+    color: Color,
+    measurer: TextMeasurer,
+) {
+    marks.forEach { drawMate(it, azimuthDeg, ring, color, measurer) }
+}
+
+private fun DrawScope.drawMate(
+    mark: MateMark,
+    azimuthDeg: Double,
+    ring: RingGeometry,
+    color: Color,
+    measurer: TextMeasurer,
+) {
+    val screenAngle = wedgeScreenAngleDeg(mark.bearingDeg, azimuthDeg)
+    drawWedgeShape(screenAngle, ring, color, WedgeStyle.FILLED)
+    drawWedgeLabel("${mark.label} ${tacticalDistanceLabel(mark.distanceM)}", screenAngle, ring, color, measurer)
 }
 
 private fun DrawScope.drawWedgeShape(angleDeg: Float, ring: RingGeometry, color: Color, style: WedgeStyle) {

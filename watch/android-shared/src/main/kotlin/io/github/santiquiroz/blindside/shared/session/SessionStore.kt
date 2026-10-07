@@ -2,6 +2,9 @@ package io.github.santiquiroz.blindside.shared.session
 
 import io.github.santiquiroz.blindside.core.scene.RadarScene
 import io.github.santiquiroz.blindside.shared.ble.BleStatus
+import io.github.santiquiroz.blindside.shared.tak.HeadingAnchor
+import io.github.santiquiroz.blindside.shared.tak.TeamUpdate
+import io.github.santiquiroz.blindside.shared.tak.anchorOf
 import io.github.santiquiroz.blindside.shared.tactical.GeoPoint
 import io.github.santiquiroz.blindside.shared.tactical.TacticalKind
 import io.github.santiquiroz.blindside.shared.tactical.nextTacticalKind
@@ -29,6 +32,9 @@ data class SessionUiState(
     val hydrationBaselineMs: Long? = null,
     val tacticalPoints: Map<TacticalKind, GeoPoint> = emptyMap(),
     val lastTacticalKind: TacticalKind? = null,
+    val headingAnchor: HeadingAnchor? = null,
+    val team: TeamUpdate? = null,
+    val teamAtMs: Long? = null,
 )
 
 object SessionStore {
@@ -47,6 +53,14 @@ object SessionStore {
 
     // The hydration cadence lives here, not in the HUD, so it survives the screen sleeping in Sigilo (spec §8.3).
     fun markHydrationBaseline(nowMs: Long) = mutableState.update { it.copy(hydrationBaselineMs = nowMs) }
+
+    // No scene means no body yaw to anchor against, so a heading sample without one is dropped.
+    fun anchorHeading(frontHeadingDeg: Double, nowNanos: Long) = mutableState.update { state ->
+        val scene = state.scene ?: return@update state
+        state.copy(headingAnchor = anchorOf(frontHeadingDeg, scene.bodyYawDeg, nowNanos))
+    }
+
+    fun receiveTeam(update: TeamUpdate, nowMs: Long) = mutableState.update { it.copy(team = update, teamAtMs = nowMs) }
 
     fun setRadarVisible(visible: Boolean) {
         mutableRadarVisible.value = visible

@@ -2,11 +2,13 @@ package io.github.santiquiroz.blindside.wear.session
 
 import android.app.Notification
 import android.content.Context
+import android.os.SystemClock
 import io.github.santiquiroz.blindside.shared.ble.BeltLinkProfile
 import io.github.santiquiroz.blindside.shared.ble.BeltRole
 import io.github.santiquiroz.blindside.shared.session.SessionCommands
 import io.github.santiquiroz.blindside.shared.session.SessionHost
 import io.github.santiquiroz.blindside.wear.BuildConfig
+import io.github.santiquiroz.blindside.wear.bridge.publishTakTelemetry
 import io.github.santiquiroz.blindside.wear.bridge.publishWatchStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -24,5 +26,8 @@ object WearSessionHost : SessionHost {
     override fun notification(context: Context, status: String): Notification = SessionNotification.build(context, status)
 
     override fun launchCompanions(context: Context, scope: CoroutineScope): List<Job> =
-        listOf(scope.launch { publishWatchStatus(context, System::currentTimeMillis) })
+        listOf(
+            scope.launch { publishWatchStatus(context, System::currentTimeMillis) },
+            scope.launch { publishTakTelemetry(context, System::currentTimeMillis, SystemClock::elapsedRealtimeNanos) },
+        )
 }

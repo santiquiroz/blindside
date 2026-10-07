@@ -24,6 +24,8 @@ import io.github.santiquiroz.blindside.shared.recording.recordingsDir
 import io.github.santiquiroz.blindside.shared.recording.shareableRecordings
 import io.github.santiquiroz.blindside.shared.session.SessionStore
 import io.github.santiquiroz.blindside.shared.session.activeRecordingName
+import io.github.santiquiroz.blindside.shared.tak.TAK_TEAM_PATH
+import io.github.santiquiroz.blindside.shared.tak.decodeTeamUpdate
 import io.github.santiquiroz.blindside.shared.settings.SharedSettings
 import io.github.santiquiroz.blindside.shared.settings.adoptingNewer
 import io.github.santiquiroz.blindside.shared.settings.settingsRepository
@@ -44,6 +46,7 @@ class BridgeListenerService : WearableListenerService() {
     // Spec §5 names this path a message, so a phone that sends it without waiting for a reply gets the same action (Deviation D6).
     override fun onMessageReceived(event: MessageEvent) {
         if (event.path == OPEN_PAIRING_PATH) askBeltForPairing()
+        if (event.path == TAK_TEAM_PATH) receiveTeam(event.data)
     }
 
     override fun onChannelOpened(channel: ChannelClient.Channel) {
@@ -66,6 +69,10 @@ class BridgeListenerService : WearableListenerService() {
         val reply = openPairingReplyFor(SessionStore.state.value)
         if (reply == OpenPairingReply.REQUESTED) WearSessionCommands.openPairing(this)
         return reply
+    }
+
+    private fun receiveTeam(data: ByteArray) {
+        decodeTeamUpdate(data.toString(Charsets.UTF_8))?.let { SessionStore.receiveTeam(it, System.currentTimeMillis()) }
     }
 
     // No bytes plus a non-zero code: the phone must never keep a refusal as an empty recording (Cross-plan contract item 4).

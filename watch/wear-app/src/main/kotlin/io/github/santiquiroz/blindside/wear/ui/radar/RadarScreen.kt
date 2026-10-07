@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material.Text
 import io.github.santiquiroz.blindside.core.scene.RadarScene
 import io.github.santiquiroz.blindside.shared.compass.CompassReading
+import io.github.santiquiroz.blindside.shared.compass.CompassTrust
 import io.github.santiquiroz.blindside.shared.compass.HeadingAnimation
 import io.github.santiquiroz.blindside.shared.compass.advanceHeading
 import io.github.santiquiroz.blindside.shared.compass.compassColors
@@ -80,6 +81,11 @@ import io.github.santiquiroz.blindside.shared.session.SessionStore
 import io.github.santiquiroz.blindside.shared.session.SessionUiState
 import io.github.santiquiroz.blindside.shared.settings.AppSettings
 import io.github.santiquiroz.blindside.shared.tactical.GeoPoint
+import io.github.santiquiroz.blindside.shared.tak.MateMark
+import io.github.santiquiroz.blindside.shared.tak.TeamUpdate
+import io.github.santiquiroz.blindside.shared.tak.hereOf
+import io.github.santiquiroz.blindside.shared.tak.mateMarks
+import io.github.santiquiroz.blindside.shared.tak.teamLinkActive
 import io.github.santiquiroz.blindside.shared.theme.BlindsideColors
 import io.github.santiquiroz.blindside.shared.theme.BlindsideFonts
 import io.github.santiquiroz.blindside.wear.ui.KeepScreenOn
@@ -93,6 +99,7 @@ import kotlin.math.roundToInt
 private const val BURN_IN_CLOCK_TICK_MS = 30_000L
 private const val NANOS_PER_MS = 1_000_000L
 private const val HEADING_SAMPLE_MS = 250L
+private const val ANCHOR_THROTTLE_MS = 250L
 private const val HERE_POLL_MS = 3_000L
 private const val CENTER_TAP_FRACTION = 0.33f
 private val CENTER_LABEL_SIZE = 26.sp
@@ -135,8 +142,12 @@ fun RadarScreen(
     val bandPx = with(LocalDensity.current) { COMPASS_BAND.toPx() }
     val measurer = rememberTextMeasurer()
     val lastFix = rememberLastFix()
-    val here by rememberHere(lastFix, compassOn)
+    val watchHere by rememberHere(lastFix, compassOn)
+    val nowMs = System.currentTimeMillis()
+    val here = hereOf(session.team, session.teamAtMs, nowMs, watchHere)
+    val mateMarks = teamMarks(session.team, session.teamAtMs, here, nowMs)
     val wedgeColors = remember { TacticalWedgeColors(BlindsideColors.Accent, BlindsideColors.AccentDim, BlindsideColors.Warn) }
+    AnchorHeading(reading, postureDeg, !ambient)
     var glanceOpen by remember { mutableStateOf(false) }
     Box(radarGestures(lastFix) { glanceOpen = !glanceOpen }) {
         // The symmetric tick band turns against the heading on the compositor, once per frame, with no recomposition.
@@ -159,6 +170,7 @@ fun RadarScreen(
                 drawCompassLetters(frame.azimuthDeg.toDouble(), ring, postureDeg, colors, measurer)
                 drawFrontIndex(ring, postureDeg, colors.index)
                 drawTacticalWedges(session.tacticalPoints, here, frame.azimuthDeg.toDouble(), ring, wedgeColors, measurer)
+                drawMateWedges(mateMarks, frame.azimuthDeg.toDouble(), ring, BlindsideColors.Ally, measurer)
             }
         }
         RadarOverlay(session, settings, ambient, shift, postureDeg, reading, frameState, glanceOpen) { glanceOpen = false }
@@ -213,6 +225,26 @@ private fun rememberHere(lastFix: () -> GeoPoint?, active: Boolean): State<GeoPo
         }
     }
     return here
+}
+
+// Mates need a live link and a known origin; either missing leaves the ring to the tactical wedges.
+private fun teamMarks(team: TeamUpdate?, teamAtMs: Long?, here: GeoPoint?, nowMs: Long): List<MateMark> {
+    if (team == null || here == null || !teamLinkActive(teamAtMs, nowMs)) return emptyList()
+    return mateMarks(team.mates, here)
+}
+
+// The compass anchors body yaw to north at most four times a second, and only off a calibrated reading.
+@Composable
+private fun AnchorHeading(reading: CompassReading?, postureDeg: Float, active: Boolean) {
+    val lastAnchoredAt = remember { mutableStateOf(0L) }
+    LaunchedEffect(reading, active) {
+        val current = reading
+        if (!active || current == null || current.trust != CompassTrust.GOOD) return@LaunchedEffect
+        val now = SystemClock.elapsedRealtimeNanos()
+        if (now - lastAnchoredAt.value < ANCHOR_THROTTLE_MS * NANOS_PER_MS) return@LaunchedEffect
+        lastAnchoredAt.value = now
+        SessionStore.anchorHeading(frontHeadingDeg(current.azimuthDeg, postureDeg), now)
+    }
 }
 
 // Spec §8.3: belt link down is the one alert that must still vibrate in Sigilo; it rides the engine's system-buzz path.
