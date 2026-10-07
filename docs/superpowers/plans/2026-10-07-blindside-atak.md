@@ -17,6 +17,7 @@
 - Tests JUnit 5 (`org.junit.jupiter.api.Test`, `Assertions.*`). Nada de `kotlin.test`.
 - Estilo del repo: funciones pequeñas con nombre que dice lo que hacen, sin KDoc, comentario de una línea solo para el porqué no obvio, datos inmutables (`copy`).
 - Convención de ángulos del proyecto: 0 = al frente, positivo = horario (derecha). `YawTracker` sube al girar a la derecha. Rumbo de brújula: 0 = norte, horario.
+- Callsigns únicos por dispositivo: OpenTAKServer descarta en silencio un callsign ya conocido bajo otro uid.
 - Prohibido en el repo: IPs públicas reales, contraseñas, paquetes `.zip`/`.p12` reales. Los fixtures de prueba se generan con `keytool` y son solo de prueba.
 - Textos de UI en español. Prohibido `git commit`/`push`/`reset`/`checkout` a los agentes delegados: el orquestador commitea.
 - Uids propios siempre empiezan por `BLINDSIDE-`.
@@ -177,13 +178,9 @@ sealed interface PackageResult {
 }
 fun readTakPackage(zip: ByteArray): PackageResult
 
+// TakIds.kt (ya existe, escrito por el orquestador): data class TakIds(deviceId, callsign) con identityUid, pingUid,
+// contactUid(id), markerUid(kind); y fun deviceIdOf(clientName: String): String.
 // TakPublisher.kt
-data class TakIds(val deviceId: String, val callsign: String) {
-    val identityUid: String get() = "BLINDSIDE-$deviceId"
-    val pingUid: String get() = "BLINDSIDE-$deviceId-ping"
-    fun contactUid(id: Int): String = "BLINDSIDE-$deviceId-C$id"
-    fun markerUid(kind: TacticalKind): String = "BLINDSIDE-$deviceId-${kind.name}"
-}
 data class PublishState(val publishedUids: Set<String> = emptySet(), val lastMarkersMs: Long? = null)
 data class Outgoing(val state: PublishState, val events: List<String>)
 const val CONTACT_TYPE = "a-u-G"
@@ -300,7 +297,7 @@ data class TakPrefs(val callsign: String, val publishContacts: Boolean, val devi
 fun Context.takPrefsRepository(): TakPrefsRepository   // prefs: Flow<TakPrefs>, current(), update(transform)
 suspend fun importTakPackage(context: Context, zip: ByteArray): PackageResult   // valida con readTakPackage y, si Ok, guarda el zip y packageSummary = "host:puerto · clientName"; callsign por defecto = clientName si estaba vacío
 fun loadTakPackage(context: Context): TakPackage?
-// deviceId: 6 hex aleatorios generados la primera vez
+// deviceId = deviceIdOf(clientName) del paquete importado: OpenTAKServer descarta un callsign conocido bajo un uid nuevo, así que el uid no puede cambiar al reinstalar
 
 // TakStore.kt — estado observable para UI y notificación
 data class TakUiState(val running: Boolean = false, val link: LinkStatus = LinkStatus.Idle,
