@@ -58,6 +58,7 @@ class RadarPipeline(private val config: PipelineConfig) {
             warnings = warningsAt(state, nowNanos, config),
             linkUp = linkUp,
             eliminated = state.eliminated,
+            yawFromBelt = linkUp && !state.motion.turnFromWatch,
         )
         return buildScene(inputs, config.tuning.tracking, config.tuning.decode)
     }

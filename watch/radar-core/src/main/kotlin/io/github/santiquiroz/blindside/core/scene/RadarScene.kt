@@ -30,4 +30,6 @@ data class RadarScene(
     val motion: MotionState,
     val warnings: Set<Warning>,
     val eliminated: Boolean,
+    val bodyYawDeg: Double = 0.0,
+    val yawFromBelt: Boolean = false,
 )

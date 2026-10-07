@@ -20,6 +20,7 @@ data class SceneInputs(
     val warnings: Set<Warning>,
     val linkUp: Boolean,
     val eliminated: Boolean,
+    val yawFromBelt: Boolean = false,
 )
 
 fun buildScene(inputs: SceneInputs, tracking: TrackingParams, decode: DecodeParams): RadarScene = RadarScene(
@@ -31,6 +32,8 @@ fun buildScene(inputs: SceneInputs, tracking: TrackingParams, decode: DecodePara
     motion = inputs.motion,
     warnings = inputs.warnings,
     eliminated = inputs.eliminated,
+    bodyYawDeg = inputs.yawDeg,
+    yawFromBelt = inputs.yawFromBelt,
 )
 
 fun logicalPosition(track: Track, nowMs: Long, yawDeg: Double, tracking: TrackingParams): Point2 =
