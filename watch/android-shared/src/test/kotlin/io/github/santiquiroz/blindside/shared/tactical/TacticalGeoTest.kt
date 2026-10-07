@@ -35,4 +35,26 @@ class TacticalGeoTest {
         assertEquals("040 m", tacticalDistanceLabel(40.4))
         assertEquals("1.2 km", tacticalDistanceLabel(1_240.0))
     }
+
+    @Test
+    fun `a hundred metres east round-trips in distance and bearing`() {
+        val dest = destinationOf(origin, 90.0, 100.0)
+        assertEquals(100.0, distanceM(origin, dest), 0.01)
+        assertEquals(90.0, bearingDeg(origin, dest), 0.01)
+    }
+
+    @Test
+    fun `north and southwest hops round-trip too`() {
+        val north = destinationOf(origin, 0.0, 100.0)
+        assertEquals(100.0, distanceM(origin, north), 0.01)
+        assertEquals(0.0, bearingDeg(origin, north), 0.01)
+        val southWest = destinationOf(origin, 225.0, 100.0)
+        assertEquals(100.0, distanceM(origin, southWest), 0.01)
+        assertEquals(225.0, bearingDeg(origin, southWest), 0.01)
+    }
+
+    @Test
+    fun `a zero hop returns the same point`() {
+        assertEquals(origin, destinationOf(origin, 90.0, 0.0))
+    }
 }
