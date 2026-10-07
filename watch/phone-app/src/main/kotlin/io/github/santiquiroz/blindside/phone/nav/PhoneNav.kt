@@ -1,6 +1,6 @@
 package io.github.santiquiroz.blindside.phone.nav
 
-enum class PhoneTab { RADAR, RECORDINGS, VIEWER, BELT }
+enum class PhoneTab { RADAR, RECORDINGS, VIEWER, BELT, TEAM }
 
 data class PhoneNav(val tab: PhoneTab = PhoneTab.RADAR, val viewing: String? = null)
 
@@ -18,6 +18,7 @@ fun tabLabel(tab: PhoneTab): String = when (tab) {
     PhoneTab.RECORDINGS -> "Grabaciones"
     PhoneTab.VIEWER -> "Visor"
     PhoneTab.BELT -> "Cinturón"
+    PhoneTab.TEAM -> "Equipo"
 }
 
 fun navToStrings(nav: PhoneNav): List<String> = listOfNotNull(nav.tab.name, nav.viewing)

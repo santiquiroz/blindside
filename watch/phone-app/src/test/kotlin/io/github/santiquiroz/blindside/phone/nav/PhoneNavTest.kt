@@ -6,8 +6,8 @@ import org.junit.jupiter.api.Test
 
 class PhoneNavTest {
     @Test
-    fun `the four destinations follow the spec order with their names`() {
-        assertEquals(listOf("Radar", "Grabaciones", "Visor", "Cinturón"), PhoneTab.entries.map(::tabLabel))
+    fun `the five destinations follow the spec order with their names`() {
+        assertEquals(listOf("Radar", "Grabaciones", "Visor", "Cinturón", "Equipo"), PhoneTab.entries.map(::tabLabel))
     }
 
     @Test
@@ -49,6 +49,6 @@ class PhoneNavTest {
 
     @Test
     fun `only the radar and belt tabs keep live scenes coming`() {
-        assertEquals(listOf(true, false, false, true), PhoneTab.entries.map(::sceneWanted))
+        assertEquals(listOf(true, false, false, true, false), PhoneTab.entries.map(::sceneWanted))
     }
 }

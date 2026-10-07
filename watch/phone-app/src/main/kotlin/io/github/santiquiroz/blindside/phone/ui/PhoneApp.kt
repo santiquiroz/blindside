@@ -38,6 +38,7 @@ import io.github.santiquiroz.blindside.phone.ui.belt.BeltTab
 import io.github.santiquiroz.blindside.phone.ui.common.ReportSceneVisibility
 import io.github.santiquiroz.blindside.phone.ui.radar.RadarTab
 import io.github.santiquiroz.blindside.phone.ui.recordings.RecordingsTab
+import io.github.santiquiroz.blindside.phone.ui.team.TeamTab
 import io.github.santiquiroz.blindside.phone.ui.theme.rememberMotionDurationMs
 import io.github.santiquiroz.blindside.phone.ui.viewer.ViewerTab
 import io.github.santiquiroz.blindside.phone.ui.viewer.rememberAnalysisCache
@@ -95,6 +96,7 @@ private fun TabContent(nav: PhoneNav, state: PhoneUiState, actions: PhoneActions
             )
             PhoneTab.VIEWER -> ViewerTab(nav.viewing, deps.recordings, analyses, onPickRecording = { onNav(selectTab(nav, PhoneTab.RECORDINGS)) })
             PhoneTab.BELT -> BeltTab(state, actions, deps.bridge)
+            PhoneTab.TEAM -> TeamTab()
         }
     }
 }

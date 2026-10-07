@@ -2,6 +2,7 @@ package io.github.santiquiroz.blindside.phone.ui
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Radar
 import androidx.compose.material.icons.filled.SettingsInputAntenna
@@ -45,4 +46,5 @@ private fun tabIcon(tab: PhoneTab): ImageVector = when (tab) {
     PhoneTab.RECORDINGS -> Icons.Filled.FolderOpen
     PhoneTab.VIEWER -> Icons.Filled.Insights
     PhoneTab.BELT -> Icons.Filled.SettingsInputAntenna
+    PhoneTab.TEAM -> Icons.Filled.Groups
 }
