@@ -6,3 +6,5 @@ watch/gradlew text eol=lf
 *.bat text eol=crlf
 *.jar binary
 *.ttf binary
+*.sh text eol=lf
+*.py text eol=lf

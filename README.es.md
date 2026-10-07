@@ -124,6 +124,16 @@ El radar B va por la matriz de GPIO porque los pines por defecto del UART1 (9/10
 
 El diseño completo (en español) está en [docs/superpowers/specs/2026-09-30-blindside-v1-design.md](docs/superpowers/specs/2026-09-30-blindside-v1-design.md).
 
+## Mapa del equipo (ATAK / iTAK)
+
+Blindside puede compartir lo que ve el cinturón en el mapa TAK del equipo. Monta tu propio [OpenTAKServer](https://github.com/brian7704/OpenTAKServer) (guía: [docs/tak-server.md](docs/tak-server.md)), dale a cada jugador su paquete de conexión e importa ese mismo paquete en la pestaña **Equipo** de la app del celular. Con el enlace prendido:
+
+- los contactos del radar aparecen en el mapa de todos como puntos **desconocidos** (amarillos), porque el radar no distingue a un compañero de un enemigo; se ubican con el GPS del celular y la dirección hacia donde miras, así que cuenta con 5-10 m de error;
+- tu base, spawn y objetivo se publican como marcadores del mapa;
+- los compañeros aparecen en el reloj como cuñas en el anillo de la brújula, con su distancia.
+
+Tu propia posición la publica ATAK/iTAK, no Blindside. Si se cae el servidor o la señal, el radar y la vibración siguen igual que siempre.
+
 ## Hoja de ruta
 
 - **v1:**
