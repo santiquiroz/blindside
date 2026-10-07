@@ -57,10 +57,12 @@ NEW=$(python -c "import secrets;print(secrets.token_urlsafe(18))"); echo "$NEW" 
 Un usuario por jugador. El script crea el usuario y su certificado, y copia sus dos paquetes a `~/.blindside/tak-packages/`:
 
 ```bash
-OTS_PUBLIC_HOST=<IP pública> bash tak/ots-player.sh jugador1
+OTS_PUBLIC_HOST=<nombre DNS o IP pública> bash tak/ots-player.sh jugador1
 ```
 
-El paquete apunta a la dirección con la que se pidió (OpenTAKServer la copia en `connectString`). Por eso el script la pide con la IP pública y no con `localhost`.
+El paquete apunta a la dirección con la que se pidió (OpenTAKServer la copia en `connectString`). Por eso el script la pide con la dirección pública y no con `localhost`.
+
+Mejor un nombre que la IP: un registro **A** propio (p. ej. `tak.<tu-dominio>`, TTL 300) hacia la IP pública. Si el proveedor cambia la IP, se actualiza el DNS y nadie vuelve a importar nada. Volver a correr el script con otro `OTS_PUBLIC_HOST` reescribe los paquetes de un usuario existente (la API contesta "Certificate already exists" pero el zip sale con el host nuevo).
 
 | Quién | Paquete | Cómo |
 |---|---|---|
