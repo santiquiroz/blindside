@@ -119,6 +119,17 @@ sudo bash tak/overlay-service.sh /mnt/c/Users/<usuario>/.blindside/tak-packages/
 journalctl -u blindside-overlay -f
 ```
 
+### Bot del servidor (tak-mando)
+
+[tak-mando](https://github.com/santiquiroz/tak-mando) es un bot que se conecta como otro cliente ("Mando") y usa el mismo GeoJSON:
+
+- mensaje privado al jugador que entra a un polígono de la carpeta "Peligros";
+- comandos en el chat de ATAK/iTAK: `!luz`, `!clima`, `!equipo`, `!donde <callsign>`, `!peligros`, `!ayuda`;
+- avisos a todos de puesta del sol, oscuridad total y lluvia fuerte;
+- aviso cuando un jugador activo deja de reportar 5 minutos.
+
+Se instala como servicio dentro de WSL con un usuario propio (por ejemplo `mando`, creado con `ots-player.sh`; después borrar sus paquetes del servidor). Instrucciones y unidad systemd en su README.
+
 ## 6. Replay después de la partida
 
 [`tak/replay.py`](../tak/replay.py) saca las posiciones guardadas en el servidor y arma una página con el recorrido animado de cada jugador, sus distancias, velocidad máxima y los contactos del radar:
