@@ -79,6 +79,13 @@ def sa_event(uid, callsign, lat, lon):
             f'<detail><contact callsign="{callsign}"/><takv device="tak-probe" platform="tak-probe" os="python" version="1"/></detail></event>')
 
 
+def contact_event(uid, callsign, lat, lon):
+    now = datetime.now(timezone.utc)
+    return (f'<event version="2.0" uid="{uid}" type="a-u-G" how="m-g" time="{cot_time(now)}" start="{cot_time(now)}" '
+            f'stale="{cot_time(now + timedelta(seconds=10))}"><point lat="{lat}" lon="{lon}" hae="9999999.0" ce="6.0" le="9999999.0"/>'
+            f'<detail><contact callsign="{callsign}"/><remarks>tak-probe: contacto simulado</remarks></detail></event>')
+
+
 def summary(xml):
     if "<!DOCTYPE" in xml or "<!ENTITY" in xml:
         return "(descartado: DOCTYPE/ENTITY)"
@@ -116,6 +123,7 @@ def main():
     parser.add_argument("--port", type=int)
     parser.add_argument("--callsign", default="Prueba")
     parser.add_argument("--at", help="lat,lon: se anuncia como compañero en ese punto cada 2 s")
+    parser.add_argument("--contact", help="lat,lon: publica un contacto de radar simulado (a-u-G) en ese punto cada 2 s")
     parser.add_argument("--seconds", type=float, default=0, help="0 = hasta Ctrl+C")
     parser.add_argument("--openssl", default="openssl")
     args = parser.parse_args()
@@ -131,6 +139,9 @@ def main():
         time.sleep(2)
         if args.at:
             sock.sendall(sa_event(uid, args.callsign, lat, lon).encode())
+        if args.contact:
+            clat, clon = args.contact.split(",")
+            sock.sendall(contact_event(f"BLINDSIDE-{uid}-C1", f"Radar {args.callsign} 1", clat, clon).encode())
     sock.close()
 
 

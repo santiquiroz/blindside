@@ -132,6 +132,8 @@ Blindside puede compartir lo que ve el cinturón en el mapa TAK del equipo. Mont
 - tu base, spawn y objetivo se publican como marcadores del mapa;
 - los compañeros aparecen en el reloj como cuñas en el anillo de la brújula, con su distancia.
 
+**Compañeros sin cinturón** también usan la app del celular: con el enlace prendido, la pestaña Equipo se vuelve un radar de equipo (aliados y contactos que publica cada cinturón, orientados con la brújula del celular) y el celular vibra cuando un contacto del equipo está a 30 m o menos. Los iPhone entran con iTAK.
+
 Tu propia posición la publica ATAK/iTAK, no Blindside. Si se cae el servidor o la señal, el radar y la vibración siguen igual que siempre.
 
 ## Hoja de ruta

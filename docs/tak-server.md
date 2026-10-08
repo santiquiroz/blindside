@@ -76,6 +76,16 @@ Reglas:
 - El paquete lleva la llave privada del jugador. Se manda por chat privado, nunca a un grupo ni a un repositorio. Para cortarle el acceso a alguien: interfaz web → Usuarios → desactivar.
 - Todos quedan en el grupo por defecto `__ANON__`, así se ven entre todos.
 
+### Compañeros sin cinturón (Android)
+
+Un compañero sin cinturón ni reloj también usa Blindside: instala el APK del celular (release de GitHub), importa su paquete en la pestaña **Equipo**, pone un callsign único y conecta. Con el enlace prendido la pestaña muestra el **radar de equipo**:
+
+- aliados en cian y contactos de los cinturones del equipo en amarillo, orientados con la brújula del celular; tocar el radar cambia la escala (50/100/250 m);
+- **aviso por vibración** cuando un contacto del equipo está a 30 m o menos (funciona con la pantalla apagada);
+- **"Publicar mi posición"** solo si no usa ATAK (si usa ATAK, aparecería dos veces en el mapa).
+
+Los iPhone usan iTAK con su paquete `_CONFIG_iTAK.zip`: ven a los aliados y los contactos del radar en el mapa.
+
 ## 5. Probar
 
 [`tak/tak-probe.py`](../tak/tak-probe.py) se conecta con un paquete e imprime todo lo que llega; con `--at lat,lon` se anuncia como un compañero:
@@ -83,6 +93,8 @@ Reglas:
 ```bash
 python tak/tak-probe.py ~/.blindside/tak-packages/prueba_CONFIG_iTAK.zip --host <IP LAN del PC> --callsign Toro --at 5.0689,-75.5174
 python tak/tak-probe.py ~/.blindside/tak-packages/jugador1_CONFIG.zip --host <IP LAN del PC> --callsign Lince
+# contacto de radar simulado (como si lo publicara otro cinturón), útil para probar los avisos:
+python tak/tak-probe.py ~/.blindside/tak-packages/jugador2_CONFIG.zip --callsign Puma --contact <lat>,<lon>
 ```
 
 Cada uno debe ver al otro. Desde afuera (celular con Wi-Fi apagado), ATAK debe quedar en verde con la IP pública.

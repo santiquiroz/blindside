@@ -9,6 +9,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.IBinder
+import android.os.VibrationEffect
+import android.os.VibratorManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
@@ -38,6 +40,9 @@ import kotlinx.coroutines.tasks.await
 
 private const val TAG = "TakLinkService"
 private const val TEAM_FIX_FRESH_MS = 15_000L
+private const val PICTURE_PERIOD_MS = 1_000L
+private const val SELF_PUBLISH_PERIOD_MS = 5_000L
+private const val ALERT_BASE_ID = 1000
 
 class TakLinkService : Service() {
     companion object {
@@ -60,6 +65,8 @@ class TakLinkService : Service() {
     private val mutex = Mutex()
     private var publish = PublishState()
     private var roster = TeamRoster()
+    private var board = ContactBoard()
+    private var alertBook = AlertBook()
     private var fix: GeoFix? = null
     private var fixAtMs: Long? = null
 
@@ -125,10 +132,11 @@ class TakLinkService : Service() {
         val current = scope ?: return
         current.launch { takLink.run() }
         current.launch { mirrorStatus(takLink) }
-        current.launch { collectIncoming(takLink, ids.callsign) }
+        current.launch { collectIncoming(takLink, ids) }
         startGps()
         addTelemetryListener(ids)
         current.launch { teamLoop() }
+        current.launch { pictureLoop(ids) }
     }
 
     private fun startGps() {
@@ -160,9 +168,14 @@ class TakLinkService : Service() {
         if (sent > 0) TakStore.update { it.copy(contactsSent = it.contactsSent + sent) }
     }
 
-    private suspend fun collectIncoming(takLink: TakLink, ownCallsign: String) {
+    private suspend fun collectIncoming(takLink: TakLink, ids: TakIds) {
+        val ownUidPrefix = "BLINDSIDE-${ids.deviceId}-"
         takLink.incoming.collect { event ->
-            mutex.withLock { roster = roster.with(event, ownCallsign, System.currentTimeMillis()) }
+            val now = System.currentTimeMillis()
+            mutex.withLock {
+                roster = roster.with(event, ids.callsign, now)
+                board = board.with(event, ownUidPrefix, now)
+            }
         }
     }
 
@@ -184,9 +197,66 @@ class TakLinkService : Service() {
     }
 
     private fun teamSnapshot(now: Long): TeamSnapshot {
-        val fresh = if (fix != null && fixAtMs != null && now - fixAtMs!! <= TEAM_FIX_FRESH_MS) fix else null
+        val fresh = freshFix(now)
         val mates = roster.mates(now)
         return TeamSnapshot(TeamUpdate(fresh, mates), mates.size, fixAtMs)
+    }
+
+    private fun freshFix(now: Long): GeoFix? =
+        if (fix != null && fixAtMs != null && now - fixAtMs!! <= TEAM_FIX_FRESH_MS) fix else null
+
+    private suspend fun pictureLoop(ids: TakIds) {
+        var lastPublishAtMs = 0L
+        while (true) {
+            delay(PICTURE_PERIOD_MS)
+            val now = System.currentTimeMillis()
+            val prefs = applicationContext.takPrefsRepository().current()
+            val snapshot = mutex.withLock { pictureSnapshot(prefs, now) }
+            TakStore.update { it.copy(picture = snapshot.picture) }
+            snapshot.alerts.forEach { raiseAlert(it) }
+            if (shouldPublishSelf(prefs, snapshot.picture.self, now, lastPublishAtMs)) {
+                lastPublishAtMs = now
+                val self = snapshot.picture.self!!
+                link?.send(selfEvent("BLINDSIDE-${ids.deviceId}-SA", ids.callsign, self.point, self.accuracyM, now))
+            }
+        }
+    }
+
+    private fun pictureSnapshot(prefs: TakPrefs, now: Long): PictureSnapshot {
+        val fresh = freshFix(now)
+        val contacts = board.contacts(now)
+        val alerts = if (prefs.proximityAlerts) {
+            val round = dueAlerts(alertBook, contacts, fresh?.point, now)
+            alertBook = round.book
+            round.alerts
+        } else {
+            emptyList()
+        }
+        return PictureSnapshot(TeamPicture(fresh, roster.mates(now), contacts), alerts)
+    }
+
+    private fun shouldPublishSelf(prefs: TakPrefs, self: GeoFix?, now: Long, lastPublishAtMs: Long): Boolean =
+        prefs.publishSelf && self != null && now - lastPublishAtMs >= SELF_PUBLISH_PERIOD_MS
+
+    private fun raiseAlert(alert: ProximityAlert) {
+        vibrateAlert()
+        postAlert(alert)
+    }
+
+    private fun vibrateAlert() {
+        getSystemService(VibratorManager::class.java).defaultVibrator
+            .vibrate(VibrationEffect.createWaveform(longArrayOf(0, 200, 120, 200), -1))
+    }
+
+    private fun postAlert(alert: ProximityAlert) {
+        val manager = getSystemService(NotificationManager::class.java) ?: return
+        val notification = NotificationCompat.Builder(this, TakLinkNotification.ALERT_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_radar)
+            .setContentTitle("Blindside")
+            .setContentText(alertText(alert))
+            .setAutoCancel(true)
+            .build()
+        manager.notify(ALERT_BASE_ID + (alert.uid.hashCode() and 0xFFF), notification)
     }
 
     private suspend fun sendTeam(nodes: NodeClient, messages: MessageClient, update: TeamUpdate) {
@@ -218,6 +288,8 @@ class TakLinkService : Service() {
         scope = null
         publish = PublishState()
         roster = TeamRoster()
+        board = ContactBoard()
+        alertBook = AlertBook()
         fix = null
         fixAtMs = null
         stopForeground(STOP_FOREGROUND_REMOVE)
@@ -228,14 +300,18 @@ class TakLinkService : Service() {
 
 private data class TeamSnapshot(val update: TeamUpdate, val count: Int, val fixAtMs: Long?)
 
+private data class PictureSnapshot(val picture: TeamPicture, val alerts: List<ProximityAlert>)
+
 private object TakLinkNotification {
     const val NOTIFICATION_ID = 12
+    const val ALERT_CHANNEL_ID = "blindside_tak_alerts"
     private const val CHANNEL_ID = "blindside_tak"
     private const val REQUEST_STOP = 3
 
     fun ensureChannel(context: Context) {
-        val channel = NotificationChannel(CHANNEL_ID, "Enlace TAK", NotificationManager.IMPORTANCE_LOW)
-        context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        val manager = context.getSystemService(NotificationManager::class.java)
+        manager.createNotificationChannel(NotificationChannel(CHANNEL_ID, "Enlace TAK", NotificationManager.IMPORTANCE_LOW))
+        manager.createNotificationChannel(NotificationChannel(ALERT_CHANNEL_ID, "Avisos del equipo", NotificationManager.IMPORTANCE_HIGH))
     }
 
     fun build(context: Context, status: String): Notification = NotificationCompat.Builder(context, CHANNEL_ID)

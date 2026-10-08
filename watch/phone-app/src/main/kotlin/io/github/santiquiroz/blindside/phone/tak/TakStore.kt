@@ -1,9 +1,13 @@
 package io.github.santiquiroz.blindside.phone.tak
 
+import io.github.santiquiroz.blindside.shared.tak.GeoFix
+import io.github.santiquiroz.blindside.shared.tak.Mate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+
+data class TeamPicture(val self: GeoFix?, val mates: List<Mate>, val contacts: List<TeamContact>)
 
 data class TakUiState(
     val running: Boolean = false,
@@ -12,6 +16,7 @@ data class TakUiState(
     val contactsSent: Long = 0,
     val lastFixAtMs: Long? = null,
     val error: String? = null,
+    val picture: TeamPicture? = null,
 )
 
 object TakStore {

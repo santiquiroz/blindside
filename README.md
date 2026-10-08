@@ -132,6 +132,8 @@ Blindside can share what the belt sees on the team's TAK map. Run your own [Open
 - your base, spawn and objective marks are published as map markers;
 - teammates show up on the watch as wedges on the compass ring, with their distance.
 
+**Teammates without a belt** can use the phone app too: once connected, the Team tab becomes a team radar (allies plus the contacts every belt publishes, oriented with the phone's compass) and the phone vibrates when a team contact is within 30 m. iPhone users join with iTAK.
+
 Your own position is published by ATAK/iTAK, not by Blindside. If the server or the signal drops, the radar and the vibration keep working exactly as before.
 
 ## Roadmap

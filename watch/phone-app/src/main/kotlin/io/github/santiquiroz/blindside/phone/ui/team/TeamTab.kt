@@ -9,6 +9,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -27,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
@@ -44,6 +46,7 @@ import io.github.santiquiroz.blindside.phone.tak.TakStore
 import io.github.santiquiroz.blindside.phone.tak.importTakPackage
 import io.github.santiquiroz.blindside.phone.tak.takPrefsRepository
 import io.github.santiquiroz.blindside.phone.tak.takStatusText
+import io.github.santiquiroz.blindside.phone.ui.common.KeepScreenOn
 import io.github.santiquiroz.blindside.phone.ui.common.MIN_TOUCH
 import io.github.santiquiroz.blindside.phone.ui.common.SectionCard
 import io.github.santiquiroz.blindside.phone.ui.common.SwitchRow
@@ -51,6 +54,7 @@ import io.github.santiquiroz.blindside.phone.ui.common.rememberNowMs
 import io.github.santiquiroz.blindside.phone.ui.theme.Text2Color
 import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
+import kotlin.math.roundToInt
 
 private const val MAX_IMPORT_BYTES = 4 * 1024 * 1024
 private val IMPORT_MIME_TYPES = arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream")
@@ -63,12 +67,26 @@ fun TeamTab() {
     val takState by TakStore.state.collectAsStateWithLifecycle()
     val nowMs by rememberNowMs()
     var importMessage by remember { mutableStateOf<String?>(null) }
+    val picture = takState.picture
+    val heading by rememberPhoneHeading(takState.running && picture != null)
+    var rangeM by rememberSaveable { mutableStateOf(100.0) }
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text("Equipo", style = MaterialTheme.typography.headlineSmall)
         Text(takStatusText(takState, nowMs), style = MaterialTheme.typography.bodyLarge)
+        if (takState.running && picture != null) {
+            KeepScreenOn()
+            TeamRadar(
+                picture = picture,
+                heading = heading,
+                rangeM = rangeM,
+                onTap = { rangeM = nextRange(rangeM) },
+                modifier = Modifier.fillMaxWidth().aspectRatio(1f),
+            )
+            Text("Escala: ${rangeM.roundToInt()} m (toca para cambiar)", style = MaterialTheme.typography.bodyMedium)
+        }
         SectionCard("Servidor TAK") {
             ImportSection(prefs, importMessage, { importMessage = it })
             CallsignField(repo, prefs.callsign)
@@ -76,9 +94,15 @@ fun TeamTab() {
             SwitchRow("Publicar contactos del radar", prefs.publishContacts) {
                 scope.launch { repo.update { it.copy(publishContacts = !it.publishContacts) } }
             }
+            SwitchRow("Avisos por vibración (contactos a 30 m)", prefs.proximityAlerts) {
+                scope.launch { repo.update { it.copy(proximityAlerts = !it.proximityAlerts) } }
+            }
+            SwitchRow("Publicar mi posición (solo si no usas ATAK)", prefs.publishSelf) {
+                scope.launch { repo.update { it.copy(publishSelf = !it.publishSelf) } }
+            }
             ConnectButton(prefs.packageSummary != null, takState.running)
             Text(
-                "Tu posición la publica ATAK. Blindside solo publica los contactos del radar y tus puntos tácticos.",
+                "Si usas ATAK, él publica tu posición; si no, activa \"Publicar mi posición\".",
                 style = MaterialTheme.typography.bodySmall,
                 color = Text2Color,
             )

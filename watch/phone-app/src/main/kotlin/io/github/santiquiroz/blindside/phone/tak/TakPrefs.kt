@@ -26,6 +26,8 @@ data class TakPrefs(
     val publishContacts: Boolean = true,
     val deviceId: String = "",
     val packageSummary: String? = null,
+    val publishSelf: Boolean = false,
+    val proximityAlerts: Boolean = true,
 )
 
 private object TakKeys {
@@ -33,6 +35,8 @@ private object TakKeys {
     val PUBLISH_CONTACTS = booleanPreferencesKey("tak_publish_contacts")
     val DEVICE_ID = stringPreferencesKey("tak_device_id")
     val PACKAGE_SUMMARY = stringPreferencesKey("tak_package_summary")
+    val PUBLISH_SELF = booleanPreferencesKey("tak_publish_self")
+    val PROXIMITY_ALERTS = booleanPreferencesKey("tak_proximity_alerts")
 }
 
 private val Context.takPrefsStore: DataStore<Preferences> by preferencesDataStore(name = "blindside_tak")
@@ -45,12 +49,16 @@ fun takPrefsFrom(prefs: Preferences): TakPrefs = TakPrefs(
     publishContacts = prefs[TakKeys.PUBLISH_CONTACTS] ?: true,
     deviceId = prefs[TakKeys.DEVICE_ID] ?: "",
     packageSummary = prefs[TakKeys.PACKAGE_SUMMARY],
+    publishSelf = prefs[TakKeys.PUBLISH_SELF] ?: false,
+    proximityAlerts = prefs[TakKeys.PROXIMITY_ALERTS] ?: true,
 )
 
 fun writeTakPrefs(prefs: MutablePreferences, value: TakPrefs) {
     prefs[TakKeys.CALLSIGN] = value.callsign
     prefs[TakKeys.PUBLISH_CONTACTS] = value.publishContacts
     prefs[TakKeys.DEVICE_ID] = value.deviceId
+    prefs[TakKeys.PUBLISH_SELF] = value.publishSelf
+    prefs[TakKeys.PROXIMITY_ALERTS] = value.proximityAlerts
     if (value.packageSummary == null) prefs.remove(TakKeys.PACKAGE_SUMMARY) else prefs[TakKeys.PACKAGE_SUMMARY] = value.packageSummary
 }
 
