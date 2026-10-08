@@ -8,3 +8,4 @@ watch/gradlew text eol=lf
 *.ttf binary
 *.sh text eol=lf
 *.py text eol=lf
+*.patch text eol=lf
