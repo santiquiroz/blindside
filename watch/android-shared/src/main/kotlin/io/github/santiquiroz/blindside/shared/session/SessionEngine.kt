@@ -5,6 +5,7 @@ import io.github.santiquiroz.blindside.core.alerts.PipelineEvent
 import io.github.santiquiroz.blindside.core.alerts.SystemAlert
 import io.github.santiquiroz.blindside.core.alerts.TrackConfirmed
 import io.github.santiquiroz.blindside.core.scene.RadarScene
+import io.github.santiquiroz.blindside.shared.haptics.ALLY_PATTERN
 import io.github.santiquiroz.blindside.shared.haptics.HapticGate
 import io.github.santiquiroz.blindside.shared.haptics.HapticSink
 import io.github.santiquiroz.blindside.shared.haptics.afterSystemBuzz
@@ -37,6 +38,7 @@ class SessionEngine(
     private val startNanos: Long,
     private val deferred: DeferredPlayback,
     private val onError: (Throwable) -> Unit,
+    private val allyHint: (Int) -> Boolean = { false },
 ) {
     private var gate = HapticGate()
 
@@ -95,7 +97,8 @@ class SessionEngine(
     }
 
     private fun playContact(alert: ContactAlert, nowNanos: Long) {
-        hapticFor(alert)?.let(haptics::play)
+        val pattern = if (allyHint(alert.displayId)) ALLY_PATTERN else hapticFor(alert)
+        pattern?.let(haptics::play)
         records.record(vibrationStartedRecord(alert, nowNanos, startNanos))
     }
 

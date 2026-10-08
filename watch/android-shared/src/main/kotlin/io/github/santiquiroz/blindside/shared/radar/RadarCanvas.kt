@@ -7,16 +7,18 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import io.github.santiquiroz.blindside.shared.theme.BlindsideColors
 
 private const val LINE_WIDTH_PX = 2f
 private const val BLIP_STROKE_PX = 3f
 private const val EDGE_MARKER_WIDTH_PX = 5f
+private const val ALLY_RING_GAP_PX = 5f
 private val DASHED = PathEffect.dashPathEffect(floatArrayOf(6f, 6f))
 
-fun DrawScope.drawRadar(model: RadarDrawModel, colors: RadarColors) {
+fun DrawScope.drawRadar(model: RadarDrawModel, colors: RadarColors, allyIds: Set<Int> = emptySet()) {
     drawFan(model, colors)
     drawRings(model, colors)
-    model.blips.forEach { drawBlip(it, model.blipRadiusPx, colors) }
+    model.blips.forEach { drawBlip(it, model.blipRadiusPx, colors, it.id in allyIds) }
     model.edgeMarkers.forEach { drawEdgeMarker(it, colors) }
 }
 
@@ -44,14 +46,21 @@ private fun DrawScope.drawSectorArc(origin: PointPx, radius: Float, sector: Sect
     )
 }
 
-private fun DrawScope.drawBlip(blip: BlipDraw, radius: Float, colors: RadarColors) {
-    val color = toneColor(contactTone(blip.style), colors).copy(alpha = blip.alpha)
+private fun DrawScope.drawBlip(blip: BlipDraw, radius: Float, colors: RadarColors, ally: Boolean) {
+    val base = if (ally) BlindsideColors.Ally else toneColor(contactTone(blip.style), colors)
+    val color = base.copy(alpha = blip.alpha)
     val center = Offset(blip.center.x, blip.center.y)
+    if (ally) drawAllyRing(center, radius, color)
     when (blip.style) {
         BlipStyle.FILLED -> drawCircle(color, radius, center)
         BlipStyle.OUTLINE -> drawCircle(color, radius, center, style = Stroke(width = BLIP_STROKE_PX))
         BlipStyle.DASHED -> drawCircle(color, radius, center, style = Stroke(width = BLIP_STROKE_PX, pathEffect = DASHED))
     }
+}
+
+// DrawScope has no text measurer, so the likely-ally "?" is a ring around the dot instead.
+private fun DrawScope.drawAllyRing(center: Offset, radius: Float, color: Color) {
+    drawCircle(color, radius + ALLY_RING_GAP_PX, center, style = Stroke(width = LINE_WIDTH_PX))
 }
 
 private fun toneColor(tone: ContactTone, colors: RadarColors): Color = when (tone) {

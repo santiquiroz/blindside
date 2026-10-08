@@ -9,6 +9,7 @@ import io.github.santiquiroz.blindside.shared.tak.TAK_TELEMETRY_PATH
 import io.github.santiquiroz.blindside.shared.tak.TAK_TELEMETRY_PERIOD_MS
 import io.github.santiquiroz.blindside.shared.tak.bodyHeadingDeg
 import io.github.santiquiroz.blindside.shared.tak.encodeTelemetry
+import io.github.santiquiroz.blindside.shared.tak.likelyAllyIdsOf
 import io.github.santiquiroz.blindside.shared.tak.teamLinkActive
 import io.github.santiquiroz.blindside.shared.tak.telemetryOf
 import kotlinx.coroutines.CancellationException
@@ -39,7 +40,8 @@ private suspend fun publishOnce(context: Context, nodes: NodeCache, nowMs: Long,
     val session = SessionStore.state.value
     if (!teamLinkActive(session.teamAtMs, nowMs)) return
     val heading = session.scene?.let { bodyHeadingDeg(session.headingAnchor, it.bodyYawDeg, it.yawFromBelt, nowNanos) }
-    val bytes = encodeTelemetry(telemetryOf(session.scene, heading, session.tacticalPoints)).toByteArray(Charsets.UTF_8)
+    val allies = likelyAllyIdsOf(session, nowMs, nowNanos)
+    val bytes = encodeTelemetry(telemetryOf(session.scene, heading, session.tacticalPoints, excludeIds = allies)).toByteArray(Charsets.UTF_8)
     nodes.ids(context, nowMs).forEach { sendTo(context, it, bytes) }
 }
 

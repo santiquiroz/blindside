@@ -15,7 +15,7 @@ data class TelemetryBlip(val id: Int, val bearingDeg: Double, val rangeM: Double
 data class Telemetry(val headingOk: Boolean, val blips: List<TelemetryBlip>, val points: Map<TacticalKind, GeoPoint>)
 data class GeoFix(val point: GeoPoint, val accuracyM: Double)
 data class Mate(val callsign: String, val point: GeoPoint, val ageS: Int)
-data class TeamUpdate(val self: GeoFix?, val mates: List<Mate>)
+data class TeamUpdate(val self: GeoFix?, val mates: List<Mate>, val me: Long? = null)
 
 fun encodeTelemetry(telemetry: Telemetry): String = MiniJson.obj(
     listOf(
@@ -40,6 +40,7 @@ fun encodeTeamUpdate(update: TeamUpdate): String = MiniJson.obj(
         "v" to "1",
         "self" to (update.self?.let(::encodeFix) ?: "null"),
         "mates" to MiniJson.array(update.mates.map(::encodeMate)),
+        "me" to (update.me?.toString() ?: "null"),
     ),
 )
 
@@ -50,7 +51,9 @@ fun decodeTeamUpdate(json: String): TeamUpdate? {
     val rawSelf = fields["self"]
     val self = if (rawSelf == null) null else decodeFix(rawSelf) ?: return null
     val mates = fields["mates"] as? List<*> ?: return null
-    return TeamUpdate(self, mates.mapNotNull(::decodeMate))
+    val rawMe = fields["me"]
+    val me = if (rawMe == null) null else longField(fields, "me") ?: return null
+    return TeamUpdate(self, mates.mapNotNull(::decodeMate), me)
 }
 
 private fun encodeBlip(blip: TelemetryBlip): String = MiniJson.obj(
@@ -134,3 +137,9 @@ private fun doubleField(fields: Map<*, *>, key: String): Double? = doubleOf(fiel
 // A fractional id or version is malformed, not a number to round.
 private fun intField(fields: Map<*, *>, key: String): Int? =
     doubleField(fields, key)?.takeIf { it % 1.0 == 0.0 }?.toInt()
+
+// "me" is an unsigned 32-bit id that fits in a Long; MiniJson numbers arrive as Double.
+private fun longField(fields: Map<*, *>, key: String): Long? =
+    doubleField(fields, key)?.takeIf { it % 1.0 == 0.0 && it in 0.0..MAX_UINT32 }?.toLong()
+
+private const val MAX_UINT32 = 4_294_967_295.0

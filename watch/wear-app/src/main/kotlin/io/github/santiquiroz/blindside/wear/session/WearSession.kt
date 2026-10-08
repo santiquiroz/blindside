@@ -8,6 +8,7 @@ import io.github.santiquiroz.blindside.shared.ble.BeltRole
 import io.github.santiquiroz.blindside.shared.session.SessionCommands
 import io.github.santiquiroz.blindside.shared.session.SessionHost
 import io.github.santiquiroz.blindside.wear.BuildConfig
+import io.github.santiquiroz.blindside.wear.ble.scanTeamBeacons
 import io.github.santiquiroz.blindside.wear.bridge.publishTakTelemetry
 import io.github.santiquiroz.blindside.wear.bridge.publishWatchStatus
 import kotlinx.coroutines.CoroutineScope
@@ -29,5 +30,6 @@ object WearSessionHost : SessionHost {
         listOf(
             scope.launch { publishWatchStatus(context, System::currentTimeMillis) },
             scope.launch { publishTakTelemetry(context, System::currentTimeMillis, SystemClock::elapsedRealtimeNanos) },
+            scope.launch { scanTeamBeacons(context, System::currentTimeMillis) },
         )
 }

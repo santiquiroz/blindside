@@ -37,6 +37,7 @@ import io.github.santiquiroz.blindside.shared.settings.AppSettings
 import io.github.santiquiroz.blindside.shared.settings.ScreenMode
 import io.github.santiquiroz.blindside.shared.settings.SettingsRepository
 import io.github.santiquiroz.blindside.shared.settings.toPipelineConfig
+import io.github.santiquiroz.blindside.shared.tak.likelyAllyIdsOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -141,6 +142,7 @@ class RunningSession(
             startNanos = startNanos,
             deferred = DeferredPlayback(::playLater),
             onError = { error -> Log.w(TAG, "session input failed", error) },
+            allyHint = { id -> id in likelyAllyIdsOf(SessionStore.state.value, System.currentTimeMillis(), SystemClock.elapsedRealtimeNanos()) },
         )
     }
 

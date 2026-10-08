@@ -52,6 +52,19 @@ class TelemetryOfTest {
     }
 
     @Test
+    fun `excluded ids are left out of the published blips`() {
+        val scene = sceneWith(
+            listOf(
+                Blip(1, 30.0, 5.0, Confidence.BOTH, 0L, false),
+                Blip(2, 60.0, 6.0, Confidence.BOTH, 0L, false),
+            ),
+        )
+        val telemetry = telemetryOf(scene, 0.0, points, excludeIds = setOf(1))
+        assertTrue(telemetry.headingOk)
+        assertEquals(listOf(2), telemetry.blips.map { it.id })
+    }
+
+    @Test
     fun `a null scene sends no blips`() {
         val telemetry = telemetryOf(null, 350.0, points)
         assertFalse(telemetry.headingOk)

@@ -180,6 +180,7 @@ private fun ConnectButton(hasPackage: Boolean, running: Boolean) {
 
 private fun takPermissions(): List<String> = buildList {
     add(Manifest.permission.ACCESS_FINE_LOCATION)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) add(Manifest.permission.BLUETOOTH_ADVERTISE)
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) add(Manifest.permission.POST_NOTIFICATIONS)
 }
 

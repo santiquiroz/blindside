@@ -12,7 +12,7 @@ data class PointPx(val x: Float, val y: Float)
 
 enum class BlipStyle { FILLED, OUTLINE, DASHED }
 
-data class BlipDraw(val center: PointPx, val style: BlipStyle, val alpha: Float)
+data class BlipDraw(val center: PointPx, val style: BlipStyle, val alpha: Float, val id: Int = 0)
 
 data class EdgeMarkerDraw(val inner: PointPx, val outer: PointPx, val alpha: Float)
 
@@ -101,7 +101,7 @@ private fun sweepDeg(sector: CoverageSector): Double {
 }
 
 private fun blipDraw(blip: Blip, origin: PointPx, radius: Float): BlipDraw =
-    BlipDraw(polarToPx(origin, radius, blip.bearingDeg, blip.rangeM), blipStyle(blip.confidence), blipAlpha(blip.ageMs))
+    BlipDraw(polarToPx(origin, radius, blip.bearingDeg, blip.rangeM), blipStyle(blip.confidence), blipAlpha(blip.ageMs), blip.displayId)
 
 private fun edgeMarker(blip: Blip, origin: PointPx, radius: Float): EdgeMarkerDraw = EdgeMarkerDraw(
     inner = polarToPx(origin, radius, blip.bearingDeg, EDGE_MARKER_INNER_M),

@@ -81,6 +81,17 @@ class SessionStoreTest {
     }
 
     @Test
+    fun `sawBeacon smooths rssi and drops beacons older than 30 s`() {
+        SessionStore.update { SessionUiState() }
+        SessionStore.sawBeacon(7L, -60, 1_000L)
+        SessionStore.sawBeacon(7L, -70, 2_000L)
+        assertEquals(-63.0, requireNotNull(SessionStore.state.value.beacons[7L]).rssiDbm, 1e-9)
+        SessionStore.sawBeacon(9L, -60, 40_000L)
+        assertEquals(setOf(9L), SessionStore.state.value.beacons.keys)
+        SessionStore.update { SessionUiState() }
+    }
+
+    @Test
     fun `receiveTeam stores the update and its time`() {
         SessionStore.update { SessionUiState() }
         val update = TeamUpdate(GeoFix(GeoPoint(5.0, -75.0), 4.0), listOf(Mate("Toro", GeoPoint(5.0, -75.0), 3)))

@@ -61,6 +61,7 @@ class TakLinkService : Service() {
     private var scope: CoroutineScope? = null
     private var link: TakLink? = null
     private var location: TakLocation? = null
+    private var beacon: TeamBeaconAdvertiser? = null
     private var listener: MessageClient.OnMessageReceivedListener? = null
     private val mutex = Mutex()
     private var publish = PublishState()
@@ -135,7 +136,8 @@ class TakLinkService : Service() {
         current.launch { collectIncoming(takLink, ids) }
         startGps()
         addTelemetryListener(ids)
-        current.launch { teamLoop() }
+        startBeacon(ids)
+        current.launch { teamLoop(ids) }
         current.launch { pictureLoop(ids) }
     }
 
@@ -145,6 +147,12 @@ class TakLinkService : Service() {
         }
         location = gps
         if (!gps.start()) TakStore.update { it.copy(error = "Falta permiso de ubicación") }
+    }
+
+    private fun startBeacon(ids: TakIds) {
+        val beacons = TeamBeaconAdvertiser(this)
+        beacon = beacons
+        beacons.start(beaconIdOf(ids.deviceId))
     }
 
     private fun addTelemetryListener(ids: TakIds) {
@@ -183,23 +191,23 @@ class TakLinkService : Service() {
         takLink.status.collect { status -> TakStore.update { it.copy(link = status) } }
     }
 
-    private suspend fun teamLoop() {
+    private suspend fun teamLoop(ids: TakIds) {
         val nodes = Wearable.getNodeClient(this)
         val messages = Wearable.getMessageClient(this)
         while (true) {
             delay(TAK_TEAM_PERIOD_MS)
             val now = System.currentTimeMillis()
-            val team = mutex.withLock { teamSnapshot(now) }
+            val team = mutex.withLock { teamSnapshot(now, ids) }
             sendTeam(nodes, messages, team.update)
             TakStore.update { it.copy(mates = team.count, lastFixAtMs = team.fixAtMs) }
             refreshNotification()
         }
     }
 
-    private fun teamSnapshot(now: Long): TeamSnapshot {
+    private fun teamSnapshot(now: Long, ids: TakIds): TeamSnapshot {
         val fresh = freshFix(now)
         val mates = roster.mates(now)
-        return TeamSnapshot(TeamUpdate(fresh, mates), mates.size, fixAtMs)
+        return TeamSnapshot(TeamUpdate(fresh, mates, me = beaconIdOf(ids.deviceId)), mates.size, fixAtMs)
     }
 
     private fun freshFix(now: Long): GeoFix? =
@@ -283,6 +291,8 @@ class TakLinkService : Service() {
         listener = null
         location?.stop()
         location = null
+        beacon?.stop()
+        beacon = null
         link = null
         scope?.cancel()
         scope = null

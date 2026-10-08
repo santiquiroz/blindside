@@ -13,6 +13,7 @@ import io.github.santiquiroz.blindside.core.scene.RadarScene
 import io.github.santiquiroz.blindside.core.scene.Side
 import io.github.santiquiroz.blindside.core.scene.Warning
 import io.github.santiquiroz.blindside.shared.haptics.HapticPattern
+import io.github.santiquiroz.blindside.shared.haptics.ALLY_PATTERN
 import io.github.santiquiroz.blindside.shared.haptics.LEFT_PATTERN
 import io.github.santiquiroz.blindside.shared.haptics.SYSTEM_BUZZ_MS
 import io.github.santiquiroz.blindside.shared.haptics.SYSTEM_PATTERN
@@ -149,6 +150,24 @@ class SessionEngineTest {
         engine.handle(SessionInput.Step(at(11)))
         assertEquals(1, errors.size)
         assertTrue("step@${at(11)}" in pipeline.calls)
+    }
+
+    @Test
+    fun `a likely ally plays the soft ally pulse instead of the side rhythm`() {
+        val allyEngine = SessionEngine(
+            pipeline = pipeline,
+            records = records,
+            haptics = { played += it },
+            scenes = { scenes += it },
+            clock = { at(nowMs) },
+            startNanos = start,
+            deferred = { alert, atNanos -> deferred += alert to atNanos },
+            onError = { errors += it },
+            allyHint = { it == 4 },
+        )
+        pipeline.packetEvents = listOf(leftContact)
+        allyEngine.handle(SessionInput.Packet(byteArrayOf(1), at(40)))
+        assertEquals(listOf(ALLY_PATTERN), played)
     }
 
     @Test

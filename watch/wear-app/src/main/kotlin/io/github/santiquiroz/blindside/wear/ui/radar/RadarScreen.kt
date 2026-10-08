@@ -84,6 +84,7 @@ import io.github.santiquiroz.blindside.shared.tactical.GeoPoint
 import io.github.santiquiroz.blindside.shared.tak.MateMark
 import io.github.santiquiroz.blindside.shared.tak.TeamUpdate
 import io.github.santiquiroz.blindside.shared.tak.hereOf
+import io.github.santiquiroz.blindside.shared.tak.likelyAllyIdsOf
 import io.github.santiquiroz.blindside.shared.tak.mateMarks
 import io.github.santiquiroz.blindside.shared.tak.teamLinkActive
 import io.github.santiquiroz.blindside.shared.theme.BlindsideColors
@@ -146,6 +147,7 @@ fun RadarScreen(
     val nowMs = System.currentTimeMillis()
     val here = hereOf(session.team, session.teamAtMs, nowMs, watchHere)
     val mateMarks = teamMarks(session.team, session.teamAtMs, here, nowMs)
+    val allyIds = likelyAllyIdsOf(session, nowMs, SystemClock.elapsedRealtimeNanos())
     val wedgeColors = remember { TacticalWedgeColors(BlindsideColors.Accent, BlindsideColors.AccentDim, BlindsideColors.Warn) }
     AnchorHeading(reading, postureDeg, !ambient)
     var glanceOpen by remember { mutableStateOf(false) }
@@ -162,7 +164,7 @@ fun RadarScreen(
             val pivot = screenCenter(size.width, size.height, shift)
             val drawnScene = foldInterpolated(scenes, frameFractionNow(scenes, compassOn, modeFramePeriodMs(settings.screenMode)))
             val logical = toDrawModel(drawnScene, size.width, size.height, shift, contacts, margin, fitHalfAngleDeg)
-            drawRadar(logical.rotatedAbout(pivot, postureDeg + frame.spinDeg), radarColorsFor(settings.contactColor))
+            drawRadar(logical.rotatedAbout(pivot, postureDeg + frame.spinDeg), radarColorsFor(settings.contactColor), allyIds)
             if (!ambient) drawRangeScale(rangeMarks(logical.origin, logical.radiusPx), pivot, postureDeg, measurer)
             reading?.let { r ->
                 val ring = RingGeometry(pivot, size.minDimension / 2f, bandPx)

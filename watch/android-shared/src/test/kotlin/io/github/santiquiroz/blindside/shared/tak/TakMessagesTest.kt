@@ -54,6 +54,18 @@ class TakMessagesTest {
     }
 
     @Test
+    fun `team round-trips with an unsigned beacon id above int range`() {
+        val original = TeamUpdate(GeoFix(base, 4.0), listOf(Mate("Toro", base, 1)), me = 3_000_000_000L)
+        assertEquals(original, decodeTeamUpdate(encodeTeamUpdate(original)))
+    }
+
+    @Test
+    fun `team json without me decodes to null`() {
+        val decoded = requireNotNull(decodeTeamUpdate("{\"v\":1,\"self\":null,\"mates\":[]}"))
+        assertNull(decoded.me)
+    }
+
+    @Test
     fun `telemetry decoders reject garbage and wrong versions`() {
         assertNull(decodeTelemetry("nope"))
         assertNull(decodeTelemetry("{\"v\":2}"))

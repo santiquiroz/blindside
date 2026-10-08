@@ -2,9 +2,11 @@ package io.github.santiquiroz.blindside.shared.session
 
 import io.github.santiquiroz.blindside.core.scene.RadarScene
 import io.github.santiquiroz.blindside.shared.ble.BleStatus
+import io.github.santiquiroz.blindside.shared.tak.BeaconSeen
 import io.github.santiquiroz.blindside.shared.tak.HeadingAnchor
 import io.github.santiquiroz.blindside.shared.tak.TeamUpdate
 import io.github.santiquiroz.blindside.shared.tak.anchorOf
+import io.github.santiquiroz.blindside.shared.tak.smoothedBeacon
 import io.github.santiquiroz.blindside.shared.tactical.GeoPoint
 import io.github.santiquiroz.blindside.shared.tactical.TacticalKind
 import io.github.santiquiroz.blindside.shared.tactical.nextTacticalKind
@@ -35,6 +37,7 @@ data class SessionUiState(
     val headingAnchor: HeadingAnchor? = null,
     val team: TeamUpdate? = null,
     val teamAtMs: Long? = null,
+    val beacons: Map<Long, BeaconSeen> = emptyMap(),
 )
 
 object SessionStore {
@@ -61,6 +64,12 @@ object SessionStore {
     }
 
     fun receiveTeam(update: TeamUpdate, nowMs: Long) = mutableState.update { it.copy(team = update, teamAtMs = nowMs) }
+
+    fun sawBeacon(id: Long, rssiDbm: Int, nowMs: Long) = mutableState.update { state ->
+        val updated = state.beacons + (id to smoothedBeacon(state.beacons[id], rssiDbm, nowMs))
+        // Beacons older than 30 s can never be fresh again, so prune them on the way in.
+        state.copy(beacons = updated.filterValues { nowMs - it.lastSeenMs <= 30_000L })
+    }
 
     fun setRadarVisible(visible: Boolean) {
         mutableRadarVisible.value = visible
