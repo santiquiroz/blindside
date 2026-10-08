@@ -74,10 +74,12 @@ Mejor un nombre que la IP: un registro **A** propio (p. ej. `tak.<tu-dominio>`, 
 
 **Desde la interfaz web:** `windows-autostart.ps1 -LocalDomain <tu dominio>` agrega `127.0.0.1 <tu dominio>` al archivo hosts del PC. Abre la interfaz con **https://<tu dominio>** (no con localhost): Usuarios → crear usuario → **Generate Configuration Data Package**, y descárgalo en Data Packages. Los paquetes llevan la dirección con la que abriste la interfaz, por eso hay que usar el dominio.
 
+**Después de descargarlo, bórralo del servidor** (Data Packages → borrar). OpenTAKServer deja cada paquete de conexión como paquete de datos público: cualquier usuario conectado podría bajar el de otro y entrar con su certificado. Borrarlo no le corta la conexión al jugador (probado): solo elimina la copia del servidor. Guarda tu copia en `~/.blindside/tak-packages/`.
+
 Reglas:
 
 - **Cada jugador con un callsign distinto.** OpenTAKServer identifica también por callsign. Un segundo dispositivo con un callsign repetido se conecta pero sus posiciones se descartan sin aviso (`ForeignKeyViolation cot_eud` en `~/ots/logs/cot_parser.log`).
-- El paquete lleva la llave privada del jugador. Se manda por chat privado, nunca a un grupo ni a un repositorio. Para cortarle el acceso a alguien: interfaz web → Usuarios → desactivar.
+- El paquete lleva la llave privada del jugador. Se manda por chat privado, nunca a un grupo ni a un repositorio. Para cortarle el acceso a alguien: interfaz web → Usuarios → desactivar o borrar. Sin usuario, el servidor rechaza su certificado al conectar.
 - Todos quedan en el grupo por defecto `__ANON__`, así se ven entre todos.
 
 ### Compañeros sin cinturón (Android)
@@ -90,20 +92,45 @@ Un compañero sin cinturón ni reloj también usa Blindside: instala el APK del 
 
 Los iPhone usan iTAK con su paquete `_CONFIG_iTAK.zip`: ven a los aliados y los contactos del radar en el mapa.
 
-## 5. Probar
+## 5. Mapas y capa del campo
+
+Tres herramientas arman lo que se reparte antes de una partida:
+
+- [`tak/map-sources/`](../tak/map-sources/): fuentes de mapa para ATAK (Bing Aerial, Esri World Imagery, Esri World Topo, OpenTopoMap, Google). Google se ve borroso en zonas rurales donde Bing/Esri (Maxar) siguen nítidos; compara antes de elegir.
+- [`tak/geojson2kml.py`](../tak/geojson2kml.py): convierte un GeoJSON con estilos [simplestyle](https://github.com/mapbox/simplestyle-spec) (`stroke`, `fill`, `fill-opacity`, `marker-color`, más `folder` para agrupar) en KML/KMZ para ATAK, iTAK y Google Earth.
+- [`tak/datapackage.py`](../tak/datapackage.py): empaqueta archivos en un paquete de datos TAK (`MANIFEST/manifest.xml`). El uid sale del nombre, así que reconstruirlo con el mismo nombre reemplaza al anterior en vez de duplicarlo.
+
+```bash
+python tak/geojson2kml.py campo.geojson campo.kmz --name "Campo"
+python tak/datapackage.py --name "Campo" --out campo-paquete.zip campo.kmz tak/map-sources/bing-aerial.xml tak/map-sources/esri-world-imagery.xml
+```
+
+Para que cada ATAK lo reciba solo: interfaz web → Data Packages → subir el zip → activar **Install on connection**. ATAK pide su perfil de dispositivo al conectarse (`/Marti/api/device/profile/connection` en el puerto 8443) y el servidor le incluye el paquete. iTAK no lo pide: a los iPhone se les manda el zip por chat (no trae llaves) y lo importan en Data Packages.
+
+## 6. Replay después de la partida
+
+[`tak/replay.py`](../tak/replay.py) saca las posiciones guardadas en el servidor y arma una página con el recorrido animado de cada jugador, sus distancias, velocidad máxima y los contactos del radar:
+
+```bash
+python tak/replay.py --since "2026-10-10 15:30" --until "2026-10-10 23:59" --overlay campo.geojson --title "Partida del sábado" --out replay.html
+```
+
+Las horas son locales (`--utc-offset`, por defecto -5). La página trae las posiciones reales de cada jugador: compártela solo con el equipo. OpenTAKServer tiene una tarea `delete_old_data` que, si está activa, borra lo que tenga más de una semana.
+
+## 7. Probar
 
 [`tak/tak-probe.py`](../tak/tak-probe.py) se conecta con un paquete e imprime todo lo que llega; con `--at lat,lon` se anuncia como un compañero:
 
 ```bash
-python tak/tak-probe.py ~/.blindside/tak-packages/prueba_CONFIG_iTAK.zip --host <IP LAN del PC> --callsign Toro --at 5.0689,-75.5174
-python tak/tak-probe.py ~/.blindside/tak-packages/jugador1_CONFIG.zip --host <IP LAN del PC> --callsign Lince
+python tak/tak-probe.py ~/.blindside/tak-packages/<usuario>_CONFIG_iTAK.zip --host <IP LAN del PC> --callsign Toro --at 5.0689,-75.5174
+python tak/tak-probe.py ~/.blindside/tak-packages/<otro>_CONFIG.zip --host <IP LAN del PC> --callsign Lince
 # contacto de radar simulado (como si lo publicara otro cinturón), útil para probar los avisos:
-python tak/tak-probe.py ~/.blindside/tak-packages/jugador2_CONFIG.zip --callsign Puma --contact <lat>,<lon>
+python tak/tak-probe.py ~/.blindside/tak-packages/<usuario>_CONFIG.zip --callsign Puma --contact <lat>,<lon>
 ```
 
-Cada uno debe ver al otro. Desde afuera (celular con Wi-Fi apagado), ATAK debe quedar en verde con la IP pública.
+Cada uno debe ver al otro. La sonda registra un dispositivo `tak-probe-<callsign>` en el servidor; usa un callsign que no sea de nadie. Desde afuera (celular con Wi-Fi apagado), ATAK debe quedar en verde con la IP pública.
 
-## 6. Problemas
+## 8. Problemas
 
 | Síntoma | Causa probable |
 |---|---|
@@ -111,6 +138,7 @@ Cada uno debe ver al otro. Desde afuera (celular con Wi-Fi apagado), ATAK debe q
 | Conecta pero no ve a nadie | Callsign repetido (ver arriba) o usuarios en grupos distintos. |
 | `SSL` / handshake rechazado | Paquete de otro servidor, usuario desactivado o CA regenerada. Generar paquete nuevo. |
 | Blindside: "El truststore del paquete no trae certificados" | El paquete no trae `truststore-root.p12` legible; regenerarlo con `tak/ots-player.sh`. |
-| Todo dejó de responder tras reiniciar el PC | WSL no arrancó: abrir `wsl-keepalive.vbs` o cualquier terminal de WSL. |
+| `https://tak.<tu dominio>` no carga en el navegador de un compañero | Normal: hacia afuera solo está abierto el 8089 (ATAK/iTAK). La interfaz web solo se abre desde el PC del servidor. |
+| Todo dejó de responder tras reiniciar el PC | WSL no arrancó: revisar la tarea "OpenTAKServer WSL" (`windows-autostart.ps1 -Test`) o abrir cualquier terminal de WSL. |
 
 Registros: `~/ots/logs/` dentro de WSL (`eud_handler_ssl.log` conexiones, `cot_parser.log` mensajes).
