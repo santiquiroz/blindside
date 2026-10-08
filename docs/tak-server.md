@@ -26,7 +26,9 @@ systemctl is-active opentakserver cot_parser eud_handler eud_handler_ssl rabbitm
 
 Tarda unos 15 minutos. Al final todos los servicios dicen `active`.
 
-**Mantener WSL vivo.** WSL apaga la distro cuando no queda ninguna terminal abierta. [`tak/wsl-keepalive.vbs`](../tak/wsl-keepalive.vbs) la deja corriendo sin ventana. Cópialo a la carpeta de inicio (`Win+R` → `shell:startup`) y ábrelo una vez.
+**Arranque con Windows (aunque nadie inicie sesión).** WSL apaga la distro cuando no queda ningún proceso, y solo arranca con un usuario. [`tak/windows-autostart.ps1`](../tak/windows-autostart.ps1) (PowerShell como administrador) registra la tarea programada "OpenTAKServer WSL": al encender el PC lanza `wsl -d Ubuntu-24.04 --exec sleep infinity` en modo S4U (sin guardar la contraseña de Windows), así los servicios de OpenTAKServer arrancan solos. `-Test` lo comprueba apagando WSL y relanzando la tarea. Alternativa si solo te importa con sesión iniciada: [`tak/wsl-keepalive.vbs`](../tak/wsl-keepalive.vbs) en `shell:startup`.
+
+Revisa también que el PC no se suspenda ni hiberne (Configuración → Energía): un PC dormido es un servidor caído.
 
 ## 2. Red
 
@@ -38,7 +40,7 @@ Tarda unos 15 minutos. Al final todos los servicios dicen `active`.
 2. **Router.** Reenvío de puerto TCP **8089** externo → `<IP LAN del PC>:8089`. Nada más: ni 8088 (sin cifrar), ni 80/443/8080 (web), ni 8443/8446.
 3. **Comprobar que no hay CGNAT.** La IP WAN que muestra el router tiene que ser la misma que da `curl https://api.ipify.org`. Si el router muestra una 100.64.x.x–100.127.x.x, el proveedor comparte la IP y el reenvío no sirve.
 
-La interfaz web de administración queda solo en el PC: `https://localhost` (certificado propio, el navegador avisa).
+La interfaz web de administración queda solo en el PC: `https://localhost` (certificado propio, el navegador avisa). Ahí están el **mapa en vivo** de todos los conectados, usuarios, grupos, paquetes de datos, misiones, video, alertas/CasEvac y Meshtastic.
 
 ## 3. Administrador
 
@@ -69,6 +71,8 @@ Mejor un nombre que la IP: un registro **A** propio (p. ej. `tak.<tu-dominio>`, 
 | ATAK (Android) | `<usuario>_CONFIG.zip` | Pasarlo al celular → ATAK → Importar → seleccionar el zip. |
 | iTAK (iPhone) | `<usuario>_CONFIG_iTAK.zip` | Abrirlo desde Archivos con iTAK (Ajustes → Servidores → +, importar paquete). |
 | Blindside | cualquiera de los dos | App del celular → pestaña **Equipo** → Importar paquete. Puede ser el mismo del ATAK de ese jugador. |
+
+**Desde la interfaz web:** `windows-autostart.ps1 -LocalDomain <tu dominio>` agrega `127.0.0.1 <tu dominio>` al archivo hosts del PC. Abre la interfaz con **https://<tu dominio>** (no con localhost): Usuarios → crear usuario → **Generate Configuration Data Package**, y descárgalo en Data Packages. Los paquetes llevan la dirección con la que abriste la interfaz, por eso hay que usar el dominio.
 
 Reglas:
 
