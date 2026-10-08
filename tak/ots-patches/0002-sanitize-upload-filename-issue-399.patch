@@ -1,0 +1,45 @@
+From 48f7f8349196de259ccdfc3465c3fb27a26f9d71 Mon Sep 17 00:00:00 2001
+From: Brian <bwallen@gmail.com>
+Date: Tue, 15 Sep 2026 07:52:06 -0400
+Subject: [PATCH] Properly sanitize filenames of uploaded data packages, fixes
+ #399
+
+---
+ .../blueprints/marti_api/mission_marti_api.py          | 10 ++++++----
+ 1 file changed, 6 insertions(+), 4 deletions(-)
+
+diff --git a/opentakserver/blueprints/marti_api/mission_marti_api.py b/opentakserver/blueprints/marti_api/mission_marti_api.py
+index 886f0364..345af75c 100644
+--- a/opentakserver/blueprints/marti_api/mission_marti_api.py
++++ b/opentakserver/blueprints/marti_api/mission_marti_api.py
+@@ -7,6 +7,7 @@
+ import uuid
+ from urllib.parse import urlparse
+ from xml.etree.ElementTree import Element, SubElement, fromstring, tostring
++from pathlib import Path
+ 
+ import bleach
+ import flask
+@@ -1708,7 +1709,11 @@ def upload_content():
+ 
+     username = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
+ 
+-    file_name = bleach.clean(request.args.get("name")) if "name" in request.args else None
++    if not request.args.get("name"):
++        return jsonify({"success": False, "error": gettext("File name cannot be blank")}), 400
++
++    file_name = Path(request.args.get("name")).name
++    file_name = secure_filename(file_name) if "name" in request.args else None
+     keywords = request.args.getlist("keywords")
+ 
+     if "creatorUid" in request.args:
+@@ -1719,9 +1724,6 @@ def upload_content():
+     else:
+         creator_uid = None
+ 
+-    if not file_name:
+-        return jsonify({"success": False, "error": gettext("File name cannot be blank")}), 400
+-
+     # When uploading data packages, iTAK doesn't include an extension. If the user agent is iTAK and
+     # the content type is zip, assume that iTAK is uploading a data package
+     if (

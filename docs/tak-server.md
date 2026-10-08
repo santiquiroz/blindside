@@ -83,6 +83,8 @@ bash /mnt/c/<ruta al repo>/tak/ots-apply-patches.sh   # dentro de WSL, como ots;
 systemctl restart opentakserver                        # como root
 ```
 
+`0002` y `0003` son de seguridad. En la 1.7.13, el nombre (`/Marti/sync/upload`) y el hash (`/Marti/sync/missionupload`) que manda el cliente terminan en una ruta de archivo. Así, cualquiera con certificado podía escribir fuera de la carpeta de uploads. En `0003` se usa `fullmatch` en vez del `match` de upstream, porque `match` deja pasar `<hash>/../..`.
+
 Los paquetes generados antes del parche siguen fallando, así que hay que regenerarlos y reimportarlos. Si el commit ya está en una versión publicada, se borra de `tak/ots-patches/`.
 
 Mejor un nombre que la IP: un registro **A** propio (p. ej. `tak.<tu-dominio>`, TTL 300) hacia la IP pública. Si el proveedor cambia la IP, se actualiza el DNS y nadie vuelve a importar nada. Volver a correr el script con otro `OTS_PUBLIC_HOST` reescribe los paquetes de un usuario existente (la API contesta "Certificate already exists" pero el zip sale con el host nuevo).
