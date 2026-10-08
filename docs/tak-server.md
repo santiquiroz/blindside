@@ -62,7 +62,19 @@ Un usuario por jugador. El script crea el usuario y su certificado, y copia sus 
 OTS_PUBLIC_HOST=<nombre DNS o IP pública> bash tak/ots-player.sh jugador1
 ```
 
-El paquete apunta a la dirección con la que se pidió (OpenTAKServer la copia en `connectString`). Por eso el script la pide con la dirección pública y no con `localhost`.
+De fábrica, OpenTAKServer copia en el paquete (`connectString`) la dirección con la que se pidió. Por eso el script la pide con la dirección pública y no con `localhost`.
+
+**Dirección fija para todos los paquetes.** Con este parche, OpenTAKServer usa `OTS_PUBLIC_ADDRESS` de `config.yml` en vez de la dirección del navegador. Así sirve cualquier paquete generado desde la web, aunque el jugador haya entrado por el dominio o por la IP. También aplica al QR de iTAK, a la inscripción y a las URL de video:
+
+```bash
+# dentro de WSL, como root; repetir después de actualizar OpenTAKServer
+/home/ots/.opentakserver_venv/bin/python /mnt/c/<ruta al repo>/tak/ots-public-address.py \
+  --package-dir /home/ots/.opentakserver_venv/lib/python3.12/site-packages/opentakserver \
+  --config /home/ots/ots/config.yml --address <IP pública o dominio>
+systemctl restart opentakserver   # no corta a los jugadores conectados
+```
+
+El parche guarda cada archivo original como `<archivo>.orig`. Si se borra la clave, vuelve al comportamiento de fábrica.
 
 Mejor un nombre que la IP: un registro **A** propio (p. ej. `tak.<tu-dominio>`, TTL 300) hacia la IP pública. Si el proveedor cambia la IP, se actualiza el DNS y nadie vuelve a importar nada. Volver a correr el script con otro `OTS_PUBLIC_HOST` reescribe los paquetes de un usuario existente (la API contesta "Certificate already exists" pero el zip sale con el host nuevo).
 
@@ -72,7 +84,7 @@ Mejor un nombre que la IP: un registro **A** propio (p. ej. `tak.<tu-dominio>`, 
 | iTAK (iPhone) | `<usuario>_CONFIG_iTAK.zip` | Abrirlo desde Archivos con iTAK (Ajustes → Servidores → +, importar paquete). |
 | Blindside | cualquiera de los dos | App del celular → pestaña **Equipo** → Importar paquete. Puede ser el mismo del ATAK de ese jugador. |
 
-**Desde la interfaz web:** `windows-autostart.ps1 -LocalDomain <tu dominio>` agrega `127.0.0.1 <tu dominio>` al archivo hosts del PC. Abre la interfaz con **https://<tu dominio>** (no con localhost): Usuarios → crear usuario → **Generate Configuration Data Package**, y descárgalo en Data Packages. Los paquetes llevan la dirección con la que abriste la interfaz, por eso hay que usar el dominio.
+**Desde la interfaz web:** `windows-autostart.ps1 -LocalDomain <tu dominio>` agrega `127.0.0.1 <tu dominio>` al archivo hosts del PC. Abre la interfaz con **https://<tu dominio>** (no con localhost): Usuarios → crear usuario → **Generate Configuration Data Package**, y descárgalo en Data Packages. Sin el parche de `OTS_PUBLIC_ADDRESS`, los paquetes llevan la dirección con la que abriste la interfaz, y por eso hay que usar el dominio.
 
 **Después de descargarlo, bórralo del servidor** (Data Packages → borrar). OpenTAKServer deja cada paquete de conexión como paquete de datos público: cualquier usuario conectado podría bajar el de otro y entrar con su certificado. Borrarlo no le corta la conexión al jugador (probado): solo elimina la copia del servidor. Guarda tu copia en `~/.blindside/tak-packages/`.
 
@@ -160,6 +172,7 @@ Cada uno debe ver al otro. La sonda registra un dispositivo `tak-probe-<callsign
 | ATAK/iTAK en rojo desde datos móviles, en verde en la Wi-Fi de la casa | Falta el reenvío del router, la IP LAN del PC cambió o hay CGNAT. |
 | Conecta pero no ve a nadie | Callsign repetido (ver arriba) o usuarios en grupos distintos. |
 | `SSL` / handshake rechazado | Paquete de otro servidor, usuario desactivado o CA regenerada. Generar paquete nuevo. |
+| ATAK en rojo con "Socket is closed", y el servidor no registra ningún intento | ATAK guarda los certificados por servidor. Si se edita a mano la entrada (por ejemplo, para cambiar la dirección), puede quedarse sin ellos; logcat dice `getCACerts for <host> found 0 certs`. Hay que reimportar el paquete **con otro nombre de archivo**: ATAK ignora en silencio un zip con un nombre que ya importó (`already in FileInfo db`). El `no Importer found` del log es ruido. |
 | Blindside: "El truststore del paquete no trae certificados" | El paquete no trae `truststore-root.p12` legible; regenerarlo con `tak/ots-player.sh`. |
 | `https://tak.<tu dominio>` no carga en el navegador de un compañero | Normal: hacia afuera solo está abierto el 8089 (ATAK/iTAK). La interfaz web solo se abre desde el PC del servidor. |
 | Todo dejó de responder tras reiniciar el PC | WSL no arrancó: revisar la tarea "OpenTAKServer WSL" (`windows-autostart.ps1 -Test`) o abrir cualquier terminal de WSL. |
