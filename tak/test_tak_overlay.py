@@ -210,6 +210,26 @@ def test_wait_for_change_times_out():
     assert changed is False and sum(slept) >= 5
 
 
+def _pt(props):
+    return {"type": "Feature", "properties": {"name": "3 infantería", "id": "j-9", **props}, "geometry": {"type": "Point", "coordinates": [-75.49, 5.16]}}
+
+
+def test_point_with_cot_type_uses_symbol():
+    ev = overlay.feature_event(_pt({"cot_type": "a-h-G-U-C-I", "description": "visto en E6"}), "overlay-j-9", NOW, 43200)
+    assert 'type="a-h-G-U-C-I"' in ev and "usericon" not in ev and "<remarks>visto en E6</remarks>" in ev
+
+
+def test_invalid_cot_type_falls_back_to_marker():
+    for bad in ["b-m-p-s-m", "a-h-G\"><x", "x", 5]:
+        ev = overlay.feature_event(_pt({"cot_type": bad}), "overlay-j-9", NOW, 43200)
+        assert 'type="b-m-p-s-m"' in ev
+
+
+def test_stale_minutes_shortens_stale():
+    ev = overlay.feature_event(_pt({"cot_type": "a-u-G", "stale_minutes": 10}), "overlay-j-9", NOW, 43200)
+    assert 'stale="2024-05-01T12:10:00' in ev
+
+
 def test_load_all_keeps_previous_on_broken_file(tmp_path):
     good = tmp_path / "a.geojson"
     bad = tmp_path / "b.geojson"

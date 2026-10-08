@@ -2,6 +2,7 @@ import argparse
 import hashlib
 import importlib.util
 import json
+import re
 import ssl
 import sys
 import threading
@@ -16,6 +17,23 @@ _spec.loader.exec_module(probe)
 
 D_OPEN = "<" + "detail" + ">"
 D_CLOSE = "</" + "detail" + ">"
+
+_COT_TYPE_RE = re.compile(r"^a-[fhnu]-[A-Z](-[A-Za-z]+)*$")
+
+
+def _valid_cot_type(value):
+    if isinstance(value, str) and _COT_TYPE_RE.match(value):
+        return value
+    return None
+
+
+def _point_stale_s(props, default):
+    v = props.get("stale_minutes")
+    if isinstance(v, bool) or not isinstance(v, int):
+        return default
+    if 1 <= v <= 60:
+        return v * 60
+    return default
 
 
 def _esc(s):
@@ -141,6 +159,18 @@ def feature_event(feature: dict, uid: str, now: datetime, stale_s: int) -> str |
             lat = float(coords[1])
         except (TypeError, ValueError, IndexError):
             return None
+        eff_stale = _point_stale_s(props, stale_s)
+        if eff_stale != stale_s:
+            s = probe.cot_time(now + timedelta(seconds=eff_stale))
+            head = f'<event version="2.0" uid="{_esc(uid)}" type="TYPE" how="h-g-i-g-o" time="{t}" start="{t}" stale="{s}">'
+        cot_type = _valid_cot_type(props.get("cot_type"))
+        if cot_type is not None:
+            body = (
+                f'<point lat="{lat:.7f}" lon="{lon:.7f}" hae="9999999.0" ce="9999999.0" le="9999999.0"/>'
+                + D_OPEN + f'<contact callsign="{_esc(name)}"/>'
+                + f'{remarks}<archive/><labels_on value="false"/>' + D_CLOSE + "</event>"
+            )
+            return head.replace('type="TYPE"', f'type="{_esc(cot_type)}"') + body
         argb = argb_int(_color(props, "marker-color", "#ffcc00"), 1)
         body = (
             f'<point lat="{lat:.7f}" lon="{lon:.7f}" hae="9999999.0" ce="9999999.0" le="9999999.0"/>'
