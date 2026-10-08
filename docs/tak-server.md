@@ -138,9 +138,11 @@ Para que cada ATAK lo reciba solo: interfaz web → Data Packages → subir el z
 OTS_PUBLIC_HOST=<dominio> bash tak/ots-player.sh mapa      # usuario propio para el publicador; luego borrar sus paquetes del servidor
 python tak/tak-overlay.py ~/.blindside/tak-packages/mapa_CONFIG.zip campo.geojson --callsign "Mapa" --once   # prueba
 # servicio permanente dentro de WSL (arranca con OpenTAKServer):
-sudo bash tak/overlay-service.sh /mnt/c/Users/<usuario>/.blindside/tak-packages/mapa_CONFIG.zip /mnt/c/Users/<usuario>/campo.geojson "Mapa"
+sudo bash tak/overlay-service.sh /mnt/c/Users/<usuario>/.blindside/tak-packages/mapa_CONFIG.zip "Mapa" /mnt/c/Users/<usuario>/.blindside/field/campo.geojson /mnt/c/Users/<usuario>/.blindside/field/juego.geojson
 journalctl -u blindside-overlay -f
 ```
+
+El segundo archivo es la capa viva del juego, que Mando edita.
 
 ### Bot del servidor (tak-mando)
 
@@ -152,6 +154,16 @@ journalctl -u blindside-overlay -f
 - aviso cuando un jugador activo deja de reportar 5 minutos.
 
 Se instala como servicio dentro de WSL con un usuario propio (por ejemplo `mando`, creado con `ots-player.sh`; después borrar sus paquetes del servidor). Instrucciones y unidad systemd en su README.
+
+#### Mando con IA
+
+Escríbele a Mando por mensaje directo en lenguaje normal. Ejemplos: "marca un punto de reunión EXFIL ALFA en E5", "¿qué hay en D6?", "¿dónde está Recon?", "sitrep", "BRAVO es nuestro", "en 20 min avisa que cierra el objetivo". En All Chat solo responde si el mensaje empieza con "Mando,". Los comandos con ! siguen igual y funcionan aunque la IA esté caída.
+
+Quién edita el mapa: los autorizados escriben directo. Lo que pida cualquier otro queda como propuesta numerada (naranja, carpeta Propuestas). Los autorizados reciben un mensaje que termina en "#N → responde ok N o no N". Un autorizado agrega a otro con `!autorizar <callsign>` (y lo quita con `!desautorizar`). "deshacer" revierte tu último cambio.
+
+Qué hace falta: bipolar-code corriendo en el PC (arranca solo al encender Windows con la tarea "bipolar-code backend"). El bot lleva `--llm-url auto` y la clave en `/home/ots/.config/tak-mando/llm.env`. Si la IA no responde, Mando dice "Sin cerebro ahora, usa !ayuda." y todo lo demás sigue.
+
+Desde el PC: el mismo mapa se edita desde Claude Code con el MCP `mando` (herramientas marcar_punto, dibujar_zona, estado_objetivo, programar_aviso, anunciar, entre otras).
 
 ## 6. Replay después de la partida
 
@@ -187,5 +199,6 @@ Cada uno debe ver al otro. La sonda registra un dispositivo `tak-probe-<callsign
 | Blindside: "El truststore del paquete no trae certificados" | El paquete no trae `truststore-root.p12` legible; regenerarlo con `tak/ots-player.sh`. |
 | `https://tak.<tu dominio>` no carga en el navegador de un compañero | Normal: hacia afuera solo está abierto el 8089 (ATAK/iTAK). La interfaz web solo se abre desde el PC del servidor. |
 | Todo dejó de responder tras reiniciar el PC | WSL no arrancó: revisar la tarea "OpenTAKServer WSL" (`windows-autostart.ps1 -Test`) o abrir cualquier terminal de WSL. |
+| Mando responde "Sin cerebro ahora" | bipolar no está corriendo o WSL no lo alcanza: desde WSL, `curl http://$(ip route show default \| awk '{print $3}'):8000/api/health` debe dar 200; revisar la tarea "bipolar-code backend" y la regla de firewall del puerto 8000. |
 
 Registros: `~/ots/logs/` dentro de WSL (`eud_handler_ssl.log` conexiones, `cot_parser.log` mensajes).
