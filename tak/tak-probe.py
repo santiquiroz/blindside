@@ -127,6 +127,8 @@ def main():
     parser.add_argument("--seconds", type=float, default=0, help="0 = hasta Ctrl+C")
     parser.add_argument("--openssl", default="openssl")
     args = parser.parse_args()
+    # Windows consoles default to cp1252 and would kill the reader thread on the first "≈" in a callsign.
+    sys.stdout.reconfigure(errors="replace")
 
     sock = tls_socket(args)
     # OpenTAKServer keys devices by callsign too: a new uid under a callsign it already knows is silently dropped.

@@ -107,6 +107,18 @@ python tak/datapackage.py --name "Campo" --out campo-paquete.zip campo.kmz tak/m
 
 Para que cada ATAK lo reciba solo: interfaz web → Data Packages → subir el zip → activar **Install on connection**. ATAK pide su perfil de dispositivo al conectarse (`/Marti/api/device/profile/connection` en el puerto 8443) y el servidor le incluye el paquete. iTAK no lo pide: a los iPhone se les manda el zip por chat (no trae llaves) y lo importan en Data Packages.
 
+### Capa táctica en vivo
+
+[`tak/tak-overlay.py`](../tak/tak-overlay.py) se conecta al servidor como un cliente más ("Mapa") y transmite el GeoJSON como objetos nativos de ATAK/iTAK: polígonos y líneas (`u-d-f`) y marcadores (`b-m-p-s-m`). Todos los conectados los reciben sin importar nada. Repite el envío cada `--period` segundos (120 por defecto) para quien se conecte tarde, porque OpenTAKServer no reenvía formas a clientes nuevos. Si se edita el GeoJSON, el siguiente envío actualiza los objetos y borra los que ya no están. Las curvas de nivel se omiten (`--skip-folder`); para esas sigue el paquete del campo.
+
+```bash
+OTS_PUBLIC_HOST=<dominio> bash tak/ots-player.sh mapa      # usuario propio para el publicador; luego borrar sus paquetes del servidor
+python tak/tak-overlay.py ~/.blindside/tak-packages/mapa_CONFIG.zip campo.geojson --callsign "Mapa" --once   # prueba
+# servicio permanente dentro de WSL (arranca con OpenTAKServer):
+sudo bash tak/overlay-service.sh /mnt/c/Users/<usuario>/.blindside/tak-packages/mapa_CONFIG.zip /mnt/c/Users/<usuario>/campo.geojson "Mapa"
+journalctl -u blindside-overlay -f
+```
+
 ## 6. Replay después de la partida
 
 [`tak/replay.py`](../tak/replay.py) saca las posiciones guardadas en el servidor y arma una página con el recorrido animado de cada jugador, sus distancias, velocidad máxima y los contactos del radar:
