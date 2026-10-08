@@ -76,6 +76,15 @@ systemctl restart opentakserver   # no corta a los jugadores conectados
 
 El parche guarda cada archivo original como `<archivo>.orig`. Si se borra la clave, vuelve al comportamiento de fábrica.
 
+**Correcciones de upstream todavía sin publicar.** `tak/ots-patches/` guarda commits de OpenTAKServer que aún no están en la versión de pip. El más importante es `0001`, el [issue #360](https://github.com/brian7704/OpenTAKServer/issues/360). En la 1.7.13 el paquete de ATAK deja los certificados como preferencias globales, y entonces ATAK no los guarda en su almacén. Conecta al importar, pero muere tras uno o dos reinicios en frío, y reimportar no ayuda. Para aplicar las correcciones:
+
+```bash
+bash /mnt/c/<ruta al repo>/tak/ots-apply-patches.sh   # dentro de WSL, como ots; ya aplicados = "already applied"
+systemctl restart opentakserver                        # como root
+```
+
+Los paquetes generados antes del parche siguen fallando, así que hay que regenerarlos y reimportarlos. Si el commit ya está en una versión publicada, se borra de `tak/ots-patches/`.
+
 Mejor un nombre que la IP: un registro **A** propio (p. ej. `tak.<tu-dominio>`, TTL 300) hacia la IP pública. Si el proveedor cambia la IP, se actualiza el DNS y nadie vuelve a importar nada. Volver a correr el script con otro `OTS_PUBLIC_HOST` reescribe los paquetes de un usuario existente (la API contesta "Certificate already exists" pero el zip sale con el host nuevo).
 
 | Quién | Paquete | Cómo |
@@ -172,7 +181,7 @@ Cada uno debe ver al otro. La sonda registra un dispositivo `tak-probe-<callsign
 | ATAK/iTAK en rojo desde datos móviles, en verde en la Wi-Fi de la casa | Falta el reenvío del router, la IP LAN del PC cambió o hay CGNAT. |
 | Conecta pero no ve a nadie | Callsign repetido (ver arriba) o usuarios en grupos distintos. |
 | `SSL` / handshake rechazado | Paquete de otro servidor, usuario desactivado o CA regenerada. Generar paquete nuevo. |
-| ATAK en rojo con "Socket is closed", y el servidor no registra ningún intento | ATAK guarda los certificados por servidor. Si se edita a mano la entrada (por ejemplo, para cambiar la dirección), puede quedarse sin ellos; logcat dice `getCACerts for <host> found 0 certs`. Hay que reimportar el paquete **con otro nombre de archivo**: ATAK ignora en silencio un zip con un nombre que ya importó (`already in FileInfo db`). El `no Importer found` del log es ruido. |
+| ATAK en rojo con "Socket is closed" (o "re-enter your trust store password") después de reiniciar, y el servidor no registra ningún intento | El paquete se generó sin el parche del issue #360, y ATAK perdió los certificados; logcat dice `getCACerts for <host> found 0 certs`. Hay que aplicar `ots-apply-patches.sh`, regenerar el paquete e importarlo **con otro nombre de archivo**: ATAK ignora en silencio un zip con un nombre que ya importó (`already in FileInfo db`). El `no Importer found` del log es ruido. |
 | Blindside: "El truststore del paquete no trae certificados" | El paquete no trae `truststore-root.p12` legible; regenerarlo con `tak/ots-player.sh`. |
 | `https://tak.<tu dominio>` no carga en el navegador de un compañero | Normal: hacia afuera solo está abierto el 8089 (ATAK/iTAK). La interfaz web solo se abre desde el PC del servidor. |
 | Todo dejó de responder tras reiniciar el PC | WSL no arrancó: revisar la tarea "OpenTAKServer WSL" (`windows-autostart.ps1 -Test`) o abrir cualquier terminal de WSL. |
