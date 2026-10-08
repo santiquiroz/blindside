@@ -1,5 +1,6 @@
 package io.github.santiquiroz.blindside.core
 
+import io.github.santiquiroz.blindside.core.config.DopplerParams
 import io.github.santiquiroz.blindside.core.config.ImuParams
 import io.github.santiquiroz.blindside.core.config.PipelineConfig
 import io.github.santiquiroz.blindside.core.config.TuningParams
@@ -116,8 +117,8 @@ class ScenarioTest {
     }
 
     @Test
-    fun `MVP - a rival who appears while the player walks alerts once after the player stops`() {
-        tausOffBy100.forEach { config ->
+    fun `MVP - a rival who appears while the player walks alerts once after the player stops with doppler on but too few reflectors`() {
+        tausOffBy100.map { withDoppler(it, true) }.forEach { config ->
             val run = runWith(Scenarios.rivalWhileWalking(), config)
 
             assertEquals(1, run.alerts.size, "tau ${config.tuning.imu.radarImuDelayMs}")
@@ -125,8 +126,33 @@ class ScenarioTest {
         }
     }
 
+    @Test
+    fun `MVP - a rival who appears while the player walks alerts once after the player stops with doppler off`() {
+        tausOffBy100.map { withDoppler(it, false) }.forEach { config ->
+            val run = runWith(Scenarios.rivalWhileWalking(), config)
+
+            assertEquals(1, run.alerts.size, "tau ${config.tuning.imu.radarImuDelayMs}")
+            assertTrue(scenarioMsOf(run.alerts.single().tNanos) > Scenarios.WARMUP_MS + 2_000)
+        }
+    }
+
+    @Test
+    fun `walking past trees while a rival crosses confirms only the rival`() {
+        val scenario = Scenarios.treesWhileCrossingRival()
+        val run = runScenario(scenario, withDoppler(PipelineConfig(), true).copy(mounts = scenario.mounts))
+
+        assertEquals(1, run.confirmations.size)
+        assertTrue(scenarioMsOf(run.confirmations.single().tNanos) < Scenarios.WARMUP_MS + 3_000)
+        assertEquals(listOf(Side.LEFT), run.alerts.map { it.side })
+        assertTrue(run.pipeline.counters().clutterRejected > 0)
+        assertTrue(run.scenes.all { it.second.blips.size <= 1 })
+    }
+
     private val tausOffBy100: List<PipelineConfig>
         get() = listOf(0L, 200L).map { tau -> PipelineConfig(TuningParams(imu = ImuParams(radarImuDelayMs = tau))) }
+
+    private fun withDoppler(config: PipelineConfig, enabled: Boolean): PipelineConfig =
+        config.copy(tuning = config.tuning.copy(doppler = DopplerParams(enabled = enabled)))
 
     private fun runWith(scenario: Scenario, config: PipelineConfig): ScenarioRun = runScenario(scenario, config.copy(mounts = scenario.mounts))
 }

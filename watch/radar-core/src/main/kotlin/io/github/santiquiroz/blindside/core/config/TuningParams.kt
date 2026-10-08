@@ -100,4 +100,20 @@ data class TuningParams(
     val alerts: AlertParams = AlertParams(),
     val clock: ClockParams = ClockParams(),
     val status: StatusParams = StatusParams(),
+    val doppler: DopplerParams = DopplerParams(),
+)
+
+data class DopplerParams(
+    val enabled: Boolean = true,
+    val windowMs: Long = 1_000,
+    val minDetections: Int = 4,
+    val outlierMps: Double = 0.3,
+    val maxRmsMps: Double = 0.2,
+    val minSpeedMps: Double = 0.2,
+    val maxSpeedMps: Double = 2.5,
+    val clusterGapDeg: Double = 8.0,
+    val minBearingClusters: Int = 3,
+    val staticToleranceMps: Double = 0.25,
+    val protectRadiusM: Double = 0.8,
+    val minRangeM: Double = 1.0,
 )

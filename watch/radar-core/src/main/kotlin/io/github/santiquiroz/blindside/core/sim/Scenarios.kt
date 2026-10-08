@@ -99,11 +99,25 @@ object Scenarios {
         ),
     )
 
+    fun treesWhileCrossingRival() = Scenario(
+        name = "trees-while-crossing-rival",
+        player = listOf(Stand(WARMUP_MS), Walk(3_000, speedMps = 1.0), Stand(3_000)),
+        targets = listOf(
+            stillObject(0, WARMUP_MS + 6_000, at = Point2(-1.2, 3.0)),
+            stillObject(0, WARMUP_MS + 6_000, at = Point2(1.5, 3.0)),
+            stillObject(0, WARMUP_MS + 6_000, at = Point2(0.3, 5.0)),
+            stillObject(0, WARMUP_MS + 6_000, at = Point2(3.0, 4.5)),
+            stillObject(0, WARMUP_MS + 6_000, at = Point2(-1.8, 5.2)),
+            walker(WARMUP_MS, WARMUP_MS + 6_000, start = Point2(-2.9, 4.2), velocityMps = Point2(0.8, 0.0)),
+        ),
+    )
+
     val all: List<Scenario>
         get() = listOf(
             crossing(), turningWithStillTarget(), turningWithMarcher(), walkingTowardWall(),
             headOnRival(), twoPeopleSameRange(), personStops(), targetExitsCone(),
             wallDuringTurn(), walkerConfirmedBeforeTurn(), walkerAppearsDuringTurn(), rivalWhileWalking(),
+            treesWhileCrossingRival(),
         )
 
     private fun turnInFrontOfWall() = listOf(Stand(TURN_START_MS), Turn(TURN_END_MS - TURN_START_MS, rateDps = 180.0), Stand(3_000))

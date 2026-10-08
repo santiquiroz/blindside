@@ -25,6 +25,7 @@ internal object Keys {
     val POSTURE_TEMPLATE_Z = doublePreferencesKey("posture_template_z")
     val POSTURE_TEMPLATE_ROT = doublePreferencesKey("posture_template_rot")
     val GAME_DURATION_MS = longPreferencesKey("game_duration_ms")
+    val DOPPLER_FILTER = booleanPreferencesKey("doppler_filter")
 
     fun yaw(radarId: Int) = doublePreferencesKey("radar${radarId}_yaw_deg")
     fun flipX(radarId: Int) = booleanPreferencesKey("radar${radarId}_flip_x")
@@ -46,6 +47,7 @@ fun settingsFrom(prefs: Preferences): AppSettings {
         contactColor = enumOrDefault(prefs[Keys.CONTACT_COLOR], defaults.contactColor),
         compass = prefs[Keys.COMPASS] ?: defaults.compass,
         gameDurationMs = prefs[Keys.GAME_DURATION_MS] ?: defaults.gameDurationMs,
+        dopplerFilter = prefs[Keys.DOPPLER_FILTER] ?: defaults.dopplerFilter,
     )
 }
 
@@ -59,6 +61,7 @@ fun writeSettings(prefs: MutablePreferences, settings: AppSettings) {
     prefs[Keys.CONTACT_COLOR] = settings.contactColor.name
     prefs[Keys.COMPASS] = settings.compass
     prefs[Keys.GAME_DURATION_MS] = settings.gameDurationMs
+    prefs[Keys.DOPPLER_FILTER] = settings.dopplerFilter
     writeTemplate(prefs, settings.postureTemplate)
     writeOptional(prefs, Keys.BELT_ADDRESS, settings.beltAddress)
     settings.radars.forEach { writeRadar(prefs, it) }

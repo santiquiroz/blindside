@@ -5,6 +5,7 @@ import io.github.santiquiroz.blindside.core.alerts.PipelineEvent
 import io.github.santiquiroz.blindside.core.clock.ClockMapper
 import io.github.santiquiroz.blindside.core.config.PipelineConfig
 import io.github.santiquiroz.blindside.core.geometry.StaleMemory
+import io.github.santiquiroz.blindside.core.imu.EgoMotion
 import io.github.santiquiroz.blindside.core.imu.ImuChannel
 import io.github.santiquiroz.blindside.core.imu.MotionDetector
 import io.github.santiquiroz.blindside.core.imu.Vec3
@@ -27,6 +28,7 @@ data class PipelineCounters(
     val lastLink: LinkParams? = null,
     val turningNisSum: Double = 0.0,
     val turningNisCount: Long = 0,
+    val clutterRejected: Long = 0,
 ) {
     val meanTurningNis: Double? get() = if (turningNisCount == 0L) null else turningNisSum / turningNisCount
 }
@@ -54,6 +56,8 @@ internal data class PipelineState(
     val eliminated: Boolean = false,
     val watchGravity: Vec3? = null,
     val counters: PipelineCounters = PipelineCounters(),
+    val ego: EgoMotion = EgoMotion(),
+    val walkScanSinceMs: Long? = null,
 ) {
     fun markCorrupt(nanos: Long, count: Int, windowMs: Long): PipelineState {
         if (count <= 0) return this
@@ -78,6 +82,8 @@ internal data class PipelineState(
         tracker = TrackerState(ids = tracker.ids.copy(graveyard = emptyList())),
         lastBadFrames = emptyMap(),
         counters = counters.copy(espResets = counters.espResets + 1),
+        ego = EgoMotion(),
+        walkScanSinceMs = null,
     )
 
     companion object {

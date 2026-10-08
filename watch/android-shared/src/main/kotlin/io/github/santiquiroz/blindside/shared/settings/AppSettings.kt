@@ -40,6 +40,7 @@ data class AppSettings(
     val contactColor: ContactColor = ContactColor.GREEN,
     val compass: Boolean = true,
     val gameDurationMs: Long = DEFAULT_GAME_DURATION_MS,
+    val dopplerFilter: Boolean = true,
 )
 
 typealias SettingsTransform = (AppSettings) -> AppSettings

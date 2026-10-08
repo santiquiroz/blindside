@@ -1,10 +1,15 @@
 package io.github.santiquiroz.blindside.shared.settings
 
+import io.github.santiquiroz.blindside.core.config.DopplerParams
 import io.github.santiquiroz.blindside.core.config.PipelineConfig
 import io.github.santiquiroz.blindside.core.config.RadarMount
+import io.github.santiquiroz.blindside.core.config.TuningParams
 import io.github.santiquiroz.blindside.core.config.defaultMounts
 
-fun toPipelineConfig(settings: AppSettings): PipelineConfig = PipelineConfig(mounts = mountsFor(settings))
+fun toPipelineConfig(settings: AppSettings): PipelineConfig = PipelineConfig(
+    tuning = TuningParams(doppler = DopplerParams(enabled = settings.dopplerFilter)),
+    mounts = mountsFor(settings),
+)
 
 fun mountsFor(settings: AppSettings): List<RadarMount> =
     defaultMounts(settings.handedness).map { applyRadarSettings(it, settings.radar(it.radarId)) }

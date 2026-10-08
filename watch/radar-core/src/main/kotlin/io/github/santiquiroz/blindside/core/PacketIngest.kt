@@ -2,7 +2,11 @@ package io.github.santiquiroz.blindside.core
 
 import io.github.santiquiroz.blindside.core.alerts.TrackConfirmed
 import io.github.santiquiroz.blindside.core.config.PipelineConfig
+import io.github.santiquiroz.blindside.core.config.TuningParams
+import io.github.santiquiroz.blindside.core.geometry.Detection
+import io.github.santiquiroz.blindside.core.geometry.Point2
 import io.github.santiquiroz.blindside.core.geometry.StaleMemory
+import io.github.santiquiroz.blindside.core.geometry.bodyToTracking
 import io.github.santiquiroz.blindside.core.geometry.filterFrame
 import io.github.santiquiroz.blindside.core.imu.ChannelUpdate
 import io.github.santiquiroz.blindside.core.imu.ImuChannel
@@ -10,11 +14,14 @@ import io.github.santiquiroz.blindside.core.imu.ImuReading
 import io.github.santiquiroz.blindside.core.imu.MotionDetector
 import io.github.santiquiroz.blindside.core.imu.RestEvidence
 import io.github.santiquiroz.blindside.core.imu.ingestBatch
+import io.github.santiquiroz.blindside.core.imu.isStaticEcho
 import io.github.santiquiroz.blindside.core.imu.mergeIncrements
 import io.github.santiquiroz.blindside.core.protocol.Bundle
 import io.github.santiquiroz.blindside.core.protocol.BundleDecoder
 import io.github.santiquiroz.blindside.core.protocol.RadarFrame
 import io.github.santiquiroz.blindside.core.tracking.MotionContext
+import io.github.santiquiroz.blindside.core.tracking.Track
+import io.github.santiquiroz.blindside.core.tracking.TrackStatus
 import io.github.santiquiroz.blindside.core.tracking.Tracker
 import io.github.santiquiroz.blindside.core.tracking.TrackerContext
 import io.github.santiquiroz.blindside.core.tracking.TrackerStep
@@ -44,8 +51,25 @@ internal fun trackerContext(state: PipelineState, config: PipelineConfig): Track
 
 // Spec §6.6 "detenerse y escanear": the gate stays shut while moving and for the 0.5 s tail after the last moving packet.
 internal fun motionContext(state: PipelineState, tMs: Long, config: PipelineConfig): MotionContext {
+    if (walkScanVelocity(state, tMs, config) != null) {
+        return MotionContext(moving = false, gateOpenFromMs = state.walkScanSinceMs ?: tMs)
+    }
     val gateOpenFromMs = state.lastMovingMs?.let { it + config.tuning.tracking.stopScanTailMs } ?: Long.MIN_VALUE
     return MotionContext(moving = state.motion.isMoving(tMs, config.tuning.motion), gateOpenFromMs = gateOpenFromMs)
+}
+
+// Doppler walk-scan: walking (not turning) with a valid ego-velocity estimate opens the confirmation gate.
+internal fun walkScanVelocity(state: PipelineState, tMs: Long, config: PipelineConfig): Point2? {
+    if (!config.tuning.doppler.enabled) return null
+    if (!state.motion.isWalking(tMs, config.tuning.motion) || state.motion.isTurning(config.tuning.motion)) return null
+    return state.ego.velocity(config.tuning.doppler)
+}
+
+// A confirmed rival crossing ahead briefly matches the static model; keep its detections alive.
+private fun isNearConfirmedTrack(detection: Detection, tracks: List<Track>, tMs: Long, yawDeg: Double, tuning: TuningParams): Boolean {
+    val position = bodyToTracking(detection.bodyPoint, yawDeg)
+    return tracks.filter { it.status != TrackStatus.TENTATIVE }
+        .any { (it.predictedTo(tMs, tuning.tracking).kalman.position - position).norm <= tuning.doppler.protectRadiusM }
 }
 
 private fun malformed(state: PipelineState, nowNanos: Long, config: PipelineConfig): PipelineState =
@@ -117,13 +141,22 @@ private fun withFrame(state: PipelineState, frame: RadarFrame, arrivalNanos: Lon
     }
     val tuning = config.tuning
     val filtered = filterFrame(frame, mount, state.stale[frame.radarId] ?: StaleMemory(), tuning.decode)
+    val tracked = state.copy(ego = state.ego.with(filtered.frame.detections, frame.tMs, tuning.doppler))
+    val velocity = walkScanVelocity(tracked, frame.tMs, config)
+    val scanning = tracked.copy(walkScanSinceMs = if (velocity == null) null else state.walkScanSinceMs ?: frame.tMs)
+    val ctx = trackerContext(scanning, config)
+    val yaw = ctx.yawAt(frame.tMs - tuning.imu.radarImuDelayMs)
+    val kept = velocity?.let { v ->
+        filtered.frame.detections.filterNot { isStaticEcho(it, v, tuning.doppler) && !isNearConfirmedTrack(it, state.tracker.tracks, frame.tMs, yaw, tuning) }
+    } ?: filtered.frame.detections
     val counters = state.counters.copy(
         implausibleTargets = state.counters.implausibleTargets + filtered.frame.implausible,
         staleTargets = state.counters.staleTargets + filtered.frame.stale,
         nearFieldTargets = state.counters.nearFieldTargets + filtered.frame.nearField,
+        clutterRejected = state.counters.clutterRejected + (filtered.frame.detections.size - kept.size),
     )
-    val step = Tracker.onFrame(state.tracker, filtered.frame, trackerContext(state, config), tuning)
-    val next = state.copy(stale = state.stale + (frame.radarId to filtered.memory), counters = withNis(counters, step, state, config))
+    val step = Tracker.onFrame(state.tracker, filtered.frame.copy(detections = kept), ctx, tuning)
+    val next = scanning.copy(stale = state.stale + (frame.radarId to filtered.memory), counters = withNis(counters, step, state, config))
         .markCorrupt(arrivalNanos, filtered.frame.implausible, tuning.status.corruptWindowMs)
     return confirmationStage(next, step, arrivalNanos)
 }

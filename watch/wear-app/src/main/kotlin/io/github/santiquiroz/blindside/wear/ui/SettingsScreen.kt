@@ -51,6 +51,7 @@ fun SettingsScreen(
         item { SettingChip("Duración de partida", gameDurationLabel(settings.gameDurationMs)) { onUpdate { it.copy(gameDurationMs = nextGameDuration(it.gameDurationMs)) } } }
         item { SettingChip("Color de contactos", contactColorLabel(settings.contactColor)) { onUpdate { it.copy(contactColor = toggledContactColor(it.contactColor)) } } }
         item { SettingChip("Brújula", yesNo(settings.compass)) { onUpdate { it.copy(compass = !it.compass) } } }
+        item { SettingChip("Filtro de fantasmas al caminar", yesNo(settings.dopplerFilter)) { onUpdate { it.copy(dopplerFilter = !it.dopplerFilter) } } }
         item { SettingChip("Vibración", usageLabel(settings.vibrationUsage)) { onUpdate { it.copy(vibrationUsage = toggledUsage(it.vibrationUsage)) } } }
         item { NavChip(VIBRATION_TEST_LABEL) { onNavigate(ROUTE_PRACTICE) } }
         DEFAULT_RADARS.forEach { radarItems(settings, it.radarId, onUpdate) }

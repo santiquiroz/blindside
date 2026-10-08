@@ -60,4 +60,9 @@ class AppSettingsTest {
     fun `the compass ring is on by default`() {
         assertEquals(true, AppSettings().compass)
     }
+
+    @Test
+    fun `the doppler filter is on by default`() {
+        assertEquals(true, AppSettings().dopplerFilter)
+    }
 }

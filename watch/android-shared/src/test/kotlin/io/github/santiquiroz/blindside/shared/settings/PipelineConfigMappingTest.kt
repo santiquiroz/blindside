@@ -53,4 +53,10 @@ class PipelineConfigMappingTest {
         assertEquals(25.0, effectiveYawDeg(nudged, RADAR_B), 1e-9)
         assertEquals(-40.0, effectiveYawDeg(nudged, RADAR_A), 1e-9)
     }
+
+    @Test
+    fun `the doppler filter setting reaches the pipeline tuning`() {
+        assertTrue(toPipelineConfig(AppSettings()).tuning.doppler.enabled)
+        assertFalse(toPipelineConfig(AppSettings(dopplerFilter = false)).tuning.doppler.enabled)
+    }
 }
