@@ -2,6 +2,7 @@ package io.github.santiquiroz.blindside.phone.tak
 
 import io.github.santiquiroz.blindside.shared.tactical.GeoPoint
 import java.io.StringReader
+import java.time.Instant
 import javax.xml.parsers.DocumentBuilderFactory
 import org.w3c.dom.Element
 import org.xml.sax.InputSource
@@ -56,6 +57,7 @@ data class CotEvent(
     val callsign: String?,
     val point: GeoPoint?,
     val linkUid: String?,
+    val staleMs: Long? = null,
 )
 
 fun parseCotEvent(xml: String): CotEvent? {
@@ -63,7 +65,7 @@ fun parseCotEvent(xml: String): CotEvent? {
     val root = parseRoot(xml) ?: return null
     val uid = attrOrNull(root, "uid") ?: return null
     val type = attrOrNull(root, "type") ?: return null
-    return CotEvent(uid, type, contactCallsign(root), eventPoint(root), linkUid(root))
+    return CotEvent(uid, type, contactCallsign(root), eventPoint(root), linkUid(root), staleMs(root))
 }
 
 private fun parseRoot(xml: String): Element? = runCatching {
@@ -92,3 +94,6 @@ private fun eventPoint(root: Element): GeoPoint? {
     val lon = point.getAttribute("lon").toDoubleOrNull() ?: return null
     return GeoPoint(lat, lon)
 }
+
+private fun staleMs(root: Element): Long? =
+    runCatching { Instant.parse(root.getAttribute("stale")).toEpochMilli() }.getOrNull()

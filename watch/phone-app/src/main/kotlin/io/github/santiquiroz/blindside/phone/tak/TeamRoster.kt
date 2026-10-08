@@ -11,7 +11,7 @@ data class TeamRoster(val entries: Map<String, RosterEntry> = emptyMap()) {
     fun with(event: CotEvent, ownCallsign: String, nowMs: Long): TeamRoster {
         val updated = if (event.type == "t-x-d-d" && event.linkUid != null) {
             entries - event.linkUid
-        } else if (accept(event, ownCallsign)) {
+        } else if (accept(event, ownCallsign, nowMs)) {
             entries + (event.uid to RosterEntry(event.callsign!!, event.point!!, nowMs))
         } else {
             entries
@@ -29,7 +29,9 @@ data class TeamRoster(val entries: Map<String, RosterEntry> = emptyMap()) {
 private fun isFresh(entry: RosterEntry, nowMs: Long): Boolean =
     nowMs - entry.receivedAtMs <= ROSTER_MAX_AGE_MS
 
-private fun accept(event: CotEvent, ownCallsign: String): Boolean {
+private fun accept(event: CotEvent, ownCallsign: String, nowMs: Long): Boolean {
+    // On connect OpenTAKServer replays the last position of players who already left; their stale time has passed.
+    if (event.staleMs != null && event.staleMs < nowMs) return false
     val callsign = event.callsign
     val point = event.point
     if (!event.type.startsWith("a-f-")) return false

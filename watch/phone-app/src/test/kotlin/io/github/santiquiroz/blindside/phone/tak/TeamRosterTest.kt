@@ -17,7 +17,8 @@ class TeamRosterTest {
         callsign: String? = "Toro",
         point: GeoPoint? = AT,
         linkUid: String? = null,
-    ) = CotEvent(uid, type, callsign, point, linkUid)
+        staleMs: Long? = null,
+    ) = CotEvent(uid, type, callsign, point, linkUid, staleMs)
 
     @Test
     fun `accepts a friendly SA event`() {
@@ -116,5 +117,13 @@ class TeamRosterTest {
         assertEquals(1, mates.size)
         assertEquals(moved, mates[0].point)
         assertEquals(0, mates[0].ageS)
+    }
+
+    @Test
+    fun `a replayed position whose stale time already passed is not a teammate`() {
+        val replayed = TeamRoster().with(event(staleMs = NOW - 1), "Santi", NOW).mates(NOW)
+        val live = TeamRoster().with(event(staleMs = NOW + 30_000), "Santi", NOW).mates(NOW)
+        assertTrue(replayed.isEmpty())
+        assertEquals(1, live.size)
     }
 }

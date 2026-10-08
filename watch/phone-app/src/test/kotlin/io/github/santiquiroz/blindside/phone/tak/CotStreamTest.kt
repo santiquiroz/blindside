@@ -96,4 +96,11 @@ class CotStreamTest {
         assertEquals("AAA", parsed?.uid)
         assertNull(parsed?.point)
     }
+
+    @Test
+    fun `parse reads the stale time`() {
+        val xml = "<event version=\"2.0\" uid=\"A\" type=\"a-f-G-U-C\" time=\"2026-10-07T23:00:00.000Z\" " +
+            "start=\"2026-10-07T23:00:00.000Z\" stale=\"2026-10-07T23:00:30.000Z\"><point lat=\"1\" lon=\"2\"/></event>"
+        assertEquals(java.time.Instant.parse("2026-10-07T23:00:30Z").toEpochMilli(), parseCotEvent(xml)!!.staleMs)
+    }
 }
