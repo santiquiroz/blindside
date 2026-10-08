@@ -21,6 +21,7 @@ from terrain_core import (
     ground_overlay_kml,
     height_from_text,
     mask_png,
+    observer_problem,
     write_kmz,
 )
 
@@ -296,9 +297,22 @@ def load_observers(path):
     except FileNotFoundError:
         print(f"error: no se encontró observers.json: {path}", file=sys.stderr)
         raise SystemExit(1)
+    except json.JSONDecodeError as exc:
+        print(f"error: {path} no es JSON válido: {exc}", file=sys.stderr)
+        raise SystemExit(1)
     if not isinstance(data, list) or not data:
         print(f"error: {path} no trae observadores", file=sys.stderr)
         raise SystemExit(1)
+    seen = set()
+    for i, obs in enumerate(data):
+        problem = observer_problem(i, obs)
+        if problem is not None:
+            print(f"error: {problem}", file=sys.stderr)
+            raise SystemExit(1)
+        if obs["slug"] in seen:
+            print(f"error: observador {i}: slug duplicado \"{obs['slug']}\"", file=sys.stderr)
+            raise SystemExit(1)
+        seen.add(obs["slug"])
     return data
 
 
@@ -307,6 +321,9 @@ def load_structures(path):
         data = load_json(path)
     except FileNotFoundError:
         print(f"error: no se encontró grg-structures.geojson: {path}", file=sys.stderr)
+        raise SystemExit(1)
+    except json.JSONDecodeError as exc:
+        print(f"error: {path} no es JSON válido: {exc}", file=sys.stderr)
         raise SystemExit(1)
     if not isinstance(data, dict) or data.get("type") != "FeatureCollection":
         print(f"error: {path} no es una FeatureCollection", file=sys.stderr)

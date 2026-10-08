@@ -42,6 +42,38 @@ def test_kmz_contains_doc_and_files(tmp_path):
     assert sorted(z.namelist()) == ["doc.kml", "files/v.png"]
 
 
+def _obs(**kw):
+    base = {"name": "Torre sur", "slug": "torre-sur", "lat": 5.1612, "lon": -75.4921, "height_m": 16.7}
+    base.update(kw)
+    return base
+
+
+def test_observer_problem_valid():
+    assert tc.observer_problem(0, _obs()) is None
+
+
+def test_observer_problem_bad_slug():
+    msg = tc.observer_problem(2, _obs(slug="a/b"))
+    assert msg is not None and "2" in msg and "a/b" in msg
+
+
+def test_observer_problem_missing_height():
+    obs = _obs()
+    del obs["height_m"]
+    msg = tc.observer_problem(1, obs)
+    assert msg is not None and "height_m" in msg
+
+
+def test_observer_problem_bool_lat():
+    msg = tc.observer_problem(0, _obs(lat=True))
+    assert msg is not None and "lat" in msg
+
+
+def test_ground_overlay_escapes_href():
+    kml = tc.ground_overlay_kml("n", "d", "files/a&b.png", 5.165, 5.157, -75.488, -75.496)
+    assert "files/a&amp;b.png" in kml
+
+
 def test_buildings_geojson_faint_tappable_cards():
     fc = {"type": "FeatureCollection", "features": [{"type": "Feature", "geometry": {"type": "Point", "coordinates": [-75.4934, 5.1594]},
           "properties": {"name": "12 Torre sur", "num": 12, "grid": "E6", "roof": "parcial", "height": "alto (sombra más larga)",

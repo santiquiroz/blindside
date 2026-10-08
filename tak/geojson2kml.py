@@ -121,7 +121,8 @@ def style_xml(props: dict, geometry_type: str) -> str:
     parts.append(f"<PolyStyle><color>{kml_color(fill, fill_op)}</color><outline>1</outline></PolyStyle>")
     if geometry_type in ("Point", "MultiPoint"):
         parts.append(f"<IconStyle><color>{kml_color(marker, 1)}</color><scale>1.1</scale><Icon><href>{_ICON_HREF}</href></Icon></IconStyle>")
-    parts.append("<LabelStyle><scale>0.9</scale></LabelStyle>")
+    label_scale = "0" if props.get("labels") is False else "0.9"
+    parts.append(f"<LabelStyle><scale>{label_scale}</scale></LabelStyle>")
     parts.append("</Style>")
     return "".join(parts)
 

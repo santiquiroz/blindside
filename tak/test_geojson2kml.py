@@ -122,6 +122,16 @@ def test_kmz_output_is_zip_with_doc_kml(tmp_path):
     ElementTree.fromstring(kml.encode("utf-8"))
 
 
+def test_labels_false_hides_label():
+    xml = style_xml({"labels": False}, "LineString")
+    assert "<LabelStyle><scale>0</scale></LabelStyle>" in xml
+
+
+def test_labels_missing_or_true_shows_label():
+    assert "<LabelStyle><scale>0.9</scale></LabelStyle>" in style_xml({}, "LineString")
+    assert "<LabelStyle><scale>0.9</scale></LabelStyle>" in style_xml({"labels": True}, "LineString")
+
+
 def test_kml_output_is_plain_text(tmp_path):
     src = tmp_path / "entrada.geojson"
     out = tmp_path / "salida.kml"

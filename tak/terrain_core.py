@@ -1,6 +1,7 @@
 """Pure terrain helpers (no GDAL): heights, grids, PNG, KMZ, building cards."""
 
 import math
+import re
 import struct
 import unicodedata
 import zipfile
@@ -12,6 +13,23 @@ ATTRIBUTION = "Elevación: Copernicus GLO-30 © DLR e.V. 2010-2014 y © Airbus D
 
 _LAT_M = 110574.0
 _LON_M = 111320.0
+_SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+
+
+def observer_problem(index, obs):
+    if not isinstance(obs, dict):
+        return f"observador {index}: no es un objeto"
+    for key in ("name", "slug", "lat", "lon", "height_m"):
+        if key not in obs:
+            return f'observador {index}: falta "{key}"'
+    slug = obs["slug"]
+    if not isinstance(slug, str) or not _SLUG_RE.match(slug):
+        return f'observador {index}: slug inválido "{slug}" (solo minúsculas, números y guiones)'
+    for key in ("lat", "lon", "height_m"):
+        val = obs[key]
+        if isinstance(val, bool) or not isinstance(val, (int, float)):
+            return f"observador {index}: {key} debe ser un número"
+    return None
 
 
 def _first_word(text):
@@ -110,7 +128,7 @@ def ground_overlay_kml(name, description, href, north, south, east, west):
         "<GroundOverlay>\n"
         f"<name>{_escape(name)}</name>\n"
         f"<description>{_escape(description)}</description>\n"
-        f"<Icon><href>{href}</href></Icon>\n"
+        f"<Icon><href>{_escape(href)}</href></Icon>\n"
         "<LatLonBox>"
         f"<north>{north}</north><south>{south}</south>"
         f"<east>{east}</east><west>{west}</west>"

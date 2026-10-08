@@ -138,11 +138,13 @@ Para que cada ATAK lo reciba solo: interfaz web → Data Packages → subir el z
 OTS_PUBLIC_HOST=<dominio> bash tak/ots-player.sh mapa      # usuario propio para el publicador; luego borrar sus paquetes del servidor
 python tak/tak-overlay.py ~/.blindside/tak-packages/mapa_CONFIG.zip campo.geojson --callsign "Mapa" --once   # prueba
 # servicio permanente dentro de WSL (arranca con OpenTAKServer):
-sudo bash tak/overlay-service.sh /mnt/c/Users/<usuario>/.blindside/tak-packages/mapa_CONFIG.zip "Mapa" /mnt/c/Users/<usuario>/.blindside/field/campo.geojson /mnt/c/Users/<usuario>/.blindside/field/juego.geojson
+sudo bash tak/overlay-service.sh /mnt/c/Users/<usuario>/.blindside/tak-packages/mapa_CONFIG.zip "Mapa" /mnt/c/Users/<usuario>/.blindside/field/campo.geojson /mnt/c/Users/<usuario>/.blindside/field/juego.geojson /mnt/c/Users/<usuario>/.blindside/field/terreno/edificios.geojson
 journalctl -u blindside-overlay -f
 ```
 
-El segundo archivo es la capa viva del juego, que Mando edita.
+El segundo archivo es la capa viva del juego, que Mando edita. El tercero son las fichas de los edificios que genera `tak/terrain.py`.
+
+Cada punto del GeoJSON puede llevar `cot_type` con un tipo 2525 (por ejemplo `a-h-G-U-C-I` o `a-u-G`): ATAK lo dibuja con ese símbolo militar en vez del marcador normal (si el tipo no es válido, se usa el marcador normal). Con `stale_minutes` (de 1 a 60) el objeto desaparece de ATAK pasados esos minutos si el overlay deja de refrescarlo.
 
 ### Terreno: elevación, visibilidad y rutas
 
@@ -168,9 +170,11 @@ El directorio del campo trae `grg-structures.geojson` y `observers.json` (nombre
 [{"name": "Torre sur", "slug": "torre-sur", "lat": 5.1612, "lon": -75.4921, "height_m": 16.7}]
 ```
 
-Cada paso también corre solo: `dem`, `contours`, `viewshed`, `deadground`, `exposure`, `stats`, `buildings`. Mismos `--field-dir` y `--out`.
+Cada paso también corre solo: `dem`, `contours`, `viewshed`, `deadground`, `exposure`, `stats`, `buildings`. `dem` tiene que correr primero porque los demás pasos leen `dsm.tif`. Mismos `--field-dir` y `--out`.
 
-Cómo llega a los jugadores: el paquete del campo v4 (armado con [`tak/datapackage.py`](../tak/datapackage.py)) lleva las cuatro fuentes de mapa (Bing, Esri, Google Hybrid, OpenTopoMap), los KMZ y el zip DTED. Mando lo entrega al conectar. El overlay publica `edificios.geojson` como tercer archivo. Mando se arranca con `--dted`, `--exposure` y `--buildings`.
+Cómo llega a los jugadores: el paquete del campo v4 (armado con [`tak/datapackage.py`](../tak/datapackage.py)) lleva las cuatro fuentes de mapa (Bing, Esri, Google Hybrid, OpenTopoMap), los KMZ y el zip DTED. Mando lo entrega al conectar. El overlay publica `terreno/edificios.geojson` como tercer archivo. Mando se arranca con `--dted`, `--exposure` y `--buildings`.
+
+Si ATAK no toma el DTED: manda `dted-cementera.zip` por chat o cópialo al teléfono, y en ATAK usa Import → Local SD → elige el zip → "Zipped DTED Directory". Compruébalo con la herramienta de perfil de elevación (Elevation Tools → Route Elevation Profile) o con la de línea de vista entre dos puntos cualesquiera.
 
 Límites honestos: modelo de superficie de 30 m. Los edificios salen suavizados y los árboles cuentan como obstáculo. Las alturas de las torres se estiman por sombra.
 
