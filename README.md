@@ -91,8 +91,8 @@ DIY "heartbeat sensors" built on the same radar already exist; see [Prior art](#
 - **Range is about 6 m,** with 120° per radar.
 - **No reliable through-wall detection.** Don't count on it to see through walls or cover. The signal does pass through a thin, dry plastic cover with no metal in it; that is how the enclosure works. We have not yet tested foliage, fabric (wet or dry) or rain. Wet or metal-coated materials in front of the radar are expected to degrade it.
 - **People standing perfectly still fade out.** The app holds their last position for a few seconds.
-- **Teammates show up too.** v1 can't tell friend from foe; that's on the roadmap.
-- **Ghosts are still possible.** Worn on a moving body the radar sees clutter, and v1 fights it rather than eliminating it. It works best when you're still or advancing slowly.
+- **The belt radar can't tell friend from foe.** A teammate within 6 m looks exactly like an opponent. With the team map (TAK) you do know whether allies are close and in which direction: they show as wedges on the watch ring and on the phone's team radar, with their distance. But teammates' GPS (±5–15 m) is not precise enough to say **which** contact within 6 m is the ally, so Blindside never tags contacts as friendly automatically: an opponent standing next to a teammate would be tagged as a friend. Identifying each contact (per-player beacons) is still on the roadmap.
+- **Ghosts are still possible.** Worn on a moving body the radar sees clutter. v1 reduces it — it compensates your turns with the belt IMUs, only confirms a contact seen in 3 of 5 windows and applies ghost rules — but does not eliminate it. It works best when you're still or advancing slowly. Only confirmed contacts reach the team map.
 - **Team contacts are ±5–10 m.** They are placed from the phone's GPS plus the direction you face.
 - **No contacts published without GPS and heading.** Without a fresh phone GPS fix or a reliable facing direction the belt publishes nothing; tactical points still go.
 - **iPhones need iTAK.** There is no Blindside app for iOS; iPhone teammates join the team map with iTAK.
