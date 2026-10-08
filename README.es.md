@@ -11,10 +11,43 @@ Una vibración distintiva en tu muñeca cuando alguien nuevo entra en tu campo d
 
 </div>
 
+<div align="center">
+<img src="docs/img/showcase-es.png" alt="Blindside: radar de equipo en el celular y aliados en el reloj" width="100%">
+</div>
+
 > [!NOTE]
 > **Estado: construido y listo para campo.** El firmware del ESP32, la app del reloj (Wear OS) y una app compañera de Android opcional ya están, validados en hardware real. Descarga los APK y el firmware instalables desde el [último release](https://github.com/santiquiroz/blindside/releases/latest). Primera meta de campo: una partida de 5 horas el 11 de octubre de 2026.
 
 ---
+
+## Funciones
+
+- **Radar de cinturón en tu muñeca.** Dos radares de cinturón fusionados en tu Galaxy Watch, con vibración izquierda / centro / derecha. Sin celular — ver [Qué hace](#qué-hace).
+- **Mapa del equipo con ATAK / iTAK.** Monta tu propio OpenTAKServer ([servidor](docs/tak-server.md)). La app del celular publica los contactos de cada cinturón como puntos **desconocidos** amarillos y tu base, spawn y objetivo como marcadores del mapa. Tu propia posición la publica ATAK/iTAK, nunca Blindside, así no apareces dos veces. Si se cae el servidor o la señal, el radar del cinturón y la vibración siguen igual.
+- **Aliados en el anillo del reloj.** Los compañeros aparecen como cuñas en el anillo de la brújula con su distancia, refrescadas cada 2 s.<br><img src="docs/img/watch-allies.png" width="180" alt="Anillo del reloj con cuñas de aliados">
+- **Radar de equipo en el celular, sin cinturón.** Con el enlace TAK prendido, la pestaña **Equipo** se vuelve un radar circular — aliados en cian, contactos del equipo en amarillo, orientados con la brújula del celular. Toca el radar para cambiar 50 / 100 / 250 m.<br><img src="docs/img/team-radar.png" width="200" alt="Radar de equipo en el celular">
+- **Avisos por vibración a 30 m.** Un contacto del equipo a 30 m o menos hace vibrar el celular (dos pulsos, aun con la pantalla apagada) y deja una notificación como "Contacto a 10 m al NE · Radar Puma 1". Como mucho un aviso por contacto cada 30 s.<br><img src="docs/img/alert.png" width="450" alt="Aviso de contacto del equipo">
+- **"Publicar mi posición" opcional.** Para compañeros sin ATAK: el celular publica tu posición cada 5 s. Déjalo apagado si usas ATAK.
+
+## Inicio rápido
+
+Descarga el firmware y los APK desde el [último release](https://github.com/santiquiroz/blindside/releases/latest).
+
+**A. Dueño del cinturón**
+1. Flashea el firmware del ESP32; instala el APK del reloj y el APK del celular.
+2. Empareja el cinturón con el reloj por Bluetooth LE.
+3. En el celular, pestaña **Equipo** → **Importar paquete (.zip)** → tu `jugadorN_CONFIG.zip` → pon un callsign único → **Conectar**.
+
+**B. Compañero con Android, sin cinturón**
+1. Instala el APK del celular.
+2. Importa tu `jugadorN_CONFIG.zip` en la pestaña **Equipo**, pon un callsign único y conecta.
+3. Pasos completos: [docs/guia-companeros.md](docs/guia-companeros.md).
+
+**C. Compañero con iPhone**
+1. Instala iTAK, importa tu paquete `_CONFIG_iTAK.zip` y pon un callsign único.
+2. Pasos completos: [docs/guia-companeros.md](docs/guia-companeros.md).
+
+Los paquetes de conexión llevan tu llave privada: el admin del servidor manda cada kit por chat privado, nunca en un grupo ni en un repo. Para montar el servidor: [docs/tak-server.md](docs/tak-server.md).
 
 ## Qué hace
 
@@ -60,6 +93,9 @@ Ya existen "sensores de latidos" caseros construidos con el mismo radar; consult
 - **Las personas que se quedan completamente quietas se desvanecen.** La aplicación retiene su última posición durante unos segundos.
 - **Los compañeros de equipo también aparecen.** La v1 no puede distinguir amigos de enemigos; eso está en la hoja de ruta.
 - **Aún pueden aparecer fantasmas.** Al llevarse en un cuerpo en movimiento, el radar capta ecos del entorno (clutter), y la v1 lucha contra esto en lugar de eliminarlo por completo. Rinde mejor cuando estás quieto o avanzas despacio.
+- **Los contactos del equipo tienen ±5–10 m.** Se ubican con el GPS del celular y la dirección hacia donde miras.
+- **Sin GPS ni rumbo no se publican contactos.** Sin un fix GPS fresco del celular o una dirección confiable el cinturón no publica nada; los puntos tácticos sí se publican.
+- **Los iPhone necesitan iTAK.** No hay app Blindside para iOS; los compañeros con iPhone entran al mapa con iTAK.
 
 ## Hardware (v1)
 
@@ -124,18 +160,6 @@ El radar B va por la matriz de GPIO porque los pines por defecto del UART1 (9/10
 
 El diseño completo (en español) está en [docs/superpowers/specs/2026-09-30-blindside-v1-design.md](docs/superpowers/specs/2026-09-30-blindside-v1-design.md).
 
-## Mapa del equipo (ATAK / iTAK)
-
-Blindside puede compartir lo que ve el cinturón en el mapa TAK del equipo. Monta tu propio [OpenTAKServer](https://github.com/brian7704/OpenTAKServer) (guía: [docs/tak-server.md](docs/tak-server.md)), dale a cada jugador su paquete de conexión e importa ese mismo paquete en la pestaña **Equipo** de la app del celular. Con el enlace prendido:
-
-- los contactos del radar aparecen en el mapa de todos como puntos **desconocidos** (amarillos), porque el radar no distingue a un compañero de un enemigo; se ubican con el GPS del celular y la dirección hacia donde miras, así que cuenta con 5-10 m de error;
-- tu base, spawn y objetivo se publican como marcadores del mapa;
-- los compañeros aparecen en el reloj como cuñas en el anillo de la brújula, con su distancia.
-
-**Compañeros sin cinturón** también usan la app del celular: con el enlace prendido, la pestaña Equipo se vuelve un radar de equipo (aliados y contactos que publica cada cinturón, orientados con la brújula del celular) y el celular vibra cuando un contacto del equipo está a 30 m o menos. Los iPhone entran con iTAK.
-
-Tu propia posición la publica ATAK/iTAK, no Blindside. Si se cae el servidor o la señal, el radar y la vibración siguen igual que siempre.
-
 ## Hoja de ruta
 
 - **v1:**
@@ -185,8 +209,10 @@ docs/
   research/reports/      informe de investigación (español)
   research/research_notes/  notas con fuentes: LD2450, biomecánica, Wear OS/BLE,
                             algoritmos de seguimiento, antecedentes y reglas, ideas de UX
+  img/                   imágenes del README (generadas por docs/img/make_showcase.py desde docs/img/raw/)
 firmware/                (próximamente) PlatformIO + NimBLE-Arduino
 watch/                   (próximamente) radar-core (Kotlin puro) + wear-app (Wear OS)
+tak/                     scripts de servidor (ots-player.sh, windows-network.ps1, wsl-keepalive.vbs) + tak-probe.py
 ```
 
 ## Juego limpio, aspectos legales y seguridad

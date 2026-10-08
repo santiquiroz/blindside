@@ -11,10 +11,43 @@ A distinct buzz on your wrist when someone new moves into view.
 
 </div>
 
+<div align="center">
+<img src="docs/img/showcase.png" alt="Blindside showcase: phone team radar and watch allies" width="100%">
+</div>
+
 > [!NOTE]
 > **Status: built and field-ready.** The ESP32 firmware, the Wear OS watch app and an optional Android phone companion are all here and validated on real hardware. Grab the installable APKs and firmware from the [latest release](https://github.com/santiquiroz/blindside/releases/latest). First field target: a 5-hour game on 11 October 2026.
 
 ---
+
+## Features
+
+- **Belt radar on your wrist.** Two belt radars fused on your Galaxy Watch, with a left / center / right buzz. No phone needed — see [What it does](#what-it-does).
+- **Team map with ATAK / iTAK.** Run your own OpenTAKServer ([server setup](docs/tak-server.md)). The phone app publishes each belt's contacts as yellow **unknown** points and your base, spawn and objective as map markers. Your own position comes from ATAK/iTAK, never from Blindside, so you don't appear twice. If the server or the signal drops, the belt radar and the wrist buzz keep working.
+- **Allies on the watch ring.** Teammates appear as wedges on the compass ring with their distance, refreshed every 2 s.<br><img src="docs/img/watch-allies.png" width="180" alt="Watch ring with ally wedges">
+- **Team radar on the phone, no belt needed.** With the TAK link on, the **Equipo** (Team) tab turns into a circular radar — allies in cyan, team contacts in yellow, oriented with the phone compass. Tap the radar to switch 50 / 100 / 250 m.<br><img src="docs/img/team-radar.png" width="200" alt="Team radar on the phone">
+- **30 m vibration alerts.** A team contact within 30 m buzzes the phone (two pulses, even with the screen off) and leaves a notification such as "Contacto a 10 m al NE · Radar Puma 1". At most one alert per contact every 30 s.<br><img src="docs/img/alert.png" width="450" alt="Team contact vibration alert">
+- **Optional "Publish my position".** For teammates without ATAK: the phone publishes your position every 5 s. Leave it off if you run ATAK.
+
+## Quick start
+
+Get the firmware and the APKs from the [latest release](https://github.com/santiquiroz/blindside/releases/latest).
+
+**A. Belt owner**
+1. Flash the ESP32 firmware; install the watch APK and the phone APK.
+2. Pair the belt with the watch over Bluetooth LE.
+3. On the phone, **Equipo** (Team) tab → **Importar paquete (.zip)** → your `jugadorN_CONFIG.zip` → set a unique callsign → **Connect**.
+
+**B. Android teammate, no belt**
+1. Install the phone APK.
+2. Import your `jugadorN_CONFIG.zip` in the **Equipo** (Team) tab, set a unique callsign, connect.
+3. Full steps: [docs/guia-companeros.md](docs/guia-companeros.md).
+
+**C. iPhone teammate**
+1. Install iTAK, import your `_CONFIG_iTAK.zip` package, set a unique callsign.
+2. Full steps: [docs/guia-companeros.md](docs/guia-companeros.md).
+
+Connection packages carry your private key: the server admin sends each kit privately, never in a group or a repo. To run the server: [docs/tak-server.md](docs/tak-server.md).
 
 ## What it does
 
@@ -60,6 +93,9 @@ DIY "heartbeat sensors" built on the same radar already exist; see [Prior art](#
 - **People standing perfectly still fade out.** The app holds their last position for a few seconds.
 - **Teammates show up too.** v1 can't tell friend from foe; that's on the roadmap.
 - **Ghosts are still possible.** Worn on a moving body the radar sees clutter, and v1 fights it rather than eliminating it. It works best when you're still or advancing slowly.
+- **Team contacts are ±5–10 m.** They are placed from the phone's GPS plus the direction you face.
+- **No contacts published without GPS and heading.** Without a fresh phone GPS fix or a reliable facing direction the belt publishes nothing; tactical points still go.
+- **iPhones need iTAK.** There is no Blindside app for iOS; iPhone teammates join the team map with iTAK.
 
 ## Hardware (v1)
 
@@ -124,18 +160,6 @@ Radar B rides the GPIO matrix because UART1's default pins (9/10) belong to the 
 
 The full design (in Spanish) is in [docs/superpowers/specs/2026-09-30-blindside-v1-design.md](docs/superpowers/specs/2026-09-30-blindside-v1-design.md).
 
-## Team map (ATAK / iTAK)
-
-Blindside can share what the belt sees on the team's TAK map. Run your own [OpenTAKServer](https://github.com/brian7704/OpenTAKServer) (guide: [docs/tak-server.md](docs/tak-server.md)), give every player a connection package, and import the same package in the phone app's **Team** tab. While the link is on:
-
-- radar contacts appear on everyone's map as **unknown** (yellow) points, because the radar cannot tell a teammate from an enemy; they are placed from the phone's GPS plus the direction you face, so expect 5-10 m of error;
-- your base, spawn and objective marks are published as map markers;
-- teammates show up on the watch as wedges on the compass ring, with their distance.
-
-**Teammates without a belt** can use the phone app too: once connected, the Team tab becomes a team radar (allies plus the contacts every belt publishes, oriented with the phone's compass) and the phone vibrates when a team contact is within 30 m. iPhone users join with iTAK.
-
-Your own position is published by ATAK/iTAK, not by Blindside. If the server or the signal drops, the radar and the vibration keep working exactly as before.
-
 ## Roadmap
 
 - **v1:**
@@ -185,8 +209,10 @@ docs/
   research/reports/      research report (Spanish)
   research/research_notes/  sourced notes: LD2450, biomechanics, Wear OS/BLE,
                             tracking algorithms, prior art & rules, UX ideas
+  img/                   README showcase images (built by docs/img/make_showcase.py from docs/img/raw/)
 firmware/                (coming) PlatformIO + NimBLE-Arduino
 watch/                   (coming) radar-core (pure Kotlin) + wear-app (Wear OS)
+tak/                     server scripts (ots-player.sh, windows-network.ps1, wsl-keepalive.vbs) + tak-probe.py
 ```
 
 ## Fair play, legal and safety
