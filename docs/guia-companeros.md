@@ -23,9 +23,9 @@ Cada paquete lleva **tu certificado personal**. No lo reenvíes ni lo subas a ni
 
 ### Blindside (radar de equipo y avisos por vibración)
 
-1. Descarga `blindside-celular-v1.1.0.apk` de la [última versión](https://github.com/santiquiroz/blindside/releases/latest) y ábrelo. Android pedirá permitir "instalar apps desconocidas" para el navegador o WhatsApp: acéptalo solo para esta instalación.
+1. Descarga el APK `blindside-celular-v….apk` de la [última versión](https://github.com/santiquiroz/blindside/releases/latest) y ábrelo. Android pedirá permitir "instalar apps desconocidas" para el navegador o WhatsApp: acéptalo solo para esta instalación.
 2. Abre Blindside → pestaña **Equipo** → **Importar paquete (.zip)** → elige `<usuario>_CONFIG.zip` (del kit descomprimido).
-3. Escribe tu **callsign** (único) y toca **Conectar al servidor**. Acepta ubicación y notificaciones.
+3. Escribe tu **callsign** (único) y toca **Conectar al servidor**. Acepta ubicación y notificaciones. La app también pide permiso de Bluetooth ("Dispositivos cercanos"/publicidad) para que el reloj del dueño del cinturón te reconozca como aliado a pocos metros; es opcional: si lo niegas igual apareces por el mapa del equipo.
 4. Arriba aparece el **radar de equipo**: aliados en cian, contactos del radar en amarillo. Toca el radar para cambiar la escala (50/100/250 m).
 5. Si un contacto queda a 30 m o menos, el celular **vibra** aunque esté en el bolsillo.
 6. Si **no** usas ATAK, activa **"Publicar mi posición"** para que el equipo te vea. Si usas ATAK, déjalo apagado (aparecerías dos veces).
