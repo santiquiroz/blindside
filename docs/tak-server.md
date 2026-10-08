@@ -170,7 +170,7 @@ El directorio del campo trae `grg-structures.geojson` y `observers.json` (nombre
 [{"name": "Torre sur", "slug": "torre-sur", "lat": 5.1612, "lon": -75.4921, "height_m": 16.7}]
 ```
 
-Cada paso también corre solo: `dem`, `contours`, `viewshed`, `deadground`, `exposure`, `stats`, `buildings`. `dem` tiene que correr primero porque los demás pasos leen `dsm.tif`. Mismos `--field-dir` y `--out`.
+Cada paso también corre solo: `dem`, `contours`, `viewshed`, `deadground`, `exposure`, `stats`, `buildings`. `dem` tiene que correr primero porque `contours`, `viewshed`, `deadground`, `exposure` y `stats` leen `dsm.tif`. Mismos `--field-dir` y `--out`.
 
 Cómo llega a los jugadores: el paquete del campo v4 (armado con [`tak/datapackage.py`](../tak/datapackage.py)) lleva las cuatro fuentes de mapa (Bing, Esri, Google Hybrid, OpenTopoMap), los KMZ y el zip DTED. Mando lo entrega al conectar. El overlay publica `terreno/edificios.geojson` como tercer archivo. Mando se arranca con `--dted`, `--exposure` y `--buildings`.
 
