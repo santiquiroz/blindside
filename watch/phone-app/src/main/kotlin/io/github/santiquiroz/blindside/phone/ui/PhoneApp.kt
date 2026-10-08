@@ -4,7 +4,9 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -12,11 +14,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.santiquiroz.blindside.phone.PhoneDeps
 import io.github.santiquiroz.blindside.phone.bridge.WatchStatusStore
@@ -36,18 +40,21 @@ import io.github.santiquiroz.blindside.phone.settings.PhonePrefs
 import io.github.santiquiroz.blindside.phone.settings.linkSupportAfterInfo
 import io.github.santiquiroz.blindside.phone.ui.belt.BeltTab
 import io.github.santiquiroz.blindside.phone.ui.common.ReportSceneVisibility
+import io.github.santiquiroz.blindside.phone.ui.common.UpdateBanner
 import io.github.santiquiroz.blindside.phone.ui.radar.RadarTab
 import io.github.santiquiroz.blindside.phone.ui.recordings.RecordingsTab
 import io.github.santiquiroz.blindside.phone.ui.team.TeamTab
 import io.github.santiquiroz.blindside.phone.ui.theme.rememberMotionDurationMs
 import io.github.santiquiroz.blindside.phone.ui.viewer.ViewerTab
 import io.github.santiquiroz.blindside.phone.ui.viewer.rememberAnalysisCache
+import io.github.santiquiroz.blindside.phone.update.UpdateStore
 import io.github.santiquiroz.blindside.phone.viewer.AnalysisCache
 import io.github.santiquiroz.blindside.shared.permissions.bluetoothGranted
 import io.github.santiquiroz.blindside.shared.session.SessionStore
 import io.github.santiquiroz.blindside.shared.session.activeRecordingName
 import io.github.santiquiroz.blindside.shared.settings.AppSettings
 import io.github.santiquiroz.blindside.shared.settings.adoptingNewer
+import kotlinx.coroutines.launch
 
 private const val TAB_FADE_MS = 200
 private val PHONE_NAV_SAVER = listSaver<PhoneNav, String>(save = { navToStrings(it) }, restore = { navFromStrings(it) })
@@ -59,16 +66,33 @@ fun PhoneApp(deps: PhoneDeps) {
     val actions = rememberPhoneActions(deps, onBluetoothBlocked = { bluetoothBlocked = it })
     var nav by rememberSaveable(stateSaver = PHONE_NAV_SAVER) { mutableStateOf(PhoneNav()) }
     val analyses = rememberAnalysisCache()
+    val updateState by UpdateStore.state.collectAsStateWithLifecycle()
+    val updateScope = rememberCoroutineScope()
     ReportSceneVisibility(sceneWanted(nav.tab))
     RememberLinkSupport(deps, state.phone.infoJson)
     BridgeWhileOpen(deps)
     AutoStartOnOpen(deps, actions.startRadar)
+    UpdateCheckOnStart(deps)
     BackHandler(enabled = backFrom(nav) != null) { backFrom(nav)?.let { nav = it } }
     Scaffold(bottomBar = { PhoneNavigationBar(nav.tab) { nav = selectTab(nav, it) } }) { padding ->
-        Box(Modifier.fillMaxSize().padding(padding)) {
-            TabContent(nav, state, actions, deps, analyses) { nav = it }
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            UpdateBanner(
+                state = updateState,
+                onUpdate = { info -> updateScope.launch { deps.updateInstaller.downloadAndInstall(info) } },
+                onDismiss = { updateScope.launch { deps.updateChecker.dismiss() } },
+                onRetry = { info -> updateScope.launch { deps.updateInstaller.downloadAndInstall(info) } },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 8.dp),
+            )
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                TabContent(nav, state, actions, deps, analyses) { nav = it }
+            }
         }
     }
+}
+
+@Composable
+private fun UpdateCheckOnStart(deps: PhoneDeps) {
+    LaunchedEffect(Unit) { deps.updateChecker.check() }
 }
 
 @Composable
@@ -95,7 +119,7 @@ private fun TabContent(nav: PhoneNav, state: PhoneUiState, actions: PhoneActions
                 onDeleted = { onNav(afterDelete(nav, it)) },
             )
             PhoneTab.VIEWER -> ViewerTab(nav.viewing, deps.recordings, analyses, onPickRecording = { onNav(selectTab(nav, PhoneTab.RECORDINGS)) })
-            PhoneTab.BELT -> BeltTab(state, actions, deps.bridge)
+            PhoneTab.BELT -> BeltTab(state, actions, deps.bridge, deps.updateChecker)
             PhoneTab.TEAM -> TeamTab()
         }
     }
