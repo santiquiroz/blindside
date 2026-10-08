@@ -50,6 +50,11 @@ def _color(props, key, default):
     return v
 
 
+def _labels(props):
+    # A big zone (a whole slope) repeats its name along every edge; "labels": false keeps the map readable.
+    return "false" if props.get("labels") is False else "true"
+
+
 def argb_int(hex_rgb: str, opacity: float) -> int:
     try:
         o = float(opacity)
@@ -185,7 +190,7 @@ def feature_event(feature: dict, uid: str, now: datetime, stale_s: int) -> str |
             f'<point lat="{mlat:.7f}" lon="{mlon:.7f}" hae="9999999.0" ce="9999999.0" le="9999999.0"/>'
             + D_OPEN + links
             + f'<strokeColor value="{sargb}"/><strokeWeight value="{w:.1f}"/><fillColor value="{fargb}"/>'
-            + f'<contact callsign="{_esc(name)}"/>{remarks}<archive/><labels_on value="true"/>' + D_CLOSE + "</event>"
+            + f'<contact callsign="{_esc(name)}"/>{remarks}<archive/><labels_on value="{_labels(props)}"/>' + D_CLOSE + "</event>"
         )
         return head.replace('type="TYPE"', 'type="u-d-f"') + body
     return None

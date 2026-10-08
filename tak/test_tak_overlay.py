@@ -174,3 +174,18 @@ def test_load_features_skip_and_invalid(tmp_path):
     not_fc.write_text(json.dumps({"type": "Feature"}), encoding="utf-8")
     with pytest.raises(ValueError):
         overlay.load_features(not_fc, set())
+
+
+def test_polygon_labels_can_be_turned_off():
+    import xml.etree.ElementTree as ET
+    from datetime import datetime, timezone
+
+    now = datetime(2026, 10, 10, 21, 0, tzinfo=timezone.utc)
+    ring = [[-75.49, 5.16], [-75.48, 5.16], [-75.48, 5.17], [-75.49, 5.16]]
+    hidden = {"type": "Feature", "properties": {"name": "Ladera", "labels": False},
+              "geometry": {"type": "Polygon", "coordinates": [ring]}}
+    shown = {"type": "Feature", "properties": {"name": "Bloque"},
+             "geometry": {"type": "Polygon", "coordinates": [ring]}}
+    for feature, expected in ((hidden, "false"), (shown, "true")):
+        root = ET.fromstring(overlay.feature_event(feature, "u1", now, 60))
+        assert root.find("detail/labels_on").get("value") == expected
