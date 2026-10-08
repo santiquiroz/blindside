@@ -144,6 +144,38 @@ journalctl -u blindside-overlay -f
 
 El segundo archivo es la capa viva del juego, que Mando edita.
 
+### Terreno: elevación, visibilidad y rutas
+
+[`tak/terrain.py`](../tak/terrain.py) arma la inteligencia del terreno desde el modelo Copernicus GLO-30. Corre en WSL con GDAL. Produce:
+
+- `curvas-5m.kmz`: curvas cada 5 m. Maestras cada 25 m, más gruesas y con cota.
+- `visible-torre-sur.kmz`, `visible-torre-silos.kmz`, `visible-torre-oeste.kmz`: en rojo, lo que ve cada torre.
+- `zona-muerta.kmz`: en verde, lo que no ve ninguna torre.
+- `dted-cementera.zip`: elevación DTED2 de 30 m. Activa la línea de vista nativa de ATAK.
+- `exposure.json`: rejilla de 10 m con cuántas torres ven cada celda. La usa Mando para las rutas cubiertas.
+- `edificios.geojson`: fichas tocables de los 23 edificios. Contorno casi invisible, sin etiquetas. Al tocar uno muestra nombre, cuadro, techo, altura, cobertura y qué parte del campo ve.
+
+Regenerar (dentro de WSL):
+
+```bash
+sudo apt install gdal-bin python3-gdal python3-numpy
+python3 tak/terrain.py build --field-dir /mnt/c/Users/<usuario>/.blindside/field --out /mnt/c/Users/<usuario>/.blindside/field/terreno
+```
+
+El directorio del campo trae `grg-structures.geojson` y `observers.json` (nombre, slug, posición y altura de cada torre):
+
+```json
+[{"name": "Torre sur", "slug": "torre-sur", "lat": 5.1612, "lon": -75.4921, "height_m": 16.7}]
+```
+
+Cada paso también corre solo: `dem`, `contours`, `viewshed`, `deadground`, `exposure`, `stats`, `buildings`. Mismos `--field-dir` y `--out`.
+
+Cómo llega a los jugadores: el paquete del campo v4 (armado con [`tak/datapackage.py`](../tak/datapackage.py)) lleva las cuatro fuentes de mapa (Bing, Esri, Google Hybrid, OpenTopoMap), los KMZ y el zip DTED. Mando lo entrega al conectar. El overlay publica `edificios.geojson` como tercer archivo. Mando se arranca con `--dted`, `--exposure` y `--buildings`.
+
+Límites honestos: modelo de superficie de 30 m. Los edificios salen suavizados y los árboles cuentan como obstáculo. Las alturas de las torres se estiman por sombra.
+
+Atribución: "Elevación: Copernicus GLO-30 © DLR e.V. 2010-2014 y © Airbus Defence and Space GmbH 2014-2018, provisto por la ESA (Copernicus)." Las teselas de Google y OpenTopoMap las pide cada celular bajo sus propios términos.
+
 ### Bot del servidor (tak-mando)
 
 [tak-mando](https://github.com/santiquiroz/tak-mando) es un bot que se conecta como otro cliente ("Mando") y usa el mismo GeoJSON:
@@ -158,6 +190,8 @@ Se instala como servicio dentro de WSL con un usuario propio (por ejemplo `mando
 #### Mando con IA
 
 Escríbele a Mando por mensaje directo en lenguaje normal. Ejemplos: "marca un punto de reunión EXFIL ALFA en E5", "¿qué hay en D6?", "¿dónde está Recon?", "sitrep", "BRAVO es nuestro", "en 20 min avisa que cierra el objetivo". En All Chat solo responde si el mensaje empieza con "Mando,". Los comandos con ! siguen igual y funcionan aunque la IA esté caída.
+
+Terreno: "¿me ven desde la torre sur si estoy en D7?" calcula la línea de vista. "contacto, 3 enemigos en E6" lo dice cualquier jugador: pone un símbolo militar, avisa a todos y se borra solo a los 10 minutos. "ruta cubierta de la llegada a la nave central" dibuja una línea que evita lo que ven las torres.
 
 Quién edita el mapa: los autorizados escriben directo. Lo que pida cualquier otro queda como propuesta numerada (naranja, carpeta Propuestas). Los autorizados reciben un mensaje que termina en "#N → responde ok N o no N". Un autorizado agrega a otro con `!autorizar <callsign>` (y lo quita con `!desautorizar`). "deshacer" revierte tu último cambio.
 
