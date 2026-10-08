@@ -30,6 +30,8 @@ Cada paquete lleva **tu certificado personal**. No lo reenvíes ni lo subas a ni
 5. Si un contacto queda a 30 m o menos, el celular **vibra** aunque esté en el bolsillo.
 6. Si **no** usas ATAK, activa **"Publicar mi posición"** para que el equipo te vea. Si usas ATAK, déjalo apagado (aparecerías dos veces).
 
+7. **Actualizaciones:** cuando salga una versión nueva, la app muestra un aviso arriba: toca **Actualizar**, acepta el instalador de Android (la primera vez pide permitir instalar desde Blindside; si Play Protect pregunta, elige instalar). También puedes buscar a mano en **Cinturón → Versión**.
+
 ### ATAK (mapa completo, opcional)
 
 1. Instala **ATAK-CIV** desde Google Play.
