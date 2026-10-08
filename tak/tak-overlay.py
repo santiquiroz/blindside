@@ -238,6 +238,45 @@ def load_features(path: Path, skip_folders: set[str]) -> list[dict]:
     return out
 
 
+def latest_mtime(paths) -> float:
+    latest = 0.0
+    for p in paths:
+        try:
+            m = Path(p).stat().st_mtime
+        except OSError:
+            continue
+        if m > latest:
+            latest = m
+    return latest
+
+
+def wait_for_change(paths, period, poll=2.0, sleep=time.sleep, mtime=latest_mtime) -> bool:
+    start = mtime(paths)
+    waited = 0
+    while waited < period:
+        step = min(poll, period - waited)
+        sleep(step)
+        waited += step
+        if mtime(paths) != start:
+            return True
+    return False
+
+
+def load_all(paths, skip: set[str], previous: dict) -> tuple[list[dict], dict]:
+    all_feats = []
+    by_path = {}
+    for p in paths:
+        key = str(p)
+        try:
+            feats = load_features(p, skip)
+        except Exception as e:
+            print(f"aviso: no se pudo leer {p}: {e}, se mantiene la versión anterior", flush=True)
+            feats = previous.get(key, [])
+        by_path[key] = feats
+        all_feats.extend(feats)
+    return all_feats, by_path
+
+
 def plan_cycle(features, previous_uids: set[str], prefix: str, now: datetime, stale_s: int) -> tuple[list[str], set[str]]:
     events = []
     current = set()
@@ -265,7 +304,7 @@ def _discard(sock):
 def main(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("package")
-    parser.add_argument("geojson")
+    parser.add_argument("geojson", nargs="+")
     parser.add_argument("--host")
     parser.add_argument("--port", type=int)
     parser.add_argument("--callsign", default="Mapa")
@@ -278,7 +317,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
     skip = set(args.skip_folder) if args.skip_folder else {"Curvas de nivel (10 m)"}
     stale_s = int(args.stale_hours * 3600)
-    geo_path = Path(args.geojson)
+    geo_paths = [Path(g) for g in args.geojson]
     prefix = args.prefix
     callsign = args.callsign
     period = args.period
@@ -291,11 +330,7 @@ def main(argv=None):
         try:
             now = datetime.now(timezone.utc)
             sock.sendall(identity_event(f"{prefix}-identity", callsign, now).encode("utf-8"))
-            try:
-                features = load_features(geo_path, skip)
-            except Exception as e:
-                print(f"aviso: no se pudo leer {geo_path}: {e}", flush=True)
-                features = []
+            features, _by_path = load_all(geo_paths, skip, {})
             events, _current = plan_cycle(features, set(), prefix, now, stale_s)
             for ev in events:
                 sock.sendall(ev.encode("utf-8"))
@@ -311,6 +346,7 @@ def main(argv=None):
                 pass
         return 0
     features = []
+    by_path = {}
     previous = set()
     backoff = 5
     try:
@@ -328,10 +364,7 @@ def main(argv=None):
                 threading.Thread(target=_discard, args=(sock,), daemon=True).start()
                 while True:
                     now = datetime.now(timezone.utc)
-                    try:
-                        features = load_features(geo_path, skip)
-                    except Exception as e:
-                        print(f"aviso: no se pudo leer {geo_path}: {e}, se mantiene la versión anterior", flush=True)
+                    features, by_path = load_all(geo_paths, skip, by_path)
                     events, current = plan_cycle(features, previous, prefix, now, stale_s)
                     deleted = len(previous - current)
                     sock.sendall(identity_event(f"{prefix}-identity", callsign, now).encode("utf-8"))
@@ -341,7 +374,7 @@ def main(argv=None):
                     print(f"{time.strftime('%H:%M:%S')} enviados {sent} objetos, {deleted} borrados", flush=True)
                     previous = current
                     backoff = 5
-                    time.sleep(period)
+                    wait_for_change(geo_paths, period)
             except KeyboardInterrupt:
                 try:
                     sock.close()

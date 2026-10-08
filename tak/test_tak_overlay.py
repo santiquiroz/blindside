@@ -189,3 +189,34 @@ def test_polygon_labels_can_be_turned_off():
     for feature, expected in ((hidden, "false"), (shown, "true")):
         root = ET.fromstring(overlay.feature_event(feature, "u1", now, 60))
         assert root.find("detail/labels_on").get("value") == expected
+
+
+def test_latest_mtime_missing_counts_zero(tmp_path):
+    a = tmp_path / "a.geojson"
+    a.write_text("{}", encoding="utf-8")
+    assert overlay.latest_mtime([a, tmp_path / "nope.geojson"]) == a.stat().st_mtime
+
+
+def test_wait_for_change_returns_early():
+    values = iter([1.0, 1.0, 2.0])
+    slept = []
+    changed = overlay.wait_for_change(["x"], period=10, poll=2, sleep=slept.append, mtime=lambda p: next(values))
+    assert changed is True and slept == [2, 2]
+
+
+def test_wait_for_change_times_out():
+    slept = []
+    changed = overlay.wait_for_change(["x"], period=5, poll=2, sleep=slept.append, mtime=lambda p: 1.0)
+    assert changed is False and sum(slept) >= 5
+
+
+def test_load_all_keeps_previous_on_broken_file(tmp_path):
+    good = tmp_path / "a.geojson"
+    bad = tmp_path / "b.geojson"
+    feat = {"type": "Feature", "properties": {"name": "P", "id": "j-1"}, "geometry": {"type": "Point", "coordinates": [-75.49, 5.16]}}
+    good.write_text(json.dumps({"type": "FeatureCollection", "features": [feat]}), encoding="utf-8")
+    bad.write_text("{roto", encoding="utf-8")
+    prev = {str(bad): [dict(feat, properties={"name": "Q", "id": "j-2"})]}
+    feats, by_path = overlay.load_all([good, bad], set(), prev)
+    assert sorted(f["properties"]["id"] for f in feats) == ["j-1", "j-2"]
+    assert by_path[str(bad)] == prev[str(bad)]
