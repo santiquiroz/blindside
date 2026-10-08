@@ -45,6 +45,12 @@ fun markerEvent(uid: String, callsign: String, at: GeoPoint, argb: Int, nowMs: L
 fun pingEvent(uid: String, nowMs: Long): String =
     eventHeader(uid, "t-x-c-t", "h-g-i-g-o", nowMs, nowMs + 20_000) + ZERO_POINT + "<detail/></event>"
 
+fun selfEvent(uid: String, callsign: String, at: GeoPoint, ceM: Double, nowMs: Long): String =
+    eventHeader(uid, "a-f-G-U-C", "m-g", nowMs, nowMs + 30_000) +
+        pointTag(at.latDeg, at.lonDeg, formatCe(ceM)) +
+        "<detail><contact callsign=\"${xmlAttr(callsign)}\"/>" +
+        "<takv device=\"Blindside\" platform=\"Blindside\" os=\"Android\" version=\"1\"/></detail></event>"
+
 private const val ZERO_POINT =
     "<point lat=\"0.0\" lon=\"0.0\" hae=\"9999999.0\" ce=\"9999999.0\" le=\"9999999.0\"/>"
 
