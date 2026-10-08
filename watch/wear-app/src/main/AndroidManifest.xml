@@ -22,7 +22,8 @@
 
     <application
         android:allowBackup="false"
-        android:icon="@drawable/ic_radar"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:label="Blindside"
         android:theme="@android:style/Theme.DeviceDefault">
 

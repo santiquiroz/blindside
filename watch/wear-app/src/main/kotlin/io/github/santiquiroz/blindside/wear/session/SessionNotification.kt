@@ -24,7 +24,7 @@ object SessionNotification {
     fun build(context: Context, status: String): Notification {
         val openApp = openAppIntent(context)
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_radar)
+            .setSmallIcon(R.drawable.ic_stat_blindside)
             .setContentTitle("Blindside")
             .setContentText(status)
             .setCategory(NotificationCompat.CATEGORY_WORKOUT)

@@ -251,7 +251,7 @@ class TakLinkService : Service() {
     private fun postAlert(alert: ProximityAlert) {
         val manager = getSystemService(NotificationManager::class.java) ?: return
         val notification = NotificationCompat.Builder(this, TakLinkNotification.ALERT_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_radar)
+            .setSmallIcon(R.drawable.ic_stat_blindside)
             .setContentTitle("Blindside")
             .setContentText(alertText(alert))
             .setAutoCancel(true)
@@ -315,7 +315,7 @@ private object TakLinkNotification {
     }
 
     fun build(context: Context, status: String): Notification = NotificationCompat.Builder(context, CHANNEL_ID)
-        .setSmallIcon(R.drawable.ic_radar)
+        .setSmallIcon(R.drawable.ic_stat_blindside)
         .setContentTitle("Enlace TAK")
         .setContentText(status)
         .setOngoing(true)

@@ -21,7 +21,7 @@ object PhoneNotification {
     }
 
     fun build(context: Context, status: String): Notification = NotificationCompat.Builder(context, CHANNEL_ID)
-        .setSmallIcon(R.drawable.ic_radar)
+        .setSmallIcon(R.drawable.ic_stat_blindside)
         .setContentTitle("Blindside")
         .setContentText(status)
         .setOngoing(true)

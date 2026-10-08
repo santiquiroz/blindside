@@ -1,0 +1,27 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Outer ring -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2"
+        android:pathData="M12,3a9,9 0 1,1 -0.01,0Z" />
+    <!-- Sweep hand -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2.2"
+        android:strokeLineCap="round"
+        android:pathData="M12,12L18.4,5.6" />
+    <!-- Contact dot on the ring -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M5.64,16.56a1.8,1.8 0 1,1 -0.01,0Z" />
+    <!-- Player triangle at the center -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,8L15,14L9,14Z" />
+</vector>
