@@ -35,4 +35,9 @@ class WarmFixPolicyTest {
     fun `no fix ever and no failure warms the provider`() {
         assertTrue(shouldWarmFix(lastFixAgeMs = null, lastFailedAtMs = null, nowMs = nowMs))
     }
+
+    @Test
+    fun `a fresh phone fix skips the warm-up even with no watch fix`() {
+        assertFalse(shouldWarmFix(lastFixAgeMs = null, lastFailedAtMs = null, nowMs = nowMs, phoneFixFresh = true))
+    }
 }

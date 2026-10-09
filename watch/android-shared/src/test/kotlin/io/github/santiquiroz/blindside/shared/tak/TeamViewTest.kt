@@ -3,6 +3,7 @@ package io.github.santiquiroz.blindside.shared.tak
 import io.github.santiquiroz.blindside.shared.tactical.GeoPoint
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -54,6 +55,17 @@ class TeamViewTest {
     fun `a null self falls back to the watch fix`() {
         val team = TeamUpdate(null, emptyList())
         assertEquals(watchFix, hereOf(team, 10_000L, 11_000L, watchFix))
+    }
+
+    @Test
+    fun `phoneFix returns the point only when the team fix is fresh`() {
+        val self = GeoPoint(1.0, 2.0)
+        val team = TeamUpdate(GeoFix(self, 5.0), emptyList())
+        assertEquals(self, phoneFix(team, 10_000L, 11_000L))
+        assertNull(phoneFix(team, 0L, 16_000L))
+        assertNull(phoneFix(team, null, 11_000L))
+        assertNull(phoneFix(TeamUpdate(null, emptyList()), 10_000L, 11_000L))
+        assertNull(phoneFix(null, 10_000L, 11_000L))
     }
 
     @Test

@@ -88,6 +88,7 @@ import io.github.santiquiroz.blindside.shared.tak.TeamUpdate
 import io.github.santiquiroz.blindside.shared.tak.hereOf
 import io.github.santiquiroz.blindside.shared.tak.likelyAllyIdsOf
 import io.github.santiquiroz.blindside.shared.tak.mateMarks
+import io.github.santiquiroz.blindside.shared.tak.phoneFix
 import io.github.santiquiroz.blindside.shared.tak.teamLinkActive
 import io.github.santiquiroz.blindside.shared.theme.BlindsideColors
 import io.github.santiquiroz.blindside.shared.theme.BlindsideFonts
@@ -142,7 +143,9 @@ fun RadarScreen(
     val compassWarning = rememberCompassWarning(compass, compassOn).value
     val bandPx = with(LocalDensity.current) { COMPASS_BAND.toPx() }
     val measurer = rememberTextMeasurer(cacheSize = TEXT_LAYOUT_CACHE_SIZE)
-    val lastFix = rememberLastFix()
+    val latestSession by rememberUpdatedState(session)
+    val phoneFix = remember { { phoneFix(latestSession.team, latestSession.teamAtMs, System.currentTimeMillis()) } }
+    val lastFix = rememberLastFix(phoneFix)
     val watchHere by rememberHere(lastFix, compassOn)
     val nowMs = wallClockMs(refreshEverySecond = compassOn)
     val here = hereOf(session.team, session.teamAtMs, nowMs, watchHere)
@@ -151,7 +154,7 @@ fun RadarScreen(
     val wedgeColors = remember { TacticalWedgeColors(BlindsideColors.Accent, BlindsideColors.AccentDim, BlindsideColors.Warn) }
     AnchorHeading(compass, postureDeg, compassOn)
     var glanceOpen by remember { mutableStateOf(false) }
-    Box(radarGestures(lastFix) { glanceOpen = !glanceOpen }) {
+    Box(radarGestures({ phoneFix() ?: lastFix() }) { glanceOpen = !glanceOpen }) {
         // The symmetric tick band turns against the heading on the compositor, once per frame, with no recomposition.
         compassTrust?.let { trust ->
             Canvas(Modifier.fillMaxSize().graphicsLayer { rotationZ = -frame.azimuthDeg }) {

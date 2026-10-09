@@ -15,10 +15,13 @@ data class MateMark(val label: String, val bearingDeg: Double, val distanceM: Do
 fun teamLinkActive(lastTeamAtMs: Long?, nowMs: Long): Boolean =
     lastTeamAtMs != null && nowMs - lastTeamAtMs in 0..TAK_LINK_FRESH_MS
 
-fun hereOf(team: TeamUpdate?, teamAtMs: Long?, nowMs: Long, watchFix: GeoPoint?): GeoPoint? {
+fun phoneFix(team: TeamUpdate?, teamAtMs: Long?, nowMs: Long): GeoPoint? {
     if (team?.self != null && teamAtMs != null && nowMs - teamAtMs in 0..SELF_FIX_FRESH_MS) return team.self.point
-    return watchFix
+    return null
 }
+
+fun hereOf(team: TeamUpdate?, teamAtMs: Long?, nowMs: Long, watchFix: GeoPoint?): GeoPoint? =
+    phoneFix(team, teamAtMs, nowMs) ?: watchFix
 
 fun mateMarks(mates: List<Mate>, here: GeoPoint): List<MateMark> =
     mates.filter { it.ageS <= MATE_MAX_AGE_S }
