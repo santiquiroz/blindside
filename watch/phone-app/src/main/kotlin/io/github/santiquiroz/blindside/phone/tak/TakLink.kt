@@ -6,6 +6,7 @@ import java.io.OutputStreamWriter
 import java.net.Socket
 import java.net.SocketTimeoutException
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
@@ -39,7 +40,7 @@ const val PING_PERIOD_MS = 15_000L
 const val SILENCE_LIMIT_MS = 45_000L
 const val STABLE_AFTER_MS = 60_000L
 
-private const val READ_TIMEOUT_MS = 1_000
+private const val READ_TIMEOUT_MS = 5_000
 private const val READ_CHUNK = 4_096
 
 class TakLink(
@@ -134,9 +135,18 @@ class TakLink(
                 outgoing.trySend(pingEvent(ids.pingUid, clock()))
             }
         }
+        // A read blocked up to the timeout ignores cancellation; closing the socket on cancel keeps stop immediate.
+        val closer = launch {
+            try {
+                awaitCancellation()
+            } finally {
+                runCatching { socket.close() }
+            }
+        }
         try {
             readLoop(socket)
         } finally {
+            closer.cancel()
             // A write blocked on a stalled network ignores cancellation; closing the socket is what unblocks it.
             runCatching { socket.close() }
             writer.cancel()
@@ -154,7 +164,7 @@ class TakLink(
             val read = try {
                 reader.read(chunk)
             } catch (_: SocketTimeoutException) {
-                // The 1 s read timeout only wakes the loop; silence is measured below.
+                // The read timeout only wakes the loop; silence is measured below.
                 null
             }
             if (read != null && read < 0) throw LinkBroken("el servidor cerró la conexión")
