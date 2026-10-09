@@ -5,7 +5,7 @@ import io.github.santiquiroz.blindside.core.alerts.PipelineEvent
 import io.github.santiquiroz.blindside.core.alerts.SystemAlert
 import io.github.santiquiroz.blindside.core.scene.Side
 
-data class HapticPattern(val timingsMs: List<Long>)
+data class HapticPattern(val timingsMs: List<Long>, val amplitude: Int = FULL_AMPLITUDE)
 
 const val SHORT_PULSE_MS = 100L
 const val LONG_PULSE_MS = 350L
@@ -13,6 +13,7 @@ const val PULSE_GAP_MS = 150L
 const val SYSTEM_BUZZ_MS = 1_200L
 const val ALLY_PULSE_MS = 40L
 const val FULL_AMPLITUDE = 255
+const val FAR_AMPLITUDE = 90
 
 val CENTER_PATTERN = HapticPattern(listOf(0L, LONG_PULSE_MS))
 val LEFT_PATTERN = HapticPattern(listOf(0L, SHORT_PULSE_MS, PULSE_GAP_MS, SHORT_PULSE_MS))
@@ -27,15 +28,19 @@ fun patternFor(side: Side): HapticPattern = when (side) {
 }
 
 fun hapticFor(event: PipelineEvent): HapticPattern? = when (event) {
-    is ContactAlert -> patternFor(event.side)
+    is ContactAlert -> contactPattern(event)
     is SystemAlert -> SYSTEM_PATTERN
     else -> null
 }
+
+// A far contact keeps its side rhythm, only softer, so the side still reads while it says "not close yet".
+private fun contactPattern(alert: ContactAlert): HapticPattern =
+    if (alert.far) patternFor(alert.side).copy(amplitude = FAR_AMPLITUDE) else patternFor(alert.side)
 
 fun pulsesMs(pattern: HapticPattern): List<Long> =
     pattern.timingsMs.filterIndexed { index, _ -> isPulseIndex(index) }
 
 fun amplitudesFor(pattern: HapticPattern): List<Int> =
-    pattern.timingsMs.indices.map { index -> if (isPulseIndex(index)) FULL_AMPLITUDE else 0 }
+    pattern.timingsMs.indices.map { index -> if (isPulseIndex(index)) pattern.amplitude else 0 }
 
 private fun isPulseIndex(index: Int): Boolean = index % 2 == 1

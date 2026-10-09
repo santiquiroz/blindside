@@ -10,6 +10,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import io.github.santiquiroz.blindside.core.scene.RadarScene
 import io.github.santiquiroz.blindside.phone.ui.theme.AccentColor
@@ -30,9 +31,10 @@ private const val GLYPH_RADIUS_FRACTION = 0.33f
 
 @Composable
 fun RadarView(scene: RadarScene?, modifier: Modifier = Modifier) {
+    val measurer = rememberTextMeasurer()
     Canvas(modifier.semantics { contentDescription = radarDescription(scene) }) {
         val model = toDrawModel(scene, size.width, size.height, PointPx(0f, 0f), showContacts(scene, ambient = false))
-        drawRadar(model, TACTICAL_RADAR_COLORS)
+        drawRadar(model, TACTICAL_RADAR_COLORS, measurer = measurer)
     }
 }
 

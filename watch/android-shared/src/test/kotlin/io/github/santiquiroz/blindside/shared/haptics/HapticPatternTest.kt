@@ -50,6 +50,25 @@ class HapticPatternTest {
     }
 
     @Test
+    fun `a far contact alert vibrates its side rhythm at the soft amplitude`() {
+        val far = hapticFor(ContactAlert(displayId = 3, side = Side.LEFT, tNanos = 0L, far = true))
+
+        assertEquals(LEFT_PATTERN.timingsMs, far?.timingsMs)
+        assertEquals(FAR_AMPLITUDE, far?.amplitude)
+        assertEquals(RIGHT_PATTERN.timingsMs, hapticFor(ContactAlert(3, Side.RIGHT, 0L, far = true))?.timingsMs)
+        assertEquals(CENTER_PATTERN.timingsMs, hapticFor(ContactAlert(3, Side.CENTER, 0L, far = true))?.timingsMs)
+    }
+
+    @Test
+    fun `a near contact alert keeps the full amplitude`() {
+        val near = hapticFor(ContactAlert(displayId = 3, side = Side.CENTER, tNanos = 0L))
+
+        assertEquals(CENTER_PATTERN, near)
+        assertEquals(FULL_AMPLITUDE, near?.amplitude)
+        assertEquals(listOf(0, FULL_AMPLITUDE), amplitudesFor(near!!))
+    }
+
+    @Test
     fun `every system alert buzzes`() {
         Warning.entries.forEach { kind ->
             assertEquals(SYSTEM_PATTERN, hapticFor(SystemAlert(kind = kind, tNanos = 0L)))
@@ -64,5 +83,11 @@ class HapticPatternTest {
     @Test
     fun `amplitudes are zero on gaps and full on pulses`() {
         assertEquals(listOf(0, FULL_AMPLITUDE, 0, FULL_AMPLITUDE), amplitudesFor(LEFT_PATTERN))
+    }
+
+    @Test
+    fun `a far pattern pulses at the soft amplitude and stays silent on gaps`() {
+        assertEquals(listOf(0, FAR_AMPLITUDE, 0, FAR_AMPLITUDE), amplitudesFor(RIGHT_PATTERN.copy(amplitude = FAR_AMPLITUDE)))
+        assertTrue(FAR_AMPLITUDE in 1 until FULL_AMPLITUDE)
     }
 }

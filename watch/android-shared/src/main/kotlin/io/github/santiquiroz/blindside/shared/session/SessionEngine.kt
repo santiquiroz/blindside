@@ -93,7 +93,12 @@ class SessionEngine(
     private fun playOrDefer(alert: ContactAlert) {
         val now = clock.nowNanos()
         val startAt = contactStartNanos(gate, now)
-        if (startAt <= now) playContact(alert, now) else deferred.playAt(alert, startAt)
+        if (startAt <= now) playContact(alert, now) else deferUnlessFar(alert, startAt)
+    }
+
+    // A deferred far pattern could land on top of a near one that started in between, so a far alert that cannot play now is dropped.
+    private fun deferUnlessFar(alert: ContactAlert, atNanos: Long) {
+        if (!alert.far) deferred.playAt(alert, atNanos)
     }
 
     private fun playContact(alert: ContactAlert, nowNanos: Long) {

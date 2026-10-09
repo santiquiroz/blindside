@@ -22,6 +22,16 @@ class ConfigTest {
     }
 
     @Test
+    fun `contacts are accepted up to 10 m and alert as near up to 6 m`() {
+        val tuning = TuningParams()
+
+        assertEquals(10.0, tuning.decode.maxRangeM)
+        assertEquals(6.0, tuning.alerts.nearRangeM)
+        assertEquals(1000L, tuning.alerts.farMinGapMs)
+        assertEquals(6, tuning.alerts.maxFarPerMinute)
+    }
+
+    @Test
     fun `the radar to imu delay defaults to 100 ms, not the 0 of the notes`() {
         assertEquals(100L, TuningParams().imu.radarImuDelayMs)
     }

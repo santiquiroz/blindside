@@ -1,16 +1,19 @@
 package io.github.santiquiroz.blindside.phone.viewer
 
+import io.github.santiquiroz.blindside.core.config.DecodeParams
 import io.github.santiquiroz.blindside.core.scene.Blip
-import io.github.santiquiroz.blindside.shared.radar.MAX_RANGE_M
 import io.github.santiquiroz.blindside.shared.radar.PointPx
 import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.sin
 
 const val HEAT_CELL_M = 0.5
-const val HEAT_EXTENT_M = MAX_RANGE_M
+// Recordings keep contacts out to the accepted range, wider than the live display's 6 m.
+val HEAT_EXTENT_M: Double = DecodeParams().maxRangeM
 val HEAT_COLUMNS: Int = (2 * HEAT_EXTENT_M / HEAT_CELL_M).toInt()
 val HEAT_ROWS: Int = HEAT_COLUMNS
+private const val HEAT_RING_STEP_M = 2.0
+private val HEAT_RING_RANGES_M: List<Double> = generateSequence(HEAT_RING_STEP_M) { it + HEAT_RING_STEP_M }.takeWhile { it < HEAT_EXTENT_M }.toList()
 
 data class HeatCell(val col: Int, val row: Int)
 
@@ -52,13 +55,16 @@ fun hottestCell(grid: HeatGrid): HeatCell? = hotCells(grid).maxByOrNull { it.sec
 
 fun cellCenterM(cell: HeatCell): Pair<Double, Double> = edgeM(cell.col) + HEAT_CELL_M / 2 to edgeM(cell.row) + HEAT_CELL_M / 2
 
-// Same mapping as the radar drawing: +x to the right, +y up the screen, MAX_RANGE_M at the fan radius.
+// Same orientation as the radar drawing, +x to the right and +y up the screen, but HEAT_EXTENT_M at the fan radius.
 fun cellRectPx(cell: HeatCell, origin: PointPx, radiusPx: Float): CellRectPx {
     val pxPerM = radiusPx / HEAT_EXTENT_M
     val left = origin.x + edgeM(cell.col) * pxPerM
     val top = origin.y - edgeM(cell.row + 1) * pxPerM
     return CellRectPx(left.toFloat(), top.toFloat(), (HEAT_CELL_M * pxPerM).toFloat())
 }
+
+// The heat fan is scaled to HEAT_EXTENT_M, so its rings are too, instead of the live display's 2 and 4 of 6 m.
+fun heatRingRadiiPx(radiusPx: Float): List<Float> = HEAT_RING_RANGES_M.map { (it / HEAT_EXTENT_M).toFloat() * radiusPx }
 
 private fun axisIndex(meters: Double): Int = floor((meters + HEAT_EXTENT_M) / HEAT_CELL_M).toInt()
 

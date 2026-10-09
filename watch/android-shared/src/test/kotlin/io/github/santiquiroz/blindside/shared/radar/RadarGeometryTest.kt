@@ -8,6 +8,7 @@ import io.github.santiquiroz.blindside.core.scene.RadarScene
 import io.github.santiquiroz.blindside.core.scene.SensorStatus
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -48,6 +49,35 @@ class RadarGeometryTest {
     @Test
     fun `ranges beyond six metres sit on the edge`() {
         assertPoint(PointPx(40f, 278f), polarToPx(origin, radius, -90.0, 12.0))
+    }
+
+    @Test
+    fun `a contact at 8_4 m is drawn on the rim with its range in whole metres`() {
+        val model = toDrawModel(scene(listOf(blip(1, 30.0, 8.4))), 480f, 480f, noShift, showContacts = true)
+        val drawn = model.blips.single()
+
+        assertPoint(polarToPx(model.origin, model.radiusPx, 30.0, DISPLAY_RANGE_M), drawn.center)
+        assertEquals("8", drawn.farLabel)
+    }
+
+    @Test
+    fun `a contact inside the display range has no far label`() {
+        val model = toDrawModel(scene(listOf(blip(1, 30.0, 5.9))), 480f, 480f, noShift, showContacts = true)
+
+        assertNull(model.blips.single().farLabel)
+    }
+
+    @Test
+    fun `the far label rounds to the nearest metre and starts past the display edge`() {
+        assertEquals("9", farLabel(8.6))
+        assertEquals("10", farLabel(9.8))
+        assertNull(farLabel(DISPLAY_RANGE_M))
+    }
+
+    @Test
+    fun `nudging moves a point the given pixels toward a target`() {
+        assertPoint(PointPx(100f, 10f), nudgeToward(PointPx(100f, 0f), PointPx(100f, 100f), 10f))
+        assertPoint(PointPx(5f, 5f), nudgeToward(PointPx(5f, 5f), PointPx(5f, 5f), 10f))
     }
 
     @Test

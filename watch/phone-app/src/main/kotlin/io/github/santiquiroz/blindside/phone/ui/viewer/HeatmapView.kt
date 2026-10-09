@@ -30,6 +30,7 @@ import io.github.santiquiroz.blindside.phone.viewer.HeatGrid
 import io.github.santiquiroz.blindside.phone.viewer.RecordingAnalysis
 import io.github.santiquiroz.blindside.phone.viewer.cellRectPx
 import io.github.santiquiroz.blindside.phone.viewer.heatDescription
+import io.github.santiquiroz.blindside.phone.viewer.heatRingRadiiPx
 import io.github.santiquiroz.blindside.phone.viewer.heatLegendLabels
 import io.github.santiquiroz.blindside.phone.viewer.heatLevel
 import io.github.santiquiroz.blindside.phone.viewer.hotCells
@@ -51,7 +52,8 @@ fun HeatmapView(analysis: RecordingAnalysis) {
     }
     val sectors = remember(analysis) { analysis.coverage.map(::sectorArc) }
     Canvas(Modifier.fillMaxWidth().aspectRatio(1f).semantics { contentDescription = heatDescription(analysis.heat) }) {
-        val frame = toDrawModel(null, size.width, size.height, PointPx(0f, 0f), showContacts = false).copy(sectors = sectors, dimmed = false)
+        val fan = toDrawModel(null, size.width, size.height, PointPx(0f, 0f), showContacts = false)
+        val frame = fan.copy(sectors = sectors, dimmed = false, ringRadiiPx = heatRingRadiiPx(fan.radiusPx))
         drawRadar(frame, TACTICAL_RADAR_COLORS)
         drawHeatCells(analysis.heat, frame.origin, frame.radiusPx)
     }

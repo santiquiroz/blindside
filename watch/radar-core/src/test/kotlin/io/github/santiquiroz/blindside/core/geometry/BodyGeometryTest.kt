@@ -58,7 +58,8 @@ class BodyGeometryTest {
         assertEquals(setOf(0, 1), coveringRadars(Point2.fromPolar(3.0, -10.0), mounts, params))
         assertEquals(setOf(1), coveringRadars(Point2.fromPolar(3.0, 70.0), mounts, params))
         assertTrue(coveringRadars(Point2.fromPolar(3.0, 120.0), mounts, params).isEmpty())
-        assertTrue(coveringRadars(Point2.fromPolar(7.0, 0.0), mounts, params).isEmpty())
+        assertEquals(setOf(0, 1), coveringRadars(Point2.fromPolar(9.0, -10.0), mounts, params))
+        assertTrue(coveringRadars(Point2.fromPolar(11.0, 0.0), mounts, params).isEmpty())
     }
 
     @Test

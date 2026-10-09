@@ -12,27 +12,32 @@ class HeatGridTest {
         Blip(1, bearingDeg, rangeM, Confidence.BOTH, 0, outOfView)
 
     @Test
-    fun `the grid covers the fan in half-metre cells`() {
-        assertEquals(24, HEAT_COLUMNS)
-        assertEquals(24, HEAT_ROWS)
+    fun `the grid covers the accepted 10 m range in half-metre cells`() {
+        assertEquals(40, HEAT_COLUMNS)
+        assertEquals(40, HEAT_ROWS)
     }
 
     @Test
     fun `a contact straight ahead lands in the centre column`() {
-        assertEquals(HeatCell(12, 18), heatCellOf(blip(0.0, 3.2)))
+        assertEquals(HeatCell(20, 26), heatCellOf(blip(0.0, 3.2)))
     }
 
     @Test
     fun `positive bearings go right and negative bearings go left`() {
-        assertEquals(HeatCell(14, 12), heatCellOf(blip(90.0, 1.0)))
-        assertEquals(HeatCell(10, 12), heatCellOf(blip(-90.0, 1.0)))
+        assertEquals(HeatCell(22, 20), heatCellOf(blip(90.0, 1.0)))
+        assertEquals(HeatCell(18, 20), heatCellOf(blip(-90.0, 1.0)))
     }
 
     @Test
-    fun `contacts beyond the fan or out of view count nowhere`() {
-        assertNull(heatCellOf(blip(0.0, 7.0)))
+    fun `a far contact at 8 m still counts`() {
+        assertEquals(HeatCell(20, 36), heatCellOf(blip(0.0, 8.0)))
+    }
+
+    @Test
+    fun `contacts beyond the accepted range or out of view count nowhere`() {
+        assertNull(heatCellOf(blip(0.0, 10.5)))
         assertNull(heatCellOf(blip(0.0, 2.0, outOfView = true)))
-        assertNull(cellAt(-6.01, 0.0))
+        assertNull(cellAt(-10.01, 0.0))
     }
 
     @Test
@@ -57,7 +62,14 @@ class HeatGridTest {
 
     @Test
     fun `cell centres and pixel squares follow the radar drawing`() {
-        assertEquals(0.25 to 3.25, cellCenterM(HeatCell(12, 18)))
-        assertEquals(CellRectPx(left = 100f, top = 95f, size = 5f), cellRectPx(HeatCell(12, 12), PointPx(100f, 100f), radiusPx = 60f))
+        assertEquals(0.25 to 3.25, cellCenterM(HeatCell(20, 26)))
+        assertEquals(CellRectPx(left = 100f, top = 97f, size = 3f), cellRectPx(HeatCell(20, 20), PointPx(100f, 100f), radiusPx = 60f))
+    }
+
+    @Test
+    fun `the heat rings mark every 2 m on the 10 m scale`() {
+        val radii = heatRingRadiiPx(100f)
+        assertEquals(4, radii.size)
+        listOf(20f, 40f, 60f, 80f).zip(radii).forEach { (expected, actual) -> assertEquals(expected, actual, 1e-3f) }
     }
 }

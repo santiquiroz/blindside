@@ -53,7 +53,7 @@ import io.github.santiquiroz.blindside.shared.compass.compassWarningLabel
 import io.github.santiquiroz.blindside.shared.compass.frontHeadingDeg
 import io.github.santiquiroz.blindside.shared.compass.headingDegreesText
 import io.github.santiquiroz.blindside.shared.radar.DND_RADAR_WARNING
-import io.github.santiquiroz.blindside.shared.radar.MAX_RANGE_M
+import io.github.santiquiroz.blindside.shared.radar.DISPLAY_RANGE_M
 import io.github.santiquiroz.blindside.shared.radar.PointPx
 import io.github.santiquiroz.blindside.shared.radar.RangeMark
 import io.github.santiquiroz.blindside.shared.radar.rangeMarks
@@ -65,6 +65,7 @@ import io.github.santiquiroz.blindside.shared.radar.drawRadar
 import io.github.santiquiroz.blindside.shared.radar.fanHalfAngleFor
 import io.github.santiquiroz.blindside.shared.radar.frameFraction
 import io.github.santiquiroz.blindside.shared.radar.interpolatedBlips
+import io.github.santiquiroz.blindside.shared.radar.nudgeToward
 import io.github.santiquiroz.blindside.shared.radar.radarColorsFor
 import io.github.santiquiroz.blindside.shared.radar.rotatedAbout
 import io.github.santiquiroz.blindside.shared.radar.screenCenter
@@ -164,7 +165,7 @@ fun RadarScreen(
             val pair = scenes.value
             val drawnScene = foldInterpolated(pair, frameFractionNow(pair, compassOn, glidePeriodMs))
             val logical = toDrawModel(drawnScene, size.width, size.height, shift, contacts, margin, fitHalfAngleDeg)
-            drawRadar(logical.rotatedAbout(pivot, postureDeg + frame.spinDeg), radarColorsFor(settings.contactColor), allyIds)
+            drawRadar(logical.rotatedAbout(pivot, postureDeg + frame.spinDeg), radarColorsFor(settings.contactColor), allyIds, measurer)
             if (!ambient) drawRangeScale(rangeMarks(logical.origin, logical.radiusPx), pivot, postureDeg, measurer)
             compassTrust?.let { trust ->
                 val ring = RingGeometry(pivot, size.minDimension / 2f, bandPx)
@@ -209,18 +210,10 @@ private val RANGE_LABEL_STYLE = TextStyle(color = BlindsideColors.Text2, fontSiz
 private fun DrawScope.drawRangeScale(marks: List<RangeMark>, pivot: PointPx, rotationDeg: Float, measurer: TextMeasurer) {
     marks.forEach { mark ->
         val p = nudgeToward(rotatePoint(mark.at, pivot, rotationDeg), pivot, RANGE_LABEL_INSET_PX)
-        val label = if (mark.meters >= MAX_RANGE_M.toInt()) "${mark.meters} m" else "${mark.meters}"
+        val label = if (mark.meters >= DISPLAY_RANGE_M.toInt()) "${mark.meters} m" else "${mark.meters}"
         val layout = measurer.measure(label, RANGE_LABEL_STYLE)
         drawText(layout, topLeft = Offset(p.x - layout.size.width / 2f, p.y - layout.size.height / 2f))
     }
-}
-
-private fun nudgeToward(from: PointPx, target: PointPx, px: Float): PointPx {
-    val dx = target.x - from.x
-    val dy = target.y - from.y
-    val distance = hypot(dx, dy)
-    if (distance < 1e-3f) return from
-    return PointPx(from.x + dx / distance * px, from.y + dy / distance * px)
 }
 
 @Composable

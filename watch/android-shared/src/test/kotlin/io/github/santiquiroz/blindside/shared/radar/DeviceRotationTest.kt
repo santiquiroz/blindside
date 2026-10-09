@@ -40,7 +40,7 @@ class DeviceRotationTest {
     private fun logicalModel(vararg blips: Blip, offset: PointPx = noShift): RadarDrawModel =
         toDrawModel(scene(blips.toList()), widthPx, heightPx, offset, showContacts = true)
 
-    private fun distancePx(rangeM: Double, model: RadarDrawModel): Float = (rangeM / MAX_RANGE_M).toFloat() * model.radiusPx
+    private fun distancePx(rangeM: Double, model: RadarDrawModel): Float = (rangeM / DISPLAY_RANGE_M).toFloat() * model.radiusPx
 
     private fun bottomPanelAnchor(offset: PointPx) = PointPx(widthPx / 2f + offset.x, heightPx + offset.y)
 
@@ -113,6 +113,14 @@ class DeviceRotationTest {
         assertEquals(logical.ringRadiiPx, rotated.ringRadiiPx)
         assertEquals(logical.dimmed, rotated.dimmed)
         assertEquals(logical.blips.map { it.style to it.alpha }, rotated.blips.map { it.style to it.alpha })
+    }
+
+    @Test
+    fun `turning keeps a far contact's range label`() {
+        val logical = logicalModel(blip(1, 30.0, 8.4))
+        val rotated = logical.rotatedAbout(center, WatchPosture.TACTICAL_LEFT.rotationDeg)
+        assertEquals("8", logical.blips.single().farLabel)
+        assertEquals("8", rotated.blips.single().farLabel)
     }
 
     @Test

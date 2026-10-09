@@ -203,6 +203,165 @@ class AlertLimiterTest {
         assertEquals(Side.RIGHT, sideOf(35.0, params))
     }
 
+    @Test
+    fun `a far contact at 8 m gets one far alert`() {
+        val first = AlertLimiter().step(AlertFrame(listOf(far(1)), t0), params)
+        val again = first.limiter.step(AlertFrame(listOf(far(1)), t0 + 10_000 * ms), params)
+
+        assertEquals(ContactAlert(1, Side.LEFT, t0, far = true), first.fired)
+        assertNull(again.fired)
+    }
+
+    @Test
+    fun `a far contact that later steps within 6 m gets its near alert once`() {
+        val fired = alerts(
+            0L to listOf(far(1)),
+            2_000L to listOf(left(1, range = 5.0)),
+            4_000L to listOf(left(1, range = 4.0)),
+            6_000L to listOf(far(1)),
+        )
+
+        assertEquals(listOf(ContactAlert(1, Side.LEFT, t0, far = true), ContactAlert(1, Side.LEFT, t0 + 2_000 * ms)), fired)
+    }
+
+    @Test
+    fun `a near contact 300 ms after a far alert fires at once`() {
+        val afterFar = AlertLimiter().step(AlertFrame(listOf(far(1)), t0), params).limiter
+        val near = afterFar.step(AlertFrame(listOf(far(1), right(2)), t0 + 300 * ms), params)
+
+        assertNull(afterFar.lastFiredNanos)
+        assertEquals(ContactAlert(2, Side.RIGHT, t0 + 300 * ms), near.fired)
+    }
+
+    @Test
+    fun `seven far contacts in a minute give six far alerts and leave near alerts alone`() {
+        val farSteps = (0 until 7).map { i -> i * 5_000L to listOf(far(10 + i)) }
+        val fired = alerts(
+            *farSteps.toTypedArray(),
+            30_300L to listOf(far(16), left(1)),
+            31_500L to listOf(far(16)),
+            95_000L to listOf(far(16)),
+        )
+
+        assertEquals((10..15).toList(), fired.filter { it.far }.map { it.displayId })
+        assertEquals(listOf(ContactAlert(1, Side.LEFT, t0 + 30_300 * ms)), fired.filterNot { it.far })
+    }
+
+    @Test
+    fun `far alerts do not count toward near saturation`() {
+        val afterFar = (0 until 6).fold(AlertLimiter()) { limiter, i ->
+            limiter.step(AlertFrame(listOf(far(20 + i)), t0 + i * 2_000L * ms), params).limiter
+        }
+        val near = (0 until 10).fold(afterFar to 0) { (limiter, count), i ->
+            val frame = AlertFrame(listOf(left(100 + i, at = Point2(-3.0 - i * 2.0, 3.0))), t0 + (12_000L + i * 1_100L) * ms)
+            val outcome = limiter.step(frame, params)
+            outcome.limiter to count + (if (outcome.fired != null) 1 else 0)
+        }
+
+        assertEquals(6, afterFar.farFiredNanos.size)
+        assertFalse(afterFar.isSaturated(t0 + 12_000 * ms, params))
+        assertEquals(10, near.second)
+    }
+
+    @Test
+    fun `when a near and a far contact are both due the near one fires and the far one waits for the near gap`() {
+        val fired = alerts(
+            0L to listOf(far(1, side = Side.CENTER), right(2)),
+            500L to listOf(far(1, side = Side.CENTER), right(2)),
+            1_000L to listOf(far(1, side = Side.CENTER), right(2)),
+        )
+
+        assertEquals(listOf(ContactAlert(2, Side.RIGHT, t0), ContactAlert(1, Side.CENTER, t0 + 1_000 * ms, far = true)), fired)
+    }
+
+    @Test
+    fun `a far alert waits for the system pattern like a near one`() {
+        val buzzing = AlertLimiter().withSystemAlert(t0, params)
+
+        val during = buzzing.step(AlertFrame(listOf(far(1)), t0 + 500 * ms), params)
+        val after = during.limiter.step(AlertFrame(listOf(far(1)), t0 + 1_300 * ms), params)
+
+        assertNull(during.fired)
+        assertEquals(ContactAlert(1, Side.LEFT, t0 + 1_300 * ms, far = true), after.fired)
+    }
+
+    @Test
+    fun `the far stage picks the center first, then the nearest`() {
+        val candidates = listOf(far(1, range = 7.0), far(2, range = 9.0, side = Side.CENTER), far(3, range = 6.5, side = Side.RIGHT))
+
+        assertEquals(2, AlertLimiter().step(AlertFrame(candidates, t0), params).fired?.displayId)
+        assertEquals(3, AlertLimiter().step(AlertFrame(listOf(candidates[0], candidates[2]), t0), params).fired?.displayId)
+    }
+
+    @Test
+    fun `a contact first seen near never gets a far alert`() {
+        val fired = alerts(
+            0L to listOf(left(1)),
+            2_000L to listOf(left(1, range = 8.0)),
+            4_000L to listOf(left(1, range = 9.0)),
+        )
+
+        assertEquals(listOf(ContactAlert(1, Side.LEFT, t0)), fired)
+    }
+
+    @Test
+    fun `a queued near contact that steps beyond 6 m keeps its near alert`() {
+        val fired = alerts(
+            0L to listOf(left(1)),
+            250L to listOf(left(1), center(2)),
+            600L to listOf(left(1), center(2, range = 8.0)),
+            1_000L to listOf(left(1), center(2, range = 8.0)),
+        )
+
+        assertEquals(listOf(ContactAlert(1, Side.LEFT, t0), ContactAlert(2, Side.CENTER, t0 + 1_000 * ms)), fired)
+    }
+
+    @Test
+    fun `a far contact seen next to an alerted one is never taken for it once that one is lost`() {
+        val alerted = left(1, range = 5.5, at = Point2(-3.9, 3.9))
+        val beside = far(5, range = 6.5, at = Point2(-4.6, 4.6))
+        val fired = alerts(
+            0L to listOf(alerted, beside),
+            100L to listOf(beside),
+            1_000L to listOf(beside),
+            2_000L to listOf(left(5, range = 4.0, at = Point2(-2.8, 2.8))),
+        )
+
+        val expected = listOf(
+            ContactAlert(1, Side.LEFT, t0),
+            ContactAlert(5, Side.LEFT, t0 + 1_000 * ms, far = true),
+            ContactAlert(5, Side.LEFT, t0 + 2_000 * ms),
+        )
+        assertEquals(expected, fired)
+    }
+
+    @Test
+    fun `a track reborn far through the sector pause inherits the near alert and gets no far alert`() {
+        val fired = alerts(
+            0L to listOf(left(1, range = 5.5, at = Point2(-3.9, 3.9))),
+            100L to emptyList(),
+            2_000L to listOf(far(9, range = 6.5, at = Point2(-4.6, 4.6))),
+            3_000L to listOf(left(9, range = 4.0, at = Point2(-2.8, 2.8))),
+        )
+
+        assertEquals(listOf(ContactAlert(1, Side.LEFT, t0)), fired)
+    }
+
+    @Test
+    fun `eliminated contacts get no far alert either`() {
+        val silenced = AlertLimiter().silence(listOf(1, 2))
+
+        val outcome = silenced.step(AlertFrame(listOf(far(1), left(2)), t0), params)
+
+        assertNull(outcome.fired)
+    }
+
+    private fun alerts(vararg steps: Pair<Long, List<AlertCandidate>>): List<ContactAlert> =
+        steps.fold(AlertLimiter() to emptyList<ContactAlert>()) { (limiter, fired), (atMs, candidates) ->
+            val outcome = limiter.step(AlertFrame(candidates, t0 + atMs * ms), params)
+            outcome.limiter to fired + listOfNotNull(outcome.fired)
+        }.second
+
     private fun run(vararg steps: Pair<Long, List<AlertCandidate>>): List<Pair<Long, Int>> =
         steps.fold(AlertLimiter() to emptyList<Pair<Long, Int>>()) { (limiter, fired), (atMs, candidates) ->
             val outcome = limiter.step(AlertFrame(candidates, t0 + atMs * ms), params)
@@ -214,4 +373,6 @@ class AlertLimiterTest {
     private fun center(id: Int, range: Double = 3.0) = AlertCandidate(id, Side.CENTER, range, Point2(0.0, range))
 
     private fun right(id: Int, range: Double = 3.0) = AlertCandidate(id, Side.RIGHT, range, Point2(2.5, 2.5))
+
+    private fun far(id: Int, range: Double = 8.0, side: Side = Side.LEFT, at: Point2 = Point2(-5.6, 5.7)) = AlertCandidate(id, side, range, at)
 }

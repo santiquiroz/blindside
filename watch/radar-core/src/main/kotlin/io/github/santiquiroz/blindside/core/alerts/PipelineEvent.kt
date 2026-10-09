@@ -7,7 +7,7 @@ sealed interface PipelineEvent {
     val tNanos: Long
 }
 
-data class ContactAlert(val displayId: Int, val side: Side, override val tNanos: Long) : PipelineEvent
+data class ContactAlert(val displayId: Int, val side: Side, override val tNanos: Long, val far: Boolean = false) : PipelineEvent
 
 data class TrackConfirmed(val displayId: Int, override val tNanos: Long) : PipelineEvent
 

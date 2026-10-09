@@ -28,12 +28,18 @@ data class AlertLimiter(
     val lastFiredNanos: Long? = null,
     val firedNanos: List<Long> = emptyList(),
     val systemBusyUntilNanos: Long = Long.MIN_VALUE,
+    val farSeen: Set<Int> = emptySet(),
+    val farHandled: Set<Int> = emptySet(),
+    val lastFarFiredNanos: Long? = null,
+    val farFiredNanos: List<Long> = emptyList(),
 ) {
     fun step(frame: AlertFrame, params: AlertParams): LimiterOutcome {
-        val outcome = withLosses(frame.candidates, frame.nowNanos, params)
+        val near = withLosses(frame.candidates, frame.nowNanos, params)
             .withReacquired(frame.candidates, frame.yawDeg, params)
-            .withPending(frame.candidates)
+            .withPending(frame.candidates, params)
+            .withFarSeen(frame.candidates, params)
             .fireIfDue(frame, params)
+        val outcome = if (near.fired != null) near else near.limiter.fireFarIfDue(frame, params)
         return outcome.copy(limiter = outcome.limiter.withVisible(frame.candidates, frame.playerMoving))
     }
 
@@ -65,8 +71,15 @@ data class AlertLimiter(
     }
 
     // A pending contact keeps its last confirmed candidate, so it holds its place in the queue while it is missing.
-    private fun withPending(candidates: List<AlertCandidate>): AlertLimiter =
-        copy(pending = pending + candidates.filter { it.displayId !in handled }.associateBy { it.displayId })
+    private fun withPending(candidates: List<AlertCandidate>, params: AlertParams): AlertLimiter =
+        copy(pending = pending + candidates.filter { joinsQueue(it, params) }.associateBy { it.displayId })
+
+    // A far contact joins the near queue once it comes within nearRangeM; one queued while near keeps its place wherever it goes.
+    private fun joinsQueue(candidate: AlertCandidate, params: AlertParams): Boolean =
+        candidate.displayId !in handled && (!isFar(candidate, params) || candidate.displayId in pending)
+
+    private fun withFarSeen(candidates: List<AlertCandidate>, params: AlertParams): AlertLimiter =
+        copy(farSeen = farSeen + candidates.filter { isFarContact(it, params) }.ids())
 
     // Spec §5.5 (b): only the pending contacts whose turn came and that are gone turn screen-only; held ones keep waiting.
     private fun fireIfDue(frame: AlertFrame, params: AlertParams): LimiterOutcome {
@@ -92,6 +105,35 @@ data class AlertLimiter(
         firedNanos = (firedNanos + nowNanos).filter { nowNanos - it < MINUTE_NANOS }.takeLast(params.maxPerMinute),
     )
 
+    // Runs only in a frame with no near alert and only while the near slot is free too, so a far pattern never cuts a near one short.
+    // A saturated far budget skips the far contacts for good instead of queueing them.
+    private fun fireFarIfDue(frame: AlertFrame, params: AlertParams): LimiterOutcome {
+        val due = frame.candidates.filter { isFarContact(it, params) && it.displayId !in farHandled }
+        if (due.isEmpty() || !isFarSlotOpen(frame.nowNanos, params)) return LimiterOutcome(this, null)
+        if (isFarSaturated(frame.nowNanos, params)) return LimiterOutcome(copy(farHandled = farHandled + due.ids()), null)
+        val chosen = due.sortedWith(PRIORITY).first()
+        return LimiterOutcome(fireFar(chosen, frame.nowNanos, params), ContactAlert(chosen.displayId, chosen.side, frame.nowNanos, far = true))
+    }
+
+    private fun isFarSlotOpen(nowNanos: Long, params: AlertParams): Boolean {
+        val last = lastFarFiredNanos ?: return isSlotOpen(nowNanos, params)
+        return isSlotOpen(nowNanos, params) && nowNanos - last >= params.farMinGapMs * NANOS_PER_MS
+    }
+
+    private fun isFarSaturated(nowNanos: Long, params: AlertParams): Boolean =
+        farFiredNanos.count { nowNanos - it < MINUTE_NANOS } >= params.maxFarPerMinute
+
+    private fun fireFar(chosen: AlertCandidate, nowNanos: Long, params: AlertParams) = copy(
+        farHandled = farHandled + chosen.displayId,
+        lastFarFiredNanos = nowNanos,
+        farFiredNanos = (farFiredNanos + nowNanos).filter { nowNanos - it < MINUTE_NANOS }.takeLast(params.maxFarPerMinute),
+    )
+
+    private fun isFarContact(candidate: AlertCandidate, params: AlertParams): Boolean =
+        isFar(candidate, params) && candidate.displayId !in handled && candidate.displayId !in pending
+
+    private fun isFar(candidate: AlertCandidate, params: AlertParams): Boolean = candidate.rangeM > params.nearRangeM
+
     // Positions measured while the player turns or walks carry the τ and ego-motion errors, so the last still one is kept.
     private fun withVisible(candidates: List<AlertCandidate>, playerMoving: Boolean): AlertLimiter =
         copy(visible = candidates.filter { it.displayId in handled }.associate { it.displayId to referenceOf(it, playerMoving) })
@@ -99,7 +141,9 @@ data class AlertLimiter(
     private fun referenceOf(candidate: AlertCandidate, playerMoving: Boolean): AlertCandidate =
         if (playerMoving) visible[candidate.displayId] ?: candidate else candidate
 
-    private fun isNew(candidate: AlertCandidate): Boolean = candidate.displayId !in handled && candidate.displayId !in pending
+    // A far contact already seen is not born again when it comes near, so the sector pause never hides its near alert.
+    private fun isNew(candidate: AlertCandidate): Boolean =
+        candidate.displayId !in handled && candidate.displayId !in pending && candidate.displayId !in farSeen
 
     private fun List<AlertCandidate>.ids() = map { it.displayId }
 

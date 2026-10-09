@@ -14,6 +14,7 @@ import io.github.santiquiroz.blindside.core.scene.Side
 import io.github.santiquiroz.blindside.core.scene.Warning
 import io.github.santiquiroz.blindside.shared.haptics.HapticPattern
 import io.github.santiquiroz.blindside.shared.haptics.ALLY_PATTERN
+import io.github.santiquiroz.blindside.shared.haptics.FAR_AMPLITUDE
 import io.github.santiquiroz.blindside.shared.haptics.LEFT_PATTERN
 import io.github.santiquiroz.blindside.shared.haptics.SYSTEM_BUZZ_MS
 import io.github.santiquiroz.blindside.shared.haptics.SYSTEM_PATTERN
@@ -97,6 +98,23 @@ class SessionEngineTest {
     }
 
     @Test
+    fun `a far contact alert vibrates the soft side rhythm and records the vibration start`() {
+        pipeline.packetEvents = listOf(leftContact.copy(far = true))
+        engine.handle(SessionInput.Packet(byteArrayOf(1), at(40)))
+        assertEquals(listOf(LEFT_PATTERN.copy(amplitude = FAR_AMPLITUDE)), played)
+        assertEquals(40L, vibrationRecords().single().tMsSinceStart)
+    }
+
+    @Test
+    fun `a far contact during a system buzz is dropped, never deferred`() {
+        pipeline.packetEvents = listOf(leftContact.copy(far = true), SystemAlert(kind = Warning.RADAR_DOWN, tNanos = at(40)))
+        engine.handle(SessionInput.Packet(byteArrayOf(1), at(40)))
+        assertEquals(listOf(SYSTEM_PATTERN), played)
+        assertTrue(deferred.isEmpty())
+        assertTrue(vibrationRecords().isEmpty())
+    }
+
+    @Test
     fun `a deferred contact vibrates and is recorded when its turn comes`() {
         nowMs = 1_240L
         engine.handle(SessionInput.PlayDeferred(leftContact, at(1_240)))
@@ -165,9 +183,9 @@ class SessionEngineTest {
             onError = { errors += it },
             allyHint = { it == 4 },
         )
-        pipeline.packetEvents = listOf(leftContact)
+        pipeline.packetEvents = listOf(leftContact, leftContact.copy(far = true))
         allyEngine.handle(SessionInput.Packet(byteArrayOf(1), at(40)))
-        assertEquals(listOf(ALLY_PATTERN), played)
+        assertEquals(listOf(ALLY_PATTERN, ALLY_PATTERN), played)
     }
 
     @Test

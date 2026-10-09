@@ -7,7 +7,7 @@ data class DecodeParams(
     val staleRepeatFrames: Int = 3,
     val nearFieldM: Double = 0.8,
     val coneHalfAngleDeg: Double = 60.0,
-    val maxRangeM: Double = 6.0,
+    val maxRangeM: Double = 10.0,
 )
 
 data class ImuParams(
@@ -78,6 +78,9 @@ data class AlertParams(
     val reacquireDistanceM: Double = 1.5,
     val maxPerMinute: Int = 10,
     val systemPatternMs: Long = 1200,
+    val nearRangeM: Double = 6.0,
+    val farMinGapMs: Long = 1000,
+    val maxFarPerMinute: Int = 6,
 )
 
 data class ClockParams(

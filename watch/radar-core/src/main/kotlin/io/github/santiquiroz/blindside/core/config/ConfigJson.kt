@@ -141,6 +141,9 @@ private val ALERT_FIELDS: List<Field<AlertParams>> = fieldsOf {
         double("reacquireDistanceM", { it.reacquireDistanceM }) { p, v -> p.copy(reacquireDistanceM = v) },
         int("maxPerMinute", { it.maxPerMinute }) { p, v -> p.copy(maxPerMinute = v) },
         long("systemPatternMs", { it.systemPatternMs }) { p, v -> p.copy(systemPatternMs = v) },
+        double("nearRangeM", { it.nearRangeM }) { p, v -> p.copy(nearRangeM = v) },
+        long("farMinGapMs", { it.farMinGapMs }) { p, v -> p.copy(farMinGapMs = v) },
+        int("maxFarPerMinute", { it.maxFarPerMinute }) { p, v -> p.copy(maxFarPerMinute = v) },
     )
 }
 

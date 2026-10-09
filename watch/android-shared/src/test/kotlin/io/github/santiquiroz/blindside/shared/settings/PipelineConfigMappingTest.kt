@@ -22,6 +22,13 @@ class PipelineConfigMappingTest {
     }
 
     @Test
+    fun `the app pipeline accepts contacts up to 10 m and alerts near up to 6 m`() {
+        val tuning = toPipelineConfig(AppSettings()).tuning
+        assertEquals(10.0, tuning.decode.maxRangeM, 1e-9)
+        assertEquals(6.0, tuning.alerts.nearRangeM, 1e-9)
+    }
+
+    @Test
     fun `a yaw override replaces only that radar's nominal yaw`() {
         val settings = AppSettings(handedness = Handedness.LEFT)
             .withRadar(RadarSettings(RADAR_B, yawDegOverride = 35.0))
