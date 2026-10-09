@@ -16,8 +16,8 @@ android {
         // Deviation P1: android-shared needs API 33 (plan 05 D1); 31 fails the manifest merger.
         minSdk = 33
         targetSdk = 36
-        versionCode = 5
-        versionName = "1.3.0"
+        versionCode = 6
+        versionName = "1.4.0"
     }
 
     buildTypes {

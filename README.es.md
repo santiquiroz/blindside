@@ -54,7 +54,7 @@ Los paquetes de conexión llevan tu llave privada: el admin del servidor manda c
 
 ## Qué hace
 
-- **Dos radares de ondas milimétricas HLK-LD2450** van en la parte frontal de tu cinturón, uno sobre cada bolsillo delantero, orientados hacia afuera. Juntos cubren **aproximadamente 180° frente a ti, hasta unos 6 m**.
+- **Dos radares de ondas milimétricas HLK-LD2450** van en la parte frontal de tu cinturón, uno sobre cada bolsillo delantero, orientados hacia afuera. Juntos cubren **aproximadamente 180° frente a ti, hasta unos 6 m** (la cifra del fabricante); lo que los radares reporten hasta 10 m se conserva para jugar en campo abierto.
 - **Un ESP32 en un pouch del cinturón** añade una marca de tiempo a las tramas crudas del radar y a las lecturas de dos sensores de movimiento MPU6050 (IMU), uno dentro de cada caja de radar, y luego transmite todo vía Bluetooth LE.
 - **Una aplicación nativa de Wear OS en un Samsung Galaxy Watch 7** se encarga de todo el procesamiento:
   - combina lo que ven los dos radares;
@@ -91,7 +91,7 @@ Ya existen "sensores de latidos" caseros construidos con el mismo radar; consult
 ## Límites honestos
 
 - **No detecta latidos del corazón.** Detecta personas en **movimiento** con un radar Doppler de 24 GHz (FMCW, del mismo tipo utilizado en sensores de presencia).
-- **El alcance es de unos 6 m,** con 120° por radar.
+- **El alcance es de unos 6 m según el fabricante,** con 120° por radar. Los contactos que el radar reporte entre 6 y 10 m aparecen en el borde del radar del reloj con su distancia y una vibración más suave; falta medir hasta dónde sigue de verdad el LD2450 en campo abierto.
 - **Sin detección confiable a través de paredes.** No cuentes con que vea a través de paredes o coberturas. La señal sí atraviesa una cubierta de plástico delgada, seca y sin metal; así funciona la carcasa. Todavía no hemos probado follaje, tela (mojada o seca) ni lluvia. Se espera que los materiales mojados o metalizados delante del radar lo degraden.
 - **Las personas que se quedan completamente quietas se desvanecen.** La aplicación retiene su última posición durante unos segundos.
 - **Amigo o enemigo es solo un indicio conservador de *aliado probable*.** Un contacto se marca aliado probable cuando un compañero reporta por el mapa del equipo estar a 15 m o menos en esa dirección o el reloj lo escucha por Bluetooth a ~4 m o menos —se dibuja en cian con un anillo, nunca se silencia, nunca se publica al mapa del equipo como desconocido. El GPS (±5–15 m) y la distancia por Bluetooth son aproximados, así que los casos ambiguos no se marcan: si hay más contactos ahí que compañeros, no se marca nada. La identificación por jugador sigue en la hoja de ruta.

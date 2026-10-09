@@ -54,7 +54,7 @@ Connection packages carry your private key: the server admin sends each kit priv
 
 ## What it does
 
-- **Two HLK-LD2450 mmWave radars** ride on the front of your belt, one over each front pocket, angled outward. Together they cover **about 180° in front of you, out to about 6 m**.
+- **Two HLK-LD2450 mmWave radars** ride on the front of your belt, one over each front pocket, angled outward. Together they cover **about 180° in front of you, out to about 6 m** (the manufacturer's figure); anything the radars report out to 10 m is kept for open-field play.
 - **An ESP32 in a belt pouch** adds a timestamp to the raw radar frames and to the readings of two MPU6050 motion sensors (IMUs), one inside each radar box, then streams everything over Bluetooth LE.
 - **A native Wear OS app on a Samsung Galaxy Watch 7** handles all the processing:
   - combines what the two radars see;
@@ -91,7 +91,7 @@ DIY "heartbeat sensors" built on the same radar already exist; see [Prior art](#
 ## Honest limits
 
 - **It does not detect heartbeats.** It detects **moving** people with a 24 GHz Doppler radar (FMCW, the same kind used in presence sensors).
-- **Range is about 6 m,** with 120° per radar.
+- **Range is about 6 m by spec,** with 120° per radar. Contacts the radar reports between 6 and 10 m show on the edge of the watch radar with their distance and a softer buzz; how far the LD2450 really tracks in open field is still to be measured.
 - **No reliable through-wall detection.** Don't count on it to see through walls or cover. The signal does pass through a thin, dry plastic cover with no metal in it; that is how the enclosure works. We have not yet tested foliage, fabric (wet or dry) or rain. Wet or metal-coated materials in front of the radar are expected to degrade it.
 - **People standing perfectly still fade out.** The app holds their last position for a few seconds.
 - **Friend or foe is only a conservative *probable* ally hint.** A contact is marked probable ally when a teammate reports via the team map being within 15 m in that direction or is heard by the watch over Bluetooth as within ~4 m — drawn in cyan with a ring, never muted, never published to the team map as unknown. GPS (±5–15 m) and Bluetooth distance are approximate, so ambiguous cases are not marked: if there are more contacts there than teammates, nothing is marked. Per-player identification is still on the roadmap.
