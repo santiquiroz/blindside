@@ -42,6 +42,10 @@ private val WEDGE_DASH = floatArrayOf(6f, 4f)
 private val LETTER_SIZE = 10.sp
 private val WEDGE_LABEL_SIZE = 8.sp
 
+// Built once, after the sizes above; the colour goes in at draw time, which paints exactly what a coloured style would.
+private val LETTER_STYLE = TextStyle(fontSize = LETTER_SIZE, fontFamily = BlindsideFonts.Mono, fontWeight = FontWeight.Bold)
+private val WEDGE_LABEL_STYLE = TextStyle(fontSize = WEDGE_LABEL_SIZE, fontFamily = BlindsideFonts.Mono)
+
 data class TacticalWedgeColors(val base: Color, val spawn: Color, val objective: Color)
 
 private enum class WedgeStyle { FILLED, HOLLOW, DASHED }
@@ -84,11 +88,11 @@ private fun DrawScope.drawCardinal(
     measurer: TextMeasurer,
 ) {
     val color = if (mark.label == "N") colors.north else colors.letter
-    val layout = measurer.measure(mark.label, TextStyle(color = color, fontSize = LETTER_SIZE, fontFamily = BlindsideFonts.Mono, fontWeight = FontWeight.Bold))
+    val layout = measurer.measure(mark.label, LETTER_STYLE)
     val anchor = offsetOf(pointOnRing(ring.center, ring.outerRadiusPx - ring.bandPx / 2f, markScreenAngleDeg(mark.angleDeg, azimuthDeg)))
     val topLeft = Offset(anchor.x - layout.size.width / 2f, anchor.y - layout.size.height / 2f)
     // Letters stay upright for the eye that reads the watch in this posture, not for the glass.
-    rotate(postureRotationDeg, pivot = anchor) { drawText(layout, topLeft = topLeft) }
+    rotate(postureRotationDeg, pivot = anchor) { drawText(layout, color = color, topLeft = topLeft) }
 }
 
 // The front index marks the watch's 12 o'clock in the current posture, fixed independent of heading.
@@ -173,9 +177,9 @@ private fun DrawScope.drawWedgeShape(angleDeg: Float, ring: RingGeometry, color:
 }
 
 private fun DrawScope.drawWedgeLabel(label: String, angleDeg: Float, ring: RingGeometry, color: Color, measurer: TextMeasurer) {
-    val layout = measurer.measure(label, TextStyle(color = color, fontSize = WEDGE_LABEL_SIZE, fontFamily = BlindsideFonts.Mono))
+    val layout = measurer.measure(label, WEDGE_LABEL_STYLE)
     val anchor = pointOnRing(ring.center, ring.outerRadiusPx - ring.bandPx * WEDGE_LABEL_FRACTION, angleDeg)
-    drawText(layout, topLeft = Offset(anchor.x - layout.size.width / 2f, anchor.y - layout.size.height / 2f))
+    drawText(layout, color = color, topLeft = Offset(anchor.x - layout.size.width / 2f, anchor.y - layout.size.height / 2f))
 }
 
 // Colour and shape both distinguish the kinds, so the wedge is never read by colour alone.

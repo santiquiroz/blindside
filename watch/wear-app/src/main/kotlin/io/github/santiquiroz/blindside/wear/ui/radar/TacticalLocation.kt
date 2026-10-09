@@ -6,12 +6,14 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationManager
 import android.os.CancellationSignal
+import android.os.SystemClock
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LifecycleStartEffect
 import io.github.santiquiroz.blindside.shared.tactical.GeoPoint
+import java.util.concurrent.TimeUnit
 
 private val FIX_PROVIDERS = listOf(
     LocationManager.GPS_PROVIDER,
@@ -41,8 +43,25 @@ private fun WarmFix(context: Context, manager: LocationManager?) {
 private fun warmProvider(context: Context, manager: LocationManager?, signal: CancellationSignal) {
     if (manager == null || !hasLocationPermission(context)) return
     val provider = availableProviders(manager).firstOrNull() ?: return
-    runCatching { manager.getCurrentLocation(provider, signal, context.mainExecutor) { } }
+    val nowMs = SystemClock.elapsedRealtime()
+    // Judged on the warmed provider's own fix: lastFix() reads that provider first, so another provider's fresh fix would not reach a mark.
+    if (!shouldWarmFix(fixAgeMs(manager.lastKnownOrNull(provider), nowMs), WarmFixMemory.lastFailedAtMs, nowMs)) return
+    runCatching { manager.getCurrentLocation(provider, signal, context.mainExecutor, ::recordWarmResult) }
 }
+
+// Process-wide so a failed warm-up survives recompositions and every screen-on restart of the radar.
+private object WarmFixMemory {
+    @Volatile
+    var lastFailedAtMs: Long? = null
+}
+
+// A null is the framework giving up (timeout or provider off); a cancelled request never reaches the consumer.
+private fun recordWarmResult(location: Location?) {
+    if (location == null) WarmFixMemory.lastFailedAtMs = SystemClock.elapsedRealtime()
+}
+
+private fun fixAgeMs(location: Location?, nowMs: Long): Long? =
+    location?.let { nowMs - TimeUnit.NANOSECONDS.toMillis(it.elapsedRealtimeNanos) }
 
 private fun lastFix(context: Context, manager: LocationManager?): GeoPoint? {
     if (manager == null || !hasLocationPermission(context)) return null

@@ -15,12 +15,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,8 +48,6 @@ import androidx.wear.compose.material.Text
 import io.github.santiquiroz.blindside.core.scene.RadarScene
 import io.github.santiquiroz.blindside.shared.compass.CompassReading
 import io.github.santiquiroz.blindside.shared.compass.CompassTrust
-import io.github.santiquiroz.blindside.shared.compass.HeadingAnimation
-import io.github.santiquiroz.blindside.shared.compass.advanceHeading
 import io.github.santiquiroz.blindside.shared.compass.compassColors
 import io.github.santiquiroz.blindside.shared.compass.compassWarningLabel
 import io.github.santiquiroz.blindside.shared.compass.frontHeadingDeg
@@ -58,7 +60,6 @@ import io.github.santiquiroz.blindside.shared.radar.rangeMarks
 import io.github.santiquiroz.blindside.shared.radar.rotatePoint
 import io.github.santiquiroz.blindside.shared.radar.StatusItem
 import io.github.santiquiroz.blindside.shared.radar.StatusMark
-import io.github.santiquiroz.blindside.shared.radar.advanceSceneSpinDeg
 import io.github.santiquiroz.blindside.shared.radar.centerLabel
 import io.github.santiquiroz.blindside.shared.radar.drawRadar
 import io.github.santiquiroz.blindside.shared.radar.fanHalfAngleFor
@@ -102,7 +103,10 @@ private const val NANOS_PER_MS = 1_000_000L
 private const val HEADING_SAMPLE_MS = 250L
 private const val ANCHOR_THROTTLE_MS = 250L
 private const val HERE_POLL_MS = 3_000L
+private const val FRESHNESS_TICK_MS = 1_000L
 private const val CENTER_TAP_FRACTION = 0.33f
+// Letters, wedge labels and range marks reach about 20 layouts a frame, over the default cache of 8.
+private const val TEXT_LAYOUT_CACHE_SIZE = 48
 private val CENTER_LABEL_SIZE = 26.sp
 private val LINK_MESSAGE_SIZE = 14.sp
 private val LINK_MESSAGE_SIDE_PADDING = 28.dp
@@ -110,14 +114,6 @@ private val STATUS_DOT_SIZE = 4.dp
 private val STATUS_DOT_STROKE = 1.dp
 private val COMPASS_BAND = 16.dp
 private val PANEL_BOTTOM_PADDING = 22.dp
-
-// Per-frame drawing offsets: the eased heading the ring turns by and the transient gyro spin the scene turns by.
-data class RadarFrame(val azimuthDeg: Float = 0f, val spinDeg: Float = 0f)
-
-// The last two belt scenes plus when the newest one arrived, so contacts glide from the old to the new between frames.
-data class ScenePair(val prev: RadarScene? = null, val next: RadarScene? = null, val frameStartMs: Long = 0L) {
-    fun advance(scene: RadarScene, nowMs: Long): ScenePair = ScenePair(prev = next, next = scene, frameStartMs = nowMs)
-}
 
 @Composable
 fun RadarScreen(
@@ -136,58 +132,85 @@ fun RadarScreen(
     val compassOn = settings.compass && !ambient
     val compass = rememberCompassReading(compassOn)
     val yawRate = rememberYawRate(compassOn)
-    val frameState = rememberRadarFrame(compassOn, compass, yawRate)
-    val frame by frameState
     val scenes = rememberScenePair(session.scene)
-    val reading = compass.value.takeIf { compassOn }
+    val glidePeriodMs = modeFramePeriodMs(settings.screenMode)
+    val frameState = rememberRadarFrame(compassOn, compass, yawRate, scenes, glidePeriodMs)
+    val frame by frameState
+    // The body depends on whether a reading exists and on its trust, never on the azimuth that changes at sensor rate.
+    val compassTrust = rememberCompassTrust(compass, compassOn).value
+    val compassWarning = rememberCompassWarning(compass, compassOn).value
     val bandPx = with(LocalDensity.current) { COMPASS_BAND.toPx() }
-    val measurer = rememberTextMeasurer()
+    val measurer = rememberTextMeasurer(cacheSize = TEXT_LAYOUT_CACHE_SIZE)
     val lastFix = rememberLastFix()
     val watchHere by rememberHere(lastFix, compassOn)
-    val nowMs = System.currentTimeMillis()
+    val nowMs = wallClockMs(refreshEverySecond = compassOn)
     val here = hereOf(session.team, session.teamAtMs, nowMs, watchHere)
     val mateMarks = teamMarks(session.team, session.teamAtMs, here, nowMs)
     val allyIds = likelyAllyIdsOf(session, nowMs, SystemClock.elapsedRealtimeNanos())
     val wedgeColors = remember { TacticalWedgeColors(BlindsideColors.Accent, BlindsideColors.AccentDim, BlindsideColors.Warn) }
-    AnchorHeading(reading, postureDeg, !ambient)
+    AnchorHeading(compass, postureDeg, compassOn)
     var glanceOpen by remember { mutableStateOf(false) }
     Box(radarGestures(lastFix) { glanceOpen = !glanceOpen }) {
         // The symmetric tick band turns against the heading on the compositor, once per frame, with no recomposition.
-        reading?.let { r ->
+        compassTrust?.let { trust ->
             Canvas(Modifier.fillMaxSize().graphicsLayer { rotationZ = -frame.azimuthDeg }) {
                 val ring = RingGeometry(screenCenter(size.width, size.height, shift), size.minDimension / 2f, bandPx)
-                drawCompassTicks(ring, compassColors(settings.screenMode, r.trust))
+                drawCompassTicks(ring, compassColors(settings.screenMode, trust))
             }
         }
         Canvas(Modifier.fillMaxSize()) {
             val margin = if (compassOn) bandPx else 0f
             val pivot = screenCenter(size.width, size.height, shift)
-            val drawnScene = foldInterpolated(scenes, frameFractionNow(scenes, compassOn, modeFramePeriodMs(settings.screenMode)))
+            val pair = scenes.value
+            val drawnScene = foldInterpolated(pair, frameFractionNow(pair, compassOn, glidePeriodMs))
             val logical = toDrawModel(drawnScene, size.width, size.height, shift, contacts, margin, fitHalfAngleDeg)
             drawRadar(logical.rotatedAbout(pivot, postureDeg + frame.spinDeg), radarColorsFor(settings.contactColor), allyIds)
             if (!ambient) drawRangeScale(rangeMarks(logical.origin, logical.radiusPx), pivot, postureDeg, measurer)
-            reading?.let { r ->
+            compassTrust?.let { trust ->
                 val ring = RingGeometry(pivot, size.minDimension / 2f, bandPx)
-                val colors = compassColors(settings.screenMode, r.trust)
+                val colors = compassColors(settings.screenMode, trust)
                 drawCompassLetters(frame.azimuthDeg.toDouble(), ring, postureDeg, colors, measurer)
                 drawFrontIndex(ring, postureDeg, colors.index)
                 drawTacticalWedges(session.tacticalPoints, here, frame.azimuthDeg.toDouble(), ring, wedgeColors, measurer)
                 drawMateWedges(mateMarks, frame.azimuthDeg.toDouble(), ring, BlindsideColors.Ally, measurer)
             }
         }
-        RadarOverlay(session, settings, ambient, shift, postureDeg, reading, frameState, glanceOpen) { glanceOpen = false }
+        RadarOverlay(session, settings, ambient, shift, postureDeg, compassTrust != null, compassWarning, frameState, glanceOpen) { glanceOpen = false }
     }
+}
+
+@Composable
+private fun rememberCompassTrust(compass: State<CompassReading?>, active: Boolean): State<CompassTrust?> =
+    remember(compass, active) { derivedStateOf { compass.value.takeIf { active }?.trust } }
+
+@Composable
+private fun rememberCompassWarning(compass: State<CompassReading?>, active: Boolean): State<String?> =
+    remember(compass, active) { derivedStateOf { compassWarningLabel(compass.value.takeIf { active }) } }
+
+// Link and self-fix freshness are judged against the wall clock here; with sensor samples no longer recomposing the body,
+// a one-second tick keeps re-judging them. Reading the tick is what subscribes the caller; the returned time is always now.
+@Composable
+private fun wallClockMs(refreshEverySecond: Boolean): Long {
+    val lastTickMs by produceState(0L, refreshEverySecond) {
+        while (refreshEverySecond) {
+            delay(FRESHNESS_TICK_MS)
+            value = System.currentTimeMillis()
+        }
+    }
+    return maxOf(lastTickMs, System.currentTimeMillis())
 }
 
 private val RANGE_LABEL_SIZE = 9.sp
 private const val RANGE_LABEL_INSET_PX = 12f
+// Declared after RANGE_LABEL_SIZE: top-level vals initialise in file order.
+private val RANGE_LABEL_STYLE = TextStyle(color = BlindsideColors.Text2, fontSize = RANGE_LABEL_SIZE, fontFamily = BlindsideFonts.Mono)
 
 // The metre scale rides the radar frame (posture rotation, not the gyro washout) and stays dim so it never saturates.
 private fun DrawScope.drawRangeScale(marks: List<RangeMark>, pivot: PointPx, rotationDeg: Float, measurer: TextMeasurer) {
     marks.forEach { mark ->
         val p = nudgeToward(rotatePoint(mark.at, pivot, rotationDeg), pivot, RANGE_LABEL_INSET_PX)
         val label = if (mark.meters >= MAX_RANGE_M.toInt()) "${mark.meters} m" else "${mark.meters}"
-        val layout = measurer.measure(label, TextStyle(color = BlindsideColors.Text2, fontSize = RANGE_LABEL_SIZE, fontFamily = BlindsideFonts.Mono))
+        val layout = measurer.measure(label, RANGE_LABEL_STYLE)
         drawText(layout, topLeft = Offset(p.x - layout.size.width / 2f, p.y - layout.size.height / 2f))
     }
 }
@@ -236,17 +259,23 @@ private fun teamMarks(team: TeamUpdate?, teamAtMs: Long?, here: GeoPoint?, nowMs
 }
 
 // The compass anchors body yaw to north at most four times a second, and only off a calibrated reading.
+// Each new reading is observed here, in the effect, so the samples never recompose the radar.
 @Composable
-private fun AnchorHeading(reading: CompassReading?, postureDeg: Float, active: Boolean) {
+private fun AnchorHeading(compass: State<CompassReading?>, postureDeg: Float, active: Boolean) {
     val lastAnchoredAt = remember { mutableStateOf(0L) }
-    LaunchedEffect(reading, active) {
-        val current = reading
-        if (!active || current == null || current.trust != CompassTrust.GOOD) return@LaunchedEffect
-        val now = SystemClock.elapsedRealtimeNanos()
-        if (now - lastAnchoredAt.value < ANCHOR_THROTTLE_MS * NANOS_PER_MS) return@LaunchedEffect
-        lastAnchoredAt.value = now
-        SessionStore.anchorHeading(frontHeadingDeg(current.azimuthDeg, postureDeg), now)
+    val posture by rememberUpdatedState(postureDeg)
+    LaunchedEffect(compass, active) {
+        if (!active) return@LaunchedEffect
+        snapshotFlow { compass.value }.collect { anchorIfDue(it, posture, lastAnchoredAt) }
     }
+}
+
+private fun anchorIfDue(reading: CompassReading?, postureDeg: Float, lastAnchoredAt: MutableState<Long>) {
+    if (reading == null || reading.trust != CompassTrust.GOOD) return
+    val now = SystemClock.elapsedRealtimeNanos()
+    if (now - lastAnchoredAt.value < ANCHOR_THROTTLE_MS * NANOS_PER_MS) return
+    lastAnchoredAt.value = now
+    SessionStore.anchorHeading(frontHeadingDeg(reading.azimuthDeg, postureDeg), now)
 }
 
 // Spec §8.3: belt link down is the one alert that must still vibrate in Sigilo; it rides the engine's system-buzz path.
@@ -254,25 +283,29 @@ private fun beltLinkDown(session: SessionUiState): Boolean =
     session.source == SessionSource.BELT && session.ble in setOf(BleStatus.RECONNECTING, BleStatus.BOND_LOST)
 
 // One frame loop drives both the heading ease and the gyro spin washout; idle (0,0) whenever the compass is off.
+// It publishes a frame only when the drawing would move, and on every frame while contacts glide between belt scenes.
 @Composable
-private fun rememberRadarFrame(active: Boolean, compass: State<CompassReading?>, yawRate: State<Float>): State<RadarFrame> {
+private fun rememberRadarFrame(
+    active: Boolean,
+    compass: State<CompassReading?>,
+    yawRate: State<Float>,
+    scenes: State<ScenePair>,
+    glidePeriodMs: Long,
+): State<RadarFrame> {
     val frame = remember { mutableStateOf(RadarFrame()) }
+    val periodMs by rememberUpdatedState(glidePeriodMs)
     LaunchedEffect(active) {
         if (!active) {
             frame.value = RadarFrame()
             return@LaunchedEffect
         }
-        var anim: HeadingAnimation? = null
-        var spin = 0.0
-        var lastNanos = 0L
+        val driver = RadarFrameDriver()
         while (true) {
             withFrameNanos { now ->
-                val dtMs = frameDeltaMs(lastNanos, now)
-                lastNanos = now
-                val next = advanceHeading(anim, compass.value?.azimuthDeg ?: anim?.currentDeg ?: 0.0, now)
-                anim = next
-                spin = advanceSceneSpinDeg(spin, yawRate.value.toDouble(), dtMs)
-                frame.value = RadarFrame(next.currentDeg.toFloat(), spin.toFloat())
+                val pair = scenes.value
+                val glide = SceneGlide(pair.frameStartMs, pair.hasContacts(), periodMs)
+                val candidate = driver.advance(now, compass.value?.azimuthDeg, yawRate.value, glide, SystemClock.elapsedRealtime())
+                if (frameNeedsWrite(frame.value, candidate, driver.gliding)) frame.value = candidate
             }
         }
     }
@@ -280,17 +313,16 @@ private fun rememberRadarFrame(active: Boolean, compass: State<CompassReading?>,
 }
 
 // A new belt scene becomes the target to glide toward; the one before it stays as the start of the glide.
+// The pair is read only inside the radar's draw lambda, so a new scene redraws it without recomposing the screen.
+// A scene that changes nothing drawn leaves the pair as it is, so body-yaw noise alone never starts a glide.
 @Composable
-private fun rememberScenePair(scene: RadarScene?): ScenePair {
+private fun rememberScenePair(scene: RadarScene?): State<ScenePair> {
     val holder = remember { mutableStateOf(ScenePair()) }
     LaunchedEffect(scene) {
-        if (scene != null) holder.value = holder.value.advance(scene, SystemClock.elapsedRealtime())
+        if (scene != null) holder.value = holder.value.receive(scene, SystemClock.elapsedRealtime())
     }
-    return holder.value
+    return holder
 }
-
-private fun frameDeltaMs(lastNanos: Long, nowNanos: Long): Long =
-    if (lastNanos == 0L) 0L else (nowNanos - lastNanos) / NANOS_PER_MS
 
 // The glide spans exactly one publication period, which the watch sets by screen mode (Vista 33 ms, Sigilo 100 ms).
 private fun frameFractionNow(scenes: ScenePair, animating: Boolean, periodMs: Long): Float {
@@ -311,7 +343,8 @@ private fun RadarOverlay(
     ambient: Boolean,
     shift: PointPx,
     postureDeg: Float,
-    reading: CompassReading?,
+    hasReading: Boolean,
+    compassWarning: String?,
     headingFrame: State<RadarFrame>,
     glanceOpen: Boolean,
     onDismissGlance: () -> Unit,
@@ -325,11 +358,11 @@ private fun RadarOverlay(
         centerLabel(session.scene, ambient, link)?.let { label ->
             CenterLabel(label, isLinkMessage = label == link, Modifier.align(Alignment.Center))
         }
-        if (!ambient && reading != null) {
+        if (!ambient && hasReading) {
             HeadingReadout(headingFrame, postureDeg, Modifier.align(Alignment.TopCenter))
         }
         // Spec §5.4: the dimmed screen keeps ≤ 15 % lit pixels, so ambient shows only the fan and "--".
-        if (!ambient) BottomPanel(session, compassWarningLabel(reading), Modifier.align(Alignment.BottomCenter))
+        if (!ambient) BottomPanel(session, compassWarning, Modifier.align(Alignment.BottomCenter))
         if (!ambient) {
             HudOverlay(
                 beltLinkDown = beltLinkDown(session),

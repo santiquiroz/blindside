@@ -20,7 +20,6 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 
 private const val TAG = "TakTelemetry"
-private const val NODE_CACHE_MS = 30_000L
 
 suspend fun publishTakTelemetry(context: Context, clockMs: () -> Long, clockNanos: () -> Long) {
     val nodes = NodeCache()
@@ -44,24 +43,6 @@ private suspend fun publishOnce(context: Context, nodes: NodeCache, nowMs: Long,
     val bytes = encodeTelemetry(telemetryOf(session.scene, heading, session.tacticalPoints, excludeIds = allies)).toByteArray(Charsets.UTF_8)
     nodes.ids(context, nowMs).forEach { sendTo(context, it, bytes) }
 }
-
-// The phone set barely changes, so the node list is cached; Tasks.await runs on IO because wear-app has no coroutines-play-services.
-private class NodeCache {
-    private var ids: List<String> = emptyList()
-    private var atMs: Long? = null
-
-    suspend fun ids(context: Context, nowMs: Long): List<String> {
-        val cachedAt = atMs
-        if (cachedAt == null || nowMs - cachedAt >= NODE_CACHE_MS) {
-            ids = connectedIds(context)
-            atMs = nowMs
-        }
-        return ids
-    }
-}
-
-private suspend fun connectedIds(context: Context): List<String> =
-    withContext(Dispatchers.IO) { Tasks.await(Wearable.getNodeClient(context).connectedNodes) }.map { it.id }
 
 private suspend fun sendTo(context: Context, nodeId: String, bytes: ByteArray) {
     withContext(Dispatchers.IO) { Tasks.await(Wearable.getMessageClient(context).sendMessage(nodeId, TAK_TELEMETRY_PATH, bytes)) }
