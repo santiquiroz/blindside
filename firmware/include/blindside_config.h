@@ -5,7 +5,9 @@
 
 namespace config {
 
-constexpr char kFirmwareVersion[] = "0.2.1";
+constexpr char kFirmwareVersion[] = "0.2.2";
+// 160 MHz keeps the APB at 80 MHz (UART 256000, I2C, BLE unaffected) and saves current over the 240 MHz default.
+constexpr uint32_t kCpuFrequencyMhz = 160;
 constexpr uint32_t kSerialBaud = 115200;
 constexpr size_t kSerialTxBufferBytes = 1024;
 

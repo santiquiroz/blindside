@@ -215,6 +215,7 @@ void print_diagnostics_if_due(uint32_t now_ms) {
 }  // namespace
 
 void setup() {
+    setCpuFrequencyMhz(config::kCpuFrequencyMhz);
     Serial.setTxBufferSize(config::kSerialTxBufferBytes);
     Serial.begin(config::kSerialBaud);
     status_led_begin();
