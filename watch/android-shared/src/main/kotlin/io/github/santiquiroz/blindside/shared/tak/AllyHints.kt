@@ -52,7 +52,7 @@ fun likelyAllyIdsOf(state: SessionUiState, nowMs: Long, nowNanos: Long): Set<Int
 private fun gpsAllyIds(blips: List<Blip>, mates: List<Mate>, here: GeoPoint?, bodyHeadingDeg: Double?): Set<Int> {
     if (here == null || bodyHeadingDeg == null) return emptySet()
     val rels = mates
-        .filter { it.ageS <= ALLY_MATE_MAX_AGE_S && distanceM(here, it.point) <= ALLY_GPS_RADIUS_M }
+        .filter { it.kind == MateKind.PLAYER && it.ageS <= ALLY_MATE_MAX_AGE_S && distanceM(here, it.point) <= ALLY_GPS_RADIUS_M }
         .map { normalizedDeg(bearingDeg(here, it.point) - bodyHeadingDeg) }
     return rels.flatMap { rel -> sectorIds(blips, rel, claimants(rels, rel)) }.toSet()
 }

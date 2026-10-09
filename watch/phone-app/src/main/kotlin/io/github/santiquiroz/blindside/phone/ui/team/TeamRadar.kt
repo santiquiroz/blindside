@@ -105,11 +105,12 @@ private fun DrawScope.drawMark(mark: RadarMark, cx: Float, cy: Float, radius: Fl
     if (mark.offScale) return drawEdgeTriangle(mark.screenAngleDeg, cx, cy, radius, color)
     val pos = screenPos(mark.screenAngleDeg, radius * mark.radiusFraction.toFloat(), cx, cy)
     drawCircle(color, DOT_RADIUS.toPx(), pos)
-    if (mark.kind == MarkKind.ALLY) drawAllyLabel(mark, pos, measurer)
+    if (mark.kind != MarkKind.CONTACT) drawAllyLabel(mark, pos, measurer)
 }
 
 private fun markColor(mark: RadarMark): Color = when (mark.kind) {
     MarkKind.ALLY -> BlindsideColors.Ally
+    MarkKind.STATION -> BlindsideColors.Station
     MarkKind.CONTACT -> BlindsideColors.Warn.copy(alpha = contactAlpha(mark.ageS))
 }
 

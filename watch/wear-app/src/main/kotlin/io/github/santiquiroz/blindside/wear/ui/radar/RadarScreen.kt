@@ -176,7 +176,7 @@ fun RadarScreen(
                 drawCompassLetters(frame.azimuthDeg.toDouble(), ring, postureDeg, colors, measurer)
                 drawFrontIndex(ring, postureDeg, colors.index)
                 drawTacticalWedges(session.tacticalPoints, here, frame.azimuthDeg.toDouble(), ring, wedgeColors, measurer)
-                drawMateWedges(mateMarks, frame.azimuthDeg.toDouble(), ring, BlindsideColors.Ally, measurer)
+                drawMateWedges(mateMarks, frame.azimuthDeg.toDouble(), ring, BlindsideColors.Ally, BlindsideColors.Station, measurer)
             }
         }
         RadarOverlay(session, settings, ambient, shift, postureDeg, compassTrust != null, compassWarning, frameState, glanceOpen) { glanceOpen = false }

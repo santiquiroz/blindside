@@ -97,4 +97,30 @@ class TakMessagesTest {
             "{\"cs\":\"Ok\",\"lat\":5.1,\"lon\":-75.1,\"age\":4}]}"
         assertEquals(listOf(Mate("Ok", GeoPoint(5.1, -75.1), 4)), decodeTeamUpdate(json)?.mates)
     }
+
+    @Test
+    fun `a station mate round trips with its kind`() {
+        val original = TeamUpdate(null, listOf(Mate("Mando", base, 2, MateKind.STATION), Mate("Toro", base, 1)))
+        assertEquals(original, decodeTeamUpdate(encodeTeamUpdate(original)))
+    }
+
+    @Test
+    fun `a mate without a kind decodes as a player`() {
+        val json = "{\"v\":1,\"self\":null,\"me\":null,\"mates\":[" +
+            "{\"cs\":\"Ok\",\"lat\":5.1,\"lon\":-75.1,\"age\":4}]}"
+        assertEquals(MateKind.PLAYER, decodeTeamUpdate(json)?.mates?.single()?.kind)
+    }
+
+    @Test
+    fun `an unknown kind decodes as a player`() {
+        val json = "{\"v\":1,\"self\":null,\"me\":null,\"mates\":[" +
+            "{\"cs\":\"Ok\",\"lat\":5.1,\"lon\":-75.1,\"age\":4,\"k\":\"zz\"}]}"
+        assertEquals(MateKind.PLAYER, decodeTeamUpdate(json)?.mates?.single()?.kind)
+    }
+
+    @Test
+    fun `a player is encoded without a kind field`() {
+        val json = encodeTeamUpdate(TeamUpdate(null, listOf(Mate("Toro", base, 1))))
+        assertEquals(false, json.contains("\"k\""))
+    }
 }

@@ -14,7 +14,9 @@ const val TAK_LINK_FRESH_MS = 10_000L
 data class TelemetryBlip(val id: Int, val bearingDeg: Double, val rangeM: Double, val confidence: Confidence)
 data class Telemetry(val headingOk: Boolean, val blips: List<TelemetryBlip>, val points: Map<TacticalKind, GeoPoint>)
 data class GeoFix(val point: GeoPoint, val accuracyM: Double)
-data class Mate(val callsign: String, val point: GeoPoint, val ageS: Int)
+enum class MateKind { PLAYER, STATION }
+
+data class Mate(val callsign: String, val point: GeoPoint, val ageS: Int, val kind: MateKind = MateKind.PLAYER)
 data class TeamUpdate(val self: GeoFix?, val mates: List<Mate>, val me: Long? = null)
 
 fun encodeTelemetry(telemetry: Telemetry): String = MiniJson.obj(
@@ -114,8 +116,13 @@ private fun encodeMate(mate: Mate): String = MiniJson.obj(
         "lat" to mate.point.latDeg.toString(),
         "lon" to mate.point.lonDeg.toString(),
         "age" to mate.ageS.toString(),
-    ),
+    ) + kindField(mate.kind),
 )
+
+private fun kindField(kind: MateKind): List<Pair<String, String>> =
+    if (kind == MateKind.STATION) listOf("k" to MiniJson.quote("s")) else emptyList()
+
+private fun mateKindOfCode(code: Any?): MateKind = if (code == "s") MateKind.STATION else MateKind.PLAYER
 
 private fun decodeMate(item: Any?): Mate? {
     val fields = item as? Map<*, *> ?: return null
@@ -123,7 +130,7 @@ private fun decodeMate(item: Any?): Mate? {
     val lat = doubleField(fields, "lat") ?: return null
     val lon = doubleField(fields, "lon") ?: return null
     val age = intField(fields, "age") ?: return null
-    return Mate(callsign, GeoPoint(lat, lon), age)
+    return Mate(callsign, GeoPoint(lat, lon), age, mateKindOfCode(fields["k"]))
 }
 
 private fun confidenceOf(name: String?): Confidence? =

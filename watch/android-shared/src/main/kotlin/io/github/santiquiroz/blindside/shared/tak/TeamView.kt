@@ -10,7 +10,7 @@ const val MATE_MAX_DISTANCE_M = 1_000.0
 const val MATE_MAX_SHOWN = 6
 const val SELF_FIX_FRESH_MS = 15_000L
 
-data class MateMark(val label: String, val bearingDeg: Double, val distanceM: Double)
+data class MateMark(val label: String, val bearingDeg: Double, val distanceM: Double, val kind: MateKind = MateKind.PLAYER)
 
 fun teamLinkActive(lastTeamAtMs: Long?, nowMs: Long): Boolean =
     lastTeamAtMs != null && nowMs - lastTeamAtMs in 0..TAK_LINK_FRESH_MS
@@ -34,4 +34,4 @@ fun mateLabel(callsign: String): String =
     callsign.filter { it.isLetterOrDigit() }.take(2).uppercase(Locale.ROOT).ifEmpty { "??" }
 
 private fun markOf(mate: Mate, here: GeoPoint): MateMark =
-    MateMark(mateLabel(mate.callsign), bearingDeg(here, mate.point), distanceM(here, mate.point))
+    MateMark(mateLabel(mate.callsign), bearingDeg(here, mate.point), distanceM(here, mate.point), mate.kind)

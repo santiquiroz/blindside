@@ -6,6 +6,7 @@ import io.github.santiquiroz.blindside.shared.tactical.GeoPoint
 import io.github.santiquiroz.blindside.shared.tactical.bearingDeg
 import io.github.santiquiroz.blindside.shared.tactical.distanceM
 import io.github.santiquiroz.blindside.shared.tak.Mate
+import io.github.santiquiroz.blindside.shared.tak.MateKind
 import io.github.santiquiroz.blindside.shared.tak.mateLabel
 import kotlin.math.atan2
 import kotlin.math.min
@@ -19,7 +20,7 @@ fun nextRange(currentM: Double): Double = when (currentM) {
     else -> 100.0
 }
 
-enum class MarkKind { ALLY, CONTACT }
+enum class MarkKind { ALLY, STATION, CONTACT }
 
 data class RadarMark(
     val kind: MarkKind,
@@ -61,7 +62,10 @@ fun phoneHeadingDeg(rotationMatrix: FloatArray): Double {
 }
 
 private fun allyMark(here: GeoPoint, headingDeg: Double, rangeM: Double, mate: Mate): RadarMark =
-    markOf(MarkKind.ALLY, mateLabel(mate.callsign), mate.point, mate.ageS, here, headingDeg, rangeM)
+    markOf(markKindOf(mate), mateLabel(mate.callsign), mate.point, mate.ageS, here, headingDeg, rangeM)
+
+private fun markKindOf(mate: Mate): MarkKind =
+    if (mate.kind == MateKind.STATION) MarkKind.STATION else MarkKind.ALLY
 
 private fun contactMark(here: GeoPoint, headingDeg: Double, rangeM: Double, contact: TeamContact): RadarMark =
     markOf(MarkKind.CONTACT, contact.label, contact.point, contact.ageS, here, headingDeg, rangeM)

@@ -21,6 +21,7 @@ import io.github.santiquiroz.blindside.shared.compass.compassTicks
 import io.github.santiquiroz.blindside.shared.compass.markScreenAngleDeg
 import io.github.santiquiroz.blindside.shared.compass.pointOnRing
 import io.github.santiquiroz.blindside.shared.radar.PointPx
+import io.github.santiquiroz.blindside.shared.tak.MateKind
 import io.github.santiquiroz.blindside.shared.tak.MateMark
 import io.github.santiquiroz.blindside.shared.tactical.GeoPoint
 import io.github.santiquiroz.blindside.shared.tactical.TacticalKind
@@ -141,9 +142,10 @@ fun DrawScope.drawMateWedges(
     azimuthDeg: Double,
     ring: RingGeometry,
     color: Color,
+    stationColor: Color,
     measurer: TextMeasurer,
 ) {
-    marks.forEach { drawMate(it, azimuthDeg, ring, color, measurer) }
+    marks.forEach { drawMate(it, azimuthDeg, ring, if (it.kind == MateKind.STATION) stationColor else color, measurer) }
 }
 
 private fun DrawScope.drawMate(

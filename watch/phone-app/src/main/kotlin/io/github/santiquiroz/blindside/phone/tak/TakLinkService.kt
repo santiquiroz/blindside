@@ -20,6 +20,7 @@ import io.github.santiquiroz.blindside.phone.BuildConfig
 import io.github.santiquiroz.blindside.phone.MainActivity
 import io.github.santiquiroz.blindside.phone.R
 import io.github.santiquiroz.blindside.shared.tak.GeoFix
+import io.github.santiquiroz.blindside.shared.tak.MateKind
 import io.github.santiquiroz.blindside.shared.tak.TAK_TEAM_PATH
 import io.github.santiquiroz.blindside.shared.tak.TAK_TEAM_PERIOD_MS
 import io.github.santiquiroz.blindside.shared.tak.TAK_TELEMETRY_PATH
@@ -230,7 +231,7 @@ class TakLinkService : Service() {
     private fun teamSnapshot(now: Long, ids: TakIds): TeamSnapshot {
         val fresh = freshFix(now)
         val mates = roster.mates(now)
-        return TeamSnapshot(TeamUpdate(fresh, mates, me = beaconIdOf(ids.deviceId)), mates.size, fixAtMs)
+        return TeamSnapshot(TeamUpdate(fresh, mates, me = beaconIdOf(ids.deviceId)), mates.count { it.kind == MateKind.PLAYER }, fixAtMs)
     }
 
     private fun freshFix(now: Long): GeoFix? =

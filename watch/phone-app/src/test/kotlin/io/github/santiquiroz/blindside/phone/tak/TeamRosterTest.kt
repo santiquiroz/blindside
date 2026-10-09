@@ -126,4 +126,16 @@ class TeamRosterTest {
         assertTrue(replayed.isEmpty())
         assertEquals(1, live.size)
     }
+
+    @Test
+    fun `equipment types are stations and others are players`() {
+        assertEquals(io.github.santiquiroz.blindside.shared.tak.MateKind.STATION, mateKindOf("a-f-G-E-S"))
+        assertEquals(io.github.santiquiroz.blindside.shared.tak.MateKind.PLAYER, mateKindOf("a-f-G-U-C"))
+    }
+
+    @Test
+    fun `roster keeps the station kind`() {
+        val mates = TeamRoster().with(event(type = "a-f-G-E-S"), "Santi", NOW).mates(NOW)
+        assertEquals(io.github.santiquiroz.blindside.shared.tak.MateKind.STATION, mates[0].kind)
+    }
 }

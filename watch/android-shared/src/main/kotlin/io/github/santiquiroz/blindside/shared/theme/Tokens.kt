@@ -11,6 +11,7 @@ object Tokens {
     const val ALERT_RED_DIM = 0xFF8C2A24
     const val WARN = 0xFFF2B84B
     const val ALLY = 0xFF4DD0E1
+    const val STATION = 0xFFB388FF
     const val TEXT = 0xFFE8ECEA
     const val TEXT_2 = 0xFF9AA5A0
 }

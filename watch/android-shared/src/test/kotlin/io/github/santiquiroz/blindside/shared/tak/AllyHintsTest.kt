@@ -92,4 +92,15 @@ class AllyHintsTest {
         assertEquals(-63.0, second.rssiDbm, 1e-9)
         assertEquals(nowMs, second.lastSeenMs)
     }
+
+    @Test
+    fun `a blip next to a station mate is not a likely ally`() {
+        val station = Mate("Mando", destinationOf(here, 0.0, 10.0), 3, MateKind.STATION)
+        assertEquals(emptySet<Int>(), gpsOnly(listOf(blip(1, 10.0, 8.0)), listOf(station), 0.0))
+    }
+
+    @Test
+    fun `a blip next to a player mate is still a likely ally`() {
+        assertEquals(setOf(1), gpsOnly(listOf(blip(1, 10.0, 8.0)), listOf(mateAt(0.0, 10.0)), 0.0))
+    }
 }
