@@ -24,6 +24,8 @@ object TakStore {
 
     val state: StateFlow<TakUiState> = mutableState.asStateFlow()
 
+    fun hasObservers(): Boolean = mutableState.subscriptionCount.value > 0
+
     fun update(transform: (TakUiState) -> TakUiState) = mutableState.update(transform)
 }
 

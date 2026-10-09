@@ -189,6 +189,24 @@ class TakLinkTest {
     }
 
     @Test
+    fun `cancelling while idle on the read stops promptly`() = runBlocking {
+        val server = startServer()
+        try {
+            val link = TakLink(plainConnector(server), TakIds("abc123", "Santi"), "0.2.0")
+            val job = launch(Dispatchers.IO) { link.run() }
+            acceptSoon(server, 5_000).use {
+                EventReader(it.getInputStream()).next()
+                withTimeout(5_000) { link.status.first { status -> status is LinkStatus.Connected } }
+                val started = System.currentTimeMillis()
+                withTimeout(3_000) { job.cancelAndJoin() }
+                assertTrue(System.currentTimeMillis() - started < 3_000)
+            }
+        } finally {
+            server.close()
+        }
+    }
+
+    @Test
     fun `backoff grows then caps`() {
         assertEquals(2_000, backoffMs(0))
         assertEquals(4_000, backoffMs(1))

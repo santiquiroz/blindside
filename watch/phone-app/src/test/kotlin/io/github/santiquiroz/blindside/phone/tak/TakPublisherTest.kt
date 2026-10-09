@@ -154,4 +154,45 @@ class TakPublisherTest {
         val out = publishTelemetry(state, telemetry(points = points), FIX, 1_000L, IDS, true, NOW)
         assertEquals(listOf("a-u-G", "t-x-d-d", "b-m-p-s-m"), types(out.events))
     }
+
+    private fun blipAt(bearing: Double, range: Double) = telemetry(blips = listOf(TelemetryBlip(3, bearing, range, Confidence.BOTH)))
+
+    @Test
+    fun `unchanged blip one second later is not resent nor deleted`() {
+        val first = publishTelemetry(PublishState(), telemetry(), FIX, 1_000L, IDS, true, NOW)
+        val second = publishTelemetry(first.state, telemetry(), FIX, 1_000L, IDS, true, NOW + 1_000)
+        assertEquals(0, second.events.size)
+        assertEquals(0, second.contactsSent)
+        assertEquals(setOf("BLINDSIDE-abc123-C3"), second.state.publishedUids)
+        assertEquals(1, first.contactsSent)
+    }
+
+    @Test
+    fun `blip moved half a meter is not resent`() {
+        val first = publishTelemetry(PublishState(), blipAt(90.0, 100.0), FIX, 1_000L, IDS, true, NOW)
+        val second = publishTelemetry(first.state, blipAt(90.0, 100.5), FIX, 1_000L, IDS, true, NOW + 1_000)
+        assertEquals(0, second.events.size)
+    }
+
+    @Test
+    fun `blip moved one and a half meters is resent`() {
+        val first = publishTelemetry(PublishState(), blipAt(90.0, 100.0), FIX, 1_000L, IDS, true, NOW)
+        val second = publishTelemetry(first.state, blipAt(90.0, 101.5), FIX, 1_000L, IDS, true, NOW + 1_000)
+        assertEquals(1, second.events.size)
+        assertEquals(1, second.contactsSent)
+    }
+
+    @Test
+    fun `unchanged blip five seconds later is resent`() {
+        val first = publishTelemetry(PublishState(), telemetry(), FIX, 1_000L, IDS, true, NOW)
+        val second = publishTelemetry(first.state, telemetry(), FIX, 1_000L, IDS, true, NOW + 5_000)
+        assertEquals(1, second.events.size)
+    }
+
+    @Test
+    fun `lastSent keeps only blips present in the round`() {
+        val first = publishTelemetry(PublishState(), telemetry(), FIX, 1_000L, IDS, true, NOW)
+        val second = publishTelemetry(first.state, telemetry(blips = emptyList()), FIX, 1_000L, IDS, true, NOW + 1_000)
+        assertEquals(emptySet<String>(), second.state.lastSent.keys)
+    }
 }

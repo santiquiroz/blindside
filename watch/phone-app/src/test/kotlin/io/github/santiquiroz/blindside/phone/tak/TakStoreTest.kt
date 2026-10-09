@@ -1,6 +1,14 @@
 package io.github.santiquiroz.blindside.phone.tak
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class TakStoreTest {
@@ -40,5 +48,15 @@ class TakStoreTest {
     fun `connected with a fix shows mates and contacts sent`() {
         val state = TakUiState(running = true, link = LinkStatus.Connected(now), mates = 2, contactsSent = 9, lastFixAtMs = now - 3_000)
         assertEquals("Conectado · 2 compañeros · 9 contactos enviados", takStatusText(state, now))
+    }
+
+    @Test
+    fun `hasObservers follows active collectors`() {
+        assertFalse(TakStore.hasObservers())
+        val scope = CoroutineScope(Job() + Dispatchers.Unconfined)
+        TakStore.state.onEach { }.launchIn(scope)
+        assertTrue(TakStore.hasObservers())
+        scope.cancel()
+        assertFalse(TakStore.hasObservers())
     }
 }

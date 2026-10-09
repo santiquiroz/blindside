@@ -15,7 +15,6 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.google.android.gms.wearable.MessageClient
-import com.google.android.gms.wearable.NodeClient
 import com.google.android.gms.wearable.Wearable
 import io.github.santiquiroz.blindside.phone.BuildConfig
 import io.github.santiquiroz.blindside.phone.MainActivity
@@ -27,12 +26,16 @@ import io.github.santiquiroz.blindside.shared.tak.TAK_TELEMETRY_PATH
 import io.github.santiquiroz.blindside.shared.tak.TeamUpdate
 import io.github.santiquiroz.blindside.shared.tak.decodeTelemetry
 import io.github.santiquiroz.blindside.shared.tak.encodeTeamUpdate
+import io.github.santiquiroz.blindside.shared.tactical.distanceM
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -43,6 +46,9 @@ private const val TEAM_FIX_FRESH_MS = 15_000L
 private const val PICTURE_PERIOD_MS = 1_000L
 private const val SELF_PUBLISH_PERIOD_MS = 5_000L
 private const val ALERT_BASE_ID = 1000
+private const val TEAM_RESEND_MS = 5_000L
+private const val TEAM_MIN_MOVE_M = 1.0
+private const val NODE_CACHE_MS = 30_000L
 
 class TakLinkService : Service() {
     companion object {
@@ -70,6 +76,10 @@ class TakLinkService : Service() {
     private var alertBook = AlertBook()
     private var fix: GeoFix? = null
     private var fixAtMs: Long? = null
+    private var prefsState: StateFlow<TakPrefs>? = null
+    private var lastTeamSentAtMs: Long? = null
+    private var lastTeamSentFix: GeoFix? = null
+    private var lastStatusText: String? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -100,11 +110,13 @@ class TakLinkService : Service() {
 
     // Android 14+ throws when a location service starts without the location permission.
     private fun enterForeground(): Boolean = try {
+        val status = takStatusText(TakStore.state.value, System.currentTimeMillis())
         startForeground(
             TakLinkNotification.NOTIFICATION_ID,
-            TakLinkNotification.build(this, takStatusText(TakStore.state.value, System.currentTimeMillis())),
+            TakLinkNotification.build(this, status),
             ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION,
         )
+        lastStatusText = status
         true
     } catch (error: SecurityException) {
         TakStore.update { it.copy(running = false, error = "Falta permiso de ubicación") }
@@ -113,7 +125,10 @@ class TakLinkService : Service() {
     }
 
     private suspend fun boot() {
-        val prefs = applicationContext.takPrefsRepository().current()
+        val repository = applicationContext.takPrefsRepository()
+        val prefs = repository.current()
+        val current = scope ?: return
+        prefsState = repository.prefs.stateIn(current, SharingStarted.Eagerly, prefs)
         val pkg = loadTakPackage(this)
         if (pkg == null) {
             TakStore.update { it.copy(error = "Falta el paquete TAK") }
@@ -130,7 +145,6 @@ class TakLinkService : Service() {
         }
         val takLink = TakLink(tlsConnector(pkg, tls), ids, BuildConfig.VERSION_NAME)
         link = takLink
-        val current = scope ?: return
         current.launch { takLink.run() }
         current.launch { mirrorStatus(takLink) }
         current.launch { collectIncoming(takLink, ids) }
@@ -165,13 +179,13 @@ class TakLinkService : Service() {
 
     private suspend fun handleTelemetry(data: ByteArray, ids: TakIds) {
         val telemetry = decodeTelemetry(data.toString(Charsets.UTF_8)) ?: return
-        val publishContacts = applicationContext.takPrefsRepository().current().publishContacts
+        val publishContacts = prefsState?.value?.publishContacts ?: return
         val now = System.currentTimeMillis()
         val sent = mutex.withLock {
             val outgoing = publishTelemetry(publish, telemetry, fix, fixAtMs?.let { now - it }, ids, publishContacts, now)
             publish = outgoing.state
             outgoing.events.forEach { link?.send(it) }
-            outgoing.state.publishedUids.size
+            outgoing.contactsSent
         }
         if (sent > 0) TakStore.update { it.copy(contactsSent = it.contactsSent + sent) }
     }
@@ -192,16 +206,25 @@ class TakLinkService : Service() {
     }
 
     private suspend fun teamLoop(ids: TakIds) {
-        val nodes = Wearable.getNodeClient(this)
+        val nodes = NodeIdCache { Wearable.getNodeClient(this).connectedNodes.await().map { it.id } }
         val messages = Wearable.getMessageClient(this)
         while (true) {
             delay(TAK_TEAM_PERIOD_MS)
             val now = System.currentTimeMillis()
             val team = mutex.withLock { teamSnapshot(now, ids) }
-            sendTeam(nodes, messages, team.update)
+            if (teamSendDue(team.count, movedSinceLastTeamSend(team.update.self), lastTeamSentAtMs?.let { now - it })) {
+                lastTeamSentAtMs = now
+                lastTeamSentFix = team.update.self
+                sendTeam(nodes, messages, team.update, now)
+            }
             TakStore.update { it.copy(mates = team.count, lastFixAtMs = team.fixAtMs) }
             refreshNotification()
         }
+    }
+
+    private fun movedSinceLastTeamSend(fix: GeoFix?): Double? {
+        val last = lastTeamSentFix
+        return if (fix != null && last != null) distanceM(last.point, fix.point) else null
     }
 
     private fun teamSnapshot(now: Long, ids: TakIds): TeamSnapshot {
@@ -218,9 +241,9 @@ class TakLinkService : Service() {
         while (true) {
             delay(PICTURE_PERIOD_MS)
             val now = System.currentTimeMillis()
-            val prefs = applicationContext.takPrefsRepository().current()
+            val prefs = prefsState?.value ?: continue
             val snapshot = mutex.withLock { pictureSnapshot(prefs, now) }
-            TakStore.update { it.copy(picture = snapshot.picture) }
+            if (TakStore.hasObservers()) TakStore.update { it.copy(picture = snapshot.picture) }
             snapshot.alerts.forEach { raiseAlert(it) }
             if (shouldPublishSelf(prefs, snapshot.picture.self, now, lastPublishAtMs)) {
                 lastPublishAtMs = now
@@ -267,23 +290,24 @@ class TakLinkService : Service() {
         manager.notify(ALERT_BASE_ID + (alert.uid.hashCode() and 0xFFF), notification)
     }
 
-    private suspend fun sendTeam(nodes: NodeClient, messages: MessageClient, update: TeamUpdate) {
+    private suspend fun sendTeam(nodes: NodeIdCache, messages: MessageClient, update: TeamUpdate, nowMs: Long) {
         try {
             val bytes = encodeTeamUpdate(update).toByteArray(Charsets.UTF_8)
-            nodes.connectedNodes.await().forEach { messages.sendMessage(it.id, TAK_TEAM_PATH, bytes).await() }
+            nodes.ids(nowMs).forEach { messages.sendMessage(it, TAK_TEAM_PATH, bytes).await() }
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
+            nodes.invalidate()
             Log.w(TAG, "team update failed", error)
         }
     }
 
     private fun refreshNotification() {
         val manager = getSystemService(NotificationManager::class.java) ?: return
-        manager.notify(
-            TakLinkNotification.NOTIFICATION_ID,
-            TakLinkNotification.build(this, takStatusText(TakStore.state.value, System.currentTimeMillis())),
-        )
+        val status = takStatusText(TakStore.state.value, System.currentTimeMillis())
+        if (status == lastStatusText) return
+        lastStatusText = status
+        manager.notify(TakLinkNotification.NOTIFICATION_ID, TakLinkNotification.build(this, status))
     }
 
     private fun shutdown() {
@@ -302,9 +326,34 @@ class TakLinkService : Service() {
         alertBook = AlertBook()
         fix = null
         fixAtMs = null
+        prefsState = null
+        lastTeamSentAtMs = null
+        lastTeamSentFix = null
+        lastStatusText = null
         stopForeground(STOP_FOREGROUND_REMOVE)
         // A failed start stops the service right away; its reason must outlive the shutdown so the tab can show it.
         TakStore.update { TakUiState(error = it.error) }
+    }
+}
+
+fun teamSendDue(mates: Int, fixMovedM: Double?, sinceLastSendMs: Long?): Boolean =
+    sinceLastSendMs == null || mates > 0 || fixMovedM == null || fixMovedM >= TEAM_MIN_MOVE_M || sinceLastSendMs >= TEAM_RESEND_MS
+
+private class NodeIdCache(private val fetch: suspend () -> List<String>) {
+    private var ids: List<String> = emptyList()
+    private var atMs: Long? = null
+
+    suspend fun ids(nowMs: Long): List<String> {
+        val cachedAt = atMs
+        if (cachedAt == null || nowMs - cachedAt >= NODE_CACHE_MS) {
+            ids = fetch()
+            atMs = nowMs
+        }
+        return ids
+    }
+
+    fun invalidate() {
+        atMs = null
     }
 }
 
