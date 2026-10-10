@@ -130,6 +130,15 @@ python tak/datapackage.py --name "Campo" --out campo-paquete.zip campo.kmz tak/m
 
 Para que cada ATAK lo reciba solo: interfaz web → Data Packages → subir el zip → activar **Install on connection**. ATAK pide su perfil de dispositivo al conectarse (`/Marti/api/device/profile/connection` en el puerto 8443) y el servidor le incluye el paquete. iTAK no lo pide: a los iPhone se les manda el zip por chat (no trae llaves) y lo importan en Data Packages.
 
+Para poner a todo el equipo del mismo color, el paquete puede llevar un archivo de preferencias de ATAK (por ejemplo `equipo-amarillo.pref`, declarado en el manifiesto como cualquier otro archivo). ATAK lo aplica al instalar el paquete; iTAK lo ignora y el color se elige a mano en sus ajustes:
+
+```xml
+<?xml version='1.0' standalone='yes'?>
+<preferences><preference version="1" name="com.atakmap.app.civ_preferences">
+<entry key="locationTeam" class="class java.lang.String">Yellow</entry>
+</preference></preferences>
+```
+
 ### Capa táctica en vivo
 
 [`tak/tak-overlay.py`](../tak/tak-overlay.py) se conecta al servidor como un cliente más ("Mapa") y transmite el GeoJSON como objetos nativos de ATAK/iTAK: polígonos y líneas (`u-d-f`) y marcadores (`b-m-p-s-m`). Todos los conectados los reciben sin importar nada. Repite el envío cada `--period` segundos (120 por defecto) para quien se conecte tarde, porque OpenTAKServer no reenvía formas a clientes nuevos. Si se edita el GeoJSON, el siguiente envío actualiza los objetos y borra los que ya no están. Las curvas de nivel se omiten (`--skip-folder`); para esas sigue el paquete del campo.
