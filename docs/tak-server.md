@@ -64,6 +64,15 @@ OTS_PUBLIC_HOST=<nombre DNS o IP pública> bash tak/ots-player.sh jugador1
 
 De fábrica, OpenTAKServer copia en el paquete (`connectString`) la dirección con la que se pidió. Por eso el script la pide con la dirección pública y no con `localhost`.
 
+**Paquetes de conexión que quedan públicos.** Cuando un jugador usa "Generate Configuration Data Package" en la web, OpenTAKServer deja su `<usuario>_CONFIG.zip` y `<usuario>_CONFIG_iTAK.zip` en Paquetes de Datos, visibles para cualquiera con sesión, y cada uno trae el certificado de ese jugador. [`tak/ots-purge-config.py`](../tak/ots-purge-config.py) los borra cuando cumplen 30 minutos y nunca toca otros paquetes. OpenTAKServer guarda la hora local con una "Z", así que el script lee esa hora como local y debe correr en el mismo equipo que el servidor:
+
+```bash
+# dentro de WSL, como root: prueba sin borrar
+python3 tak/ots-purge-config.py --host <dominio> --password-file /mnt/c/Users/<usuario>/.blindside/tak-admin.txt --dry-run
+```
+
+En el servidor corre cada 5 minutos con un temporizador de systemd (`ots-purge-config.timer`).
+
 **Dirección fija para todos los paquetes.** Con este parche, OpenTAKServer usa `OTS_PUBLIC_ADDRESS` de `config.yml` en vez de la dirección del navegador. Así sirve cualquier paquete generado desde la web, aunque el jugador haya entrado por el dominio o por la IP. También aplica al QR de iTAK, a la inscripción y a las URL de video:
 
 ```bash
